@@ -1,0 +1,8 @@
+# 서버마다 따로 쌓이는 데이터(DB·백업·아카이브)는 올리지 않음
+data/
+*.db
+*.db-shm
+*.db-wal
+__pycache__/
+*.pyc
+.env

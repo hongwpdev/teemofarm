@@ -1,0 +1,142 @@
+{
+  "hle": {
+    "name": "한화생명",
+    "wiki": "Hanwha Life Esports",
+    "short": "HLE",
+    "aliases": [
+      "한화",
+      "HLE"
+    ],
+    "news": [
+      "한화생명e스포츠 롤 오피셜 OR 재계약 OR 영입 OR 계약",
+      "한화생명e스포츠 스토브리그"
+    ]
+  },
+  "t1": {
+    "name": "T1",
+    "wiki": "T1",
+    "short": "T1",
+    "aliases": [
+      "T1",
+      "티원"
+    ],
+    "news": [
+      "T1 롤 오피셜 OR 재계약 OR 영입 OR 계약",
+      "T1 스토브리그"
+    ]
+  },
+  "geng": {
+    "name": "젠지",
+    "wiki": "Gen.G",
+    "short": "GEN",
+    "aliases": [
+      "젠지",
+      "Gen.G"
+    ],
+    "news": [
+      "젠지 롤 오피셜 OR 재계약 OR 영입 OR 계약",
+      "젠지 스토브리그"
+    ]
+  },
+  "dk": {
+    "name": "디플러스 기아",
+    "wiki": "Dplus KIA",
+    "short": "DK",
+    "aliases": [
+      "디플러스",
+      "DK"
+    ],
+    "news": [
+      "디플러스 기아 롤 오피셜 OR 재계약 OR 영입 OR 계약",
+      "디플러스 기아 스토브리그"
+    ]
+  },
+  "kt": {
+    "name": "kt 롤스터",
+    "wiki": "KT Rolster",
+    "short": "KT",
+    "aliases": [
+      "kt",
+      "KT"
+    ],
+    "news": [
+      "kt 롤스터 롤 오피셜 OR 재계약 OR 영입 OR 계약",
+      "kt 롤스터 스토브리그"
+    ]
+  },
+  "ns": {
+    "name": "농심",
+    "wiki": "Nongshim RedForce",
+    "short": "NS",
+    "aliases": [
+      "농심",
+      "NS"
+    ],
+    "news": [
+      "농심 레드포스 롤 오피셜 OR 재계약 OR 영입 OR 계약",
+      "농심 레드포스 스토브리그"
+    ]
+  },
+  "bfx": {
+    "name": "BNK 피어엑스",
+    "wiki": "BNK FEARX",
+    "short": "BFX",
+    "aliases": [
+      "피어엑스",
+      "FEARX",
+      "BNK"
+    ],
+    "news": [
+      "BNK 피어엑스 롤 오피셜 OR 재계약 OR 영입 OR 계약",
+      "BNK 피어엑스 스토브리그"
+    ]
+  },
+  "drx": {
+    "name": "키움 DRX",
+    "wiki": "Kiwoom DRX",
+    "short": "DRX",
+    "aliases": [
+      "DRX"
+    ],
+    "news": [
+      "키움 DRX 롤 오피셜 OR 재계약 OR 영입 OR 계약",
+      "키움 DRX 스토브리그"
+    ]
+  },
+  "dns": {
+    "name": "DN 수퍼스",
+    "wiki": "DN SOOPers",
+    "short": "DNS",
+    "aliases": [
+      "수퍼스",
+      "DN"
+    ],
+    "news": [
+      "DN 수퍼스 롤 오피셜 OR 재계약 OR 영입 OR 계약",
+      "DN 수퍼스 스토브리그"
+    ]
+  },
+  "bro": {
+    "name": "한진 브리온",
+    "wiki": "HANJIN BRION",
+    "short": "BRO",
+    "aliases": [
+      "브리온",
+      "BRO"
+    ],
+    "news": [
+      "한진 브리온 롤 오피셜 OR 재계약 OR 영입 OR 계약",
+      "한진 브리온 스토브리그"
+    ]
+  },
+  "lck": {
+    "name": "LCK 공통",
+    "wiki": "",
+    "short": "LCK",
+    "news": [
+      "LCK 스토브리그",
+      "LCK FA 오피셜",
+      "LCK 이적 OR 리턴 OR 유력 OR 결별 OR 합류"
+    ]
+  }
+}

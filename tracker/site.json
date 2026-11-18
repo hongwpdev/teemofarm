@@ -1,0 +1,16 @@
+{
+ "_note": "후원·제휴 설정. 주소(url)를 넣어야 화면에 나와요(비어 있으면 숨김). 고친 뒤 저장하면 서버가 알아서 다시 켜져요.",
+ "domain": "teemofarm.com",
+ "support": {
+  "url": "https://buymeacoffee.com/hongteemo",
+  "label": "🍄 티모에게 버섯 비료(서버비) 주기"
+ },
+ "affiliate": {
+  "url": "https://link.coupang.com/a/iLX8LuiXZc",
+  "badge": "🎮 LCK 프로 게이밍 기어",
+  "title": "프로게이머들이 선택하는 마우스·키보드",
+  "desc": "초경량 무선 마우스부터 래피드 트리거 키보드까지 인기 게이밍 장비 모음",
+  "button": "쿠팡 최저가·후기 확인하기 ↗",
+  "disclaimer": "이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다."
+ }
+}
