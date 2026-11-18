@@ -1,44 +1,72 @@
-"""일정·결과 수집: 리그피디아 Cargo(Tournaments·MatchSchedule·Standings)에서 LCK 경기 일정·결과·순위를 받아 둠.
+"""일정·결과 수집: 리그피디아 Cargo(Tournaments·MatchSchedule·Standings·Teams)에서 리그별 경기 일정·결과·순위를 받아 둠.
 
+- 대상 리그: config.LEAGUES 중 "wiki"(리그피디아 이름, 예: "LPL")가 있는 리그. 로스터·소식이 아직 없는 리그도 일정은 보여 줌
 - 지금 시즌(11월부터는 다음 해) 대회가 리그피디아에 올라와 있으면 그 시즌, 아직 없으면 바로 앞 시즌을 보여 줌
   (스토브리그 동안에는 지난 시즌 마지막 결과가 보이고, 새 시즌 일정이 올라오면 저절로 바뀜)
-- 경기가 있는 날(앞뒤 몇 시간)에는 5분마다, 그 밖에는 30분마다 새로 받음
-- 받은 내용은 data/schedule_lck.json 에도 저장해서, 서버를 다시 켜도 곧바로 화면이 나옴"""
+- 리그마다 경기 앞뒤 몇 시간에는 5분마다, 그 밖에는 30분마다 새로 받음
+- 받은 내용은 data/schedule_<리그>.json 에도 저장해서, 서버를 다시 켜도 곧바로 화면이 나옴"""
 import json
 import os
+import re
 import threading
 import time
 from datetime import datetime, timedelta, timezone
 
 from .archive import current_season, team_key
 from .cargo import _cq, cargo
-from .config import DB_PATH, KST, log
+from .config import DB_PATH, KST, LEAGUES, log
 
-_PATH = os.path.join(os.path.dirname(DB_PATH) or ".", "schedule_lck.json")
+_DIR = os.path.dirname(DB_PATH) or "."
 _LOCK = threading.Lock()
 _RUN = threading.Lock()                  # 수집이 겹치지 않게
-DATA = {}                                # 마지막으로 받은 내용(아래 refresh 참고)
+DATA = {}                                # 리그 -> 마지막으로 받은 내용(아래 refresh 참고)
 LIVE_HOURS = 5                           # 시작하고 이 시간 안에 결과가 없으면 '진행 중'으로 봄
-FAST_SEC, SLOW_SEC = 300, 1800
+FAST_SEC, SLOW_SEC, RETRY_SEC = 300, 1800, 600
+_NOT_LEAGUE = re.compile(r"Promotion|Qualifier|Regional Finals|Play-In|Showmatch|Tiebreak", re.I)   # 순위표로 안 쓰는 단계
+
+
+def leagues():
+    """일정을 받는 리그(설정 순서)."""
+    return [k for k, v in LEAGUES.items() if v.get("wiki")]
+
+
+def _path(league: str) -> str:
+    return os.path.join(_DIR, f"schedule_{league}.json")
 
 
 def _load():
     global DATA
-    try:
-        with open(_PATH, encoding="utf-8") as f:
-            DATA = json.load(f)
-    except (OSError, ValueError):
-        DATA = {}
-
-
-def get() -> dict:
+    out = {}
+    for lg in leagues():
+        try:
+            with open(_path(lg), encoding="utf-8") as f:
+                out[lg] = json.load(f)
+        except (OSError, ValueError):
+            pass
     with _LOCK:
-        return DATA
+        DATA = out
 
 
-def _tours(year: int):
+def get(league: str = "lck") -> dict:
+    with _LOCK:
+        return DATA.get(league) or {}
+
+
+def slug(name: str) -> str:
+    """팀 이름 → 화면용 키(영문 소문자·숫자·-). 예: 'Bilibili Gaming' → 'bilibili-gaming'."""
+    return re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")
+
+
+def team_id(league: str, name: str) -> str:
+    """LCK는 기존 팀 키(로고·색·내 팀과 같음), 다른 리그는 이름에서 만든 키."""
+    if not name or name == "TBD":
+        return ""
+    return (team_key(name) if league == "lck" else "") or slug(name)
+
+
+def _tours(prefix: str, year: int):
     return cargo(None, tables="Tournaments", fields="OverviewPage,Name,DateStart,Date,IsPlayoffs",
-                 where=f'OverviewPage LIKE "LCK/{year} Season/%" AND TournamentLevel="Primary"', order_by="DateStart")
+                 where=f'OverviewPage LIKE "{prefix}/{year} Season/%" AND TournamentLevel="Primary"', order_by="DateStart")
 
 
 def _dt(s: str):
@@ -48,12 +76,12 @@ def _dt(s: str):
         return None
 
 
-def _match(r: dict, tour: dict) -> dict:
+def _match(league: str, r: dict, tour: dict) -> dict:
     t1, t2 = r.get("Team1") or "TBD", r.get("Team2") or "TBD"
     return {"id": r.get("MatchId") or "", "page": tour["OverviewPage"], "tour": tour["Name"],
             "playoff": tour.get("IsPlayoffs") == "1", "tab": r.get("Tab") or "",
             "at": r.get("DT") or "", "bo": r.get("BestOf") or "",
-            "t1": t1, "k1": team_key(t1), "t2": t2, "k2": team_key(t2),
+            "t1": t1, "k1": team_id(league, t1), "t2": t2, "k2": team_id(league, t2),
             "s1": r.get("Team1Score") or "", "s2": r.get("Team2Score") or "",
             "win": r.get("Winner") or "", "ff": r.get("FF") or ""}
 
@@ -82,29 +110,51 @@ def _groups(table, matches, page):
     return [{"name": n, "table": g} for n, g in zip(names, groups)]
 
 
-def refresh(gap=None) -> bool:
-    """대회 목록 → 그 시즌 모든 경기 → 지금(또는 마지막) 정규 대회 순위. 실패하면 이전 내용을 그대로 둠."""
+def _short_names(names, gap):
+    """리그피디아 Teams 표에서 팀 약칭(BLG, G2 …). 못 받으면 빈 dict(화면은 긴 이름으로)."""
+    out = {}
+    names = sorted(n for n in names if n and n != "TBD")
+    for i in range(0, len(names), 40):
+        try:
+            rows = cargo(gap, tables="Teams", fields="Name,Short",
+                         where=f'Name IN ({",".join(_cq(n) for n in names[i:i + 40])})')
+        except Exception as e:  # noqa: BLE001
+            log.warning("schedule team names failed: %s", e)
+            return out
+        out.update({r["Name"]: r["Short"] for r in rows if r.get("Short")})
+    return out
+
+
+def refresh(league: str = "lck", gap=None) -> bool:
+    """대회 목록 → 그 시즌 모든 경기 → 지금(또는 마지막) 정규 대회 순위 → 팀 약칭. 실패하면 이전 내용을 그대로 둠."""
     global DATA
+    prefix = LEAGUES[league]["wiki"]
     with _RUN:
         try:
             cs = current_season()
-            season, tours = cs, _tours(cs)
-            if not tours:                              # 새 시즌 일정이 아직 없으면 지난 시즌
-                season, tours = cs - 1, _tours(cs - 1)
+            tours = _tours(prefix, cs - 1) + _tours(prefix, cs)   # 지난 시즌 + 지금 시즌(새 시즌 초반에도 지난 결과가 보이게)
             by_page = {t["OverviewPage"]: t for t in tours}
             matches = []
-            if by_page:
-                rows = cargo(gap, tables="MatchSchedule",
-                             fields="Team1,Team2,Winner,Team1Score,Team2Score,DateTime_UTC=DT,BestOf,Tab,MatchId,OverviewPage,FF,IsNullified",
-                             where=f'OverviewPage IN ({",".join(_cq(p) for p in by_page)})', order_by="DateTime_UTC")
-                matches = [_match(r, by_page[r["OverviewPage"]]) for r in rows
-                           if r.get("OverviewPage") in by_page and r.get("IsNullified") != "1" and r.get("DT")]
-            # 순위표: 이미 시작한 정규(플레이오프 아닌) 대회 중 가장 최근 것
+            pages = list(by_page)
+            for i in range(0, len(pages), 10):
+                for off in range(0, 5000, 500):                    # 500개씩 끝까지
+                    rows = cargo(gap, tables="MatchSchedule",
+                                 fields="Team1,Team2,Winner,Team1Score,Team2Score,DateTime_UTC=DT,BestOf,Tab,MatchId,OverviewPage,FF,IsNullified",
+                                 where=f'OverviewPage IN ({",".join(_cq(p) for p in pages[i:i + 10])})',
+                                 order_by="DateTime_UTC", offset=off)
+                    matches += [_match(league, r, by_page[r["OverviewPage"]]) for r in rows
+                                if r.get("OverviewPage") in by_page and r.get("IsNullified") != "1" and r.get("DT")]
+                    if len(rows) < 500:
+                        break
+            matches.sort(key=lambda m: m["at"])
+            cur = f"{prefix}/{cs} Season/"
+            season = cs if any(m["page"].startswith(cur) for m in matches) else cs - 1
+            # 순위표: 이미 시작한 정규 대회(플레이오프·승강전·선발전 제외) 중 순위표가 있는 가장 최근 것
             today = datetime.now(KST).date().isoformat()
-            regular = [t for t in tours if t.get("IsPlayoffs") != "1" and (t.get("DateStart") or "9") <= today]
+            regular = [t for t in tours if t.get("IsPlayoffs") != "1" and (t.get("DateStart") or "9") <= today
+                       and not _NOT_LEAGUE.search(t["OverviewPage"])]
             stand = {}
-            if regular:
-                t = regular[-1]
+            for t in reversed(regular[-3:]):
                 rows = cargo(gap, tables="Standings", fields="Team,Place,WinSeries,LossSeries,WinGames,LossGames",
                              where=f'OverviewPage={_cq(t["OverviewPage"])}', order_by="Place")
                 seen, table = set(), []
@@ -112,34 +162,42 @@ def refresh(gap=None) -> bool:
                     if r["Team"] in seen:
                         continue
                     seen.add(r["Team"])
-                    table.append({"team": r["Team"], "key": team_key(r["Team"]), "place": r.get("Place") or "",
+                    table.append({"team": r["Team"], "key": team_id(league, r["Team"]), "place": r.get("Place") or "",
                                   "w": r.get("WinSeries") or "0", "l": r.get("LossSeries") or "0",
                                   "gw": r.get("WinGames") or "0", "gl": r.get("LossGames") or "0"})
-                stand = {"name": t["Name"], "page": t["OverviewPage"], "groups": _groups(table, matches, t["OverviewPage"])}
-            d = {"season": season, "current": season == cs, "at": datetime.now(timezone.utc).isoformat(),
+                if table:
+                    stand = {"name": t["Name"], "page": t["OverviewPage"], "groups": _groups(table, matches, t["OverviewPage"])}
+                    break
+            # 팀 목록(키 → 이름·약칭). LCK는 기존 팀 정보를 쓰므로 약칭을 따로 받지 않음
+            names = {m[s] for m in matches for s in ("t1", "t2")}
+            names |= {r["team"] for g in stand.get("groups") or [] for r in g["table"]}
+            short = {} if league == "lck" else _short_names(names, gap)
+            teams = {team_id(league, n): {"name": n, "short": short.get(n) or n} for n in names if team_id(league, n)}
+            d = {"league": league, "season": season, "current": season == cs, "at": datetime.now(timezone.utc).isoformat(),
                  "tours": [{"page": t["OverviewPage"], "name": t["Name"], "start": t.get("DateStart") or "",
                             "end": t.get("Date") or "", "playoff": t.get("IsPlayoffs") == "1"} for t in tours],
-                 "matches": matches, "standings": stand}
+                 "matches": matches, "standings": stand, "teams": teams}
         except Exception as e:  # noqa: BLE001
-            log.warning("schedule refresh failed: %s", e)
+            log.warning("schedule %s refresh failed: %s", league, e)
             with _LOCK:
-                DATA = {**DATA, "error": str(e)[:200]}
+                DATA = {**DATA, league: {**DATA.get(league, {}), "error": str(e)[:200]}}
             return False
         with _LOCK:
-            DATA = d                                   # 통째로 바꿔 끼움(읽는 쪽은 잠금 없이 써도 안전)
+            DATA = {**DATA, league: d}                 # 통째로 바꿔 끼움(읽는 쪽은 잠금 없이 써도 안전)
         try:
-            with open(_PATH, "w", encoding="utf-8") as f:
+            with open(_path(league), "w", encoding="utf-8") as f:
                 json.dump(d, f, ensure_ascii=False)
         except OSError as e:
-            log.warning("schedule save failed: %s", e)
-        log.info("schedule %s: %d matches, standings %d", season, len(matches), sum(len(g["table"]) for g in stand.get("groups") or []))
+            log.warning("schedule %s save failed: %s", league, e)
+        log.info("schedule %s %s: %d matches, standings %d", league, season, len(matches),
+                 sum(len(g["table"]) for g in stand.get("groups") or []))
         return True
 
 
-def _busy_now() -> bool:
+def busy(league: str) -> bool:
     """경기 시작 3시간 전 ~ 시작 후 LIVE_HOURS 시간 사이면 자주 새로 받음."""
     now = datetime.now(timezone.utc)
-    for m in get().get("matches") or []:
+    for m in get(league).get("matches") or []:
         at = _dt(m["at"])
         if at and at - timedelta(hours=3) <= now <= at + timedelta(hours=LIVE_HOURS):
             return True
@@ -147,12 +205,16 @@ def _busy_now() -> bool:
 
 
 def start():
-    """켜자마자 저장해 둔 내용을 읽고, 1분 뒤부터 주기적으로 새로 받음."""
+    """켜자마자 저장해 둔 내용을 읽고, 1분 뒤부터 리그마다 정해진 간격으로 새로 받음(LCK 먼저)."""
     _load()
 
     def loop():
         time.sleep(60)
+        due = {lg: 0.0 for lg in leagues()}
         while True:
-            ok = refresh()
-            time.sleep(FAST_SEC if (ok and _busy_now()) else SLOW_SEC if ok else 600)
+            for lg in leagues():
+                if time.time() >= due[lg]:
+                    ok = refresh(lg)
+                    due[lg] = time.time() + (FAST_SEC if (ok and busy(lg)) else SLOW_SEC if ok else RETRY_SEC)
+            time.sleep(30)
     threading.Thread(target=loop, daemon=True).start()

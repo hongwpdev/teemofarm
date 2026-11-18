@@ -73,15 +73,16 @@ if TEAMS_FILE and os.path.exists(TEAMS_FILE):
     with open(TEAMS_FILE, encoding="utf-8") as f:
         TEAMS = json.load(f)
 
-# 리그 목록. 지금은 LCK만 켜져 있고, 나머지는 화면에 '곧 추가'로 보임
+# 리그 목록. 소식·로스터·이적은 LCK만 켜져 있음(enabled). 나머지 리그는 '일정·결과'만 보이고 다른 메뉴는 '곧 추가'
+# wiki: 리그피디아 대회 이름 앞부분("LPL/2026 Season/Split 1"의 "LPL") — 있으면 일정·결과를 받음
 # 리그를 켤 때: teams 를 채우고 enabled=True (수집·화면은 리그별로 돌도록 만들어 둠)
 LEAGUES = {
-    "lck": {"name": "LCK", "sub": "한국", "enabled": True, "teams": TEAMS, "common": "lck"},
-    "lpl": {"name": "LPL", "sub": "중국", "enabled": False, "teams": {}},
-    "lec": {"name": "LEC", "sub": "유럽", "enabled": False, "teams": {}},
-    "lcs": {"name": "LCS", "sub": "북미", "enabled": False, "teams": {}},
-    "lcp": {"name": "LCP", "sub": "아태", "enabled": False, "teams": {}},
-    "cblol": {"name": "CBLOL", "sub": "브라질", "enabled": False, "teams": {}},
+    "lck": {"name": "LCK", "sub": "한국", "enabled": True, "teams": TEAMS, "common": "lck", "wiki": "LCK"},
+    "lpl": {"name": "LPL", "sub": "중국", "enabled": False, "teams": {}, "wiki": "LPL"},
+    "lec": {"name": "LEC", "sub": "유럽", "enabled": False, "teams": {}, "wiki": "LEC"},
+    "lcs": {"name": "LCS", "sub": "북미", "enabled": False, "teams": {}, "wiki": "LCS"},
+    "lcp": {"name": "LCP", "sub": "아태", "enabled": False, "teams": {}, "wiki": "LCP"},
+    "cblol": {"name": "CBLOL", "sub": "브라질", "enabled": False, "teams": {}, "wiki": "CBLOL"},
 }
 DEFAULT_LEAGUE = "lck"
 

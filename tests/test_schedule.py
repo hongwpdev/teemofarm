@@ -28,9 +28,19 @@ class ScheduleTest(unittest.TestCase):
         self.assertEqual(views.tab_ko("Something"), "Something")
 
     def test_tour_ko(self):
-        self.assertEqual(views.tour_ko("LCK 2026 Season Playoffs"), "플레이오프")
-        self.assertEqual(views.tour_ko("LCK 2026 Rounds 3-4"), "정규 3·4라운드")
-        self.assertEqual(views.tour_ko("LCK Cup 2027"), "LCK 컵")
+        self.assertEqual(views.tour_ko("LCK/2026 Season/Season Playoffs"), "플레이오프")
+        self.assertEqual(views.tour_ko("LCK/2026 Season/Rounds 3-4"), "정규 3·4라운드")
+        self.assertEqual(views.tour_ko("LCK/2026 Season/Cup"), "LCK 컵")
+        self.assertEqual(views.tour_ko("CBLOL/2026 Season/Cup", "CBLOL"), "CBLOL 컵")
+        self.assertEqual(views.tour_ko("LPL/2026 Season/Split 1 Playoffs", "LPL"), "스플릿 1 플레이오프")
+        self.assertEqual(views.tour_ko("LEC/2026 Season/Spring Season", "LEC"), "스프링")
+        self.assertEqual(views.tour_ko("LPL/2026 Season/Grand Finals", "LPL"), "그랜드 파이널")
+        self.assertEqual(views.tour_ko("LCS/2026 Season/Lock-In", "LCS"), "락인")
+
+    def test_team_id(self):
+        self.assertEqual(schedule.team_id("lck", "Gen.G"), "geng")
+        self.assertEqual(schedule.team_id("lpl", "Bilibili Gaming"), "bilibili-gaming")
+        self.assertEqual(schedule.team_id("lpl", "TBD"), "")
 
     def test_state(self):
         now = datetime.now(timezone.utc)
@@ -54,10 +64,15 @@ class ScheduleTest(unittest.TestCase):
     def test_render_empty_and_full(self):
         schedule.DATA = {}
         self.assertIn("일정·결과", views.render_schedule("lck"))
+        self.assertIn("일정·결과", views.render_schedule("lpl"))
         now = datetime.now(timezone.utc)
-        schedule.DATA = {"season": 2027, "current": True, "at": now.isoformat(), "standings": {},
-                         "matches": [_m("A", "B", _f(now + timedelta(days=1))), _m("C", "D", _f(now - timedelta(days=1)), "1", "2", "0")]}
-        page = views.render_schedule("lck")
+        ms = [_m("A", "B", _f(now + timedelta(days=1))), _m("C", "D", _f(now - timedelta(days=1)), "1", "2", "0")]
+        ms[1]["k1"], ms[1]["k2"] = "c-team", "d-team"
+        schedule.DATA = {"lpl": {"season": 2027, "current": True, "at": now.isoformat(), "standings": {}, "matches": ms,
+                                 "teams": {"c-team": {"name": "C Team", "short": "CT"}, "d-team": {"name": "D Team", "short": "DT"}}}}
+        page = views.render_schedule("lpl")
+        self.assertIn("<b>CT</b>", page)
+        self.assertIn('data-t="c-team"', page)
         self.assertIn("다가오는 경기", page)
         self.assertIn("최근 결과", page)
         self.assertIn('class="mt up"', page)

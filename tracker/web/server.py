@@ -118,7 +118,8 @@ class Handler(BaseHTTPRequestHandler):
             body = json.dumps(chat.fetch(after, one("cid")), ensure_ascii=False).encode()
             return self._send(200, body, "application/json; charset=utf-8", cache="no-store")
         if u.path == "/api/schedule":                     # 일정·결과·순위(리그피디아에서 받아 둔 그대로)
-            return self._send(200, json.dumps(schedule.get(), ensure_ascii=False).encode(),
+            lg = one("league", DEFAULT_LEAGUE)
+            return self._send(200, json.dumps(schedule.get(lg if lg in LEAGUES else DEFAULT_LEAGUE), ensure_ascii=False).encode(),
                               "application/json; charset=utf-8", cache="no-cache")
         if u.path == "/healthz":
             return self._send(200, b"ok", "text/plain")
@@ -131,8 +132,8 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError:
                 season = 0
             season = season if season in archive.archive_years() else None
-            if not LEAGUES[league]["enabled"]:
-                page = views.render_soon(league)
+            if not LEAGUES[league]["enabled"]:          # 아직 켜지지 않은 리그: 일정·결과만, 나머지는 '곧 추가'
+                page = views.render_schedule(league) if sec == "schedule" and LEAGUES[league].get("wiki") else views.render_soon(league)
             elif season and sec in ("", "roster", "fa", "schedule"):
                 page = views.render_archive(league, sec, season)
             elif sec == "":
