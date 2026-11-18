@@ -937,6 +937,16 @@ def tour_ko(page: str, lg_name: str = "LCK") -> str:
     return t.strip()
 
 
+def match_teams(league: str, names) -> dict:
+    """경기 상세 팝업용: 팀 이름 → {short, logo(주소, 없으면 '')}."""
+    T = SchTeams(schedule.get(league))
+    out = {}
+    for n in names:
+        k = schedule.team_id(league, n)
+        out[n] = {"short": T.short(k, n), "logo": logo_src(k) if k in TEAMS else ""}
+    return out
+
+
 def _page_year(page: str) -> str:
     """'LCK/2026 Season/Cup' → '2026'."""
     m = re.search(r"/(\d{4}) Season/", page or "")
@@ -1015,7 +1025,8 @@ def match_row(m, now, T, lg_name) -> str:
     meta = " · ".join(x for x in (tour_ko(m["page"], lg_name), tab_ko(m["tab"]), f'Bo{m["bo"]}' if m["bo"] else "",
                                    "몰수승" if m.get("ff") else "") if x)
     teams = " ".join(k for k in (m["k1"], m["k2"]) if k)
-    return (f'<li class="mt {st}" data-teams="{teams}"><time datetime="{at.isoformat()}">{at:%H:%M}</time>'
+    det = f' data-id="{esc(m["id"])}" tabindex="0" role="button" aria-label="경기 상세 보기"' if st == "done" and m.get("id") else ""
+    return (f'<li class="mt {st}" data-teams="{teams}"{det}><time datetime="{at.isoformat()}">{at:%H:%M}</time>'
             f'{side(m["k1"], m["t1"], "a" + w1)}{mid}{side(m["k2"], m["t2"], "b" + w2)}<small class="mm">{esc(meta)}</small></li>')
 
 
@@ -1110,7 +1121,7 @@ def render_schedule(league: str) -> str:
         more = (f'<details class="smore"><summary>지난 결과 <b class="n">{len(older)}</b>경기 더 보기</summary>{match_days(older, now, T, lg_name, True)}</details>'
                 if older else "")
         blocks += (f'<section class="card sblock"><h3>✅ {"최근 결과" if d.get("current") else f"{season} 시즌 마지막 결과"}'
-                   f'<small>점수를 누르면 보여요(스포 방지 켰을 때)</small></h3>{match_days(recent, now, T, lg_name, True)}{more}</section>')
+                   f'<small>경기를 누르면 밴픽·선수 기록이 보여요</small></h3>{match_days(recent, now, T, lg_name, True)}{more}</section>')
     if not blocks:
         blocks = '<div class="card soon"><h2>경기 일정이 아직 없어요</h2><p>리그피디아에 일정이 올라오면 여기에 보여 줄게요.</p></div>'
     empty = '<p class="note sch-empty" id="schEmpty" hidden>이 팀 경기가 없어요.</p>'
@@ -1139,7 +1150,8 @@ def render_schedule(league: str) -> str:
 <section class="card sch-tabs"><div class="tabs-wrap"><nav class="tabs" id="tabs" aria-label="팀">{nav}</nav></div></section>
 {blocks}{empty}
 </div><aside>{stand}</aside></div>
-<p class="note">일정·결과·순위 출처 리그피디아{upd} · 경기 날엔 5분마다, 평소엔 30분마다 새로 받아요 · 시간은 한국 시간</p>"""
+{POPUP}
+<p class="note">일정·결과·순위·경기 기록 출처 리그피디아 · 챔피언 이미지 Riot Games Data Dragon{upd} · 경기 날엔 5분마다, 평소엔 30분마다 새로 받아요 · 시간은 한국 시간</p>"""
     return shell(league, "schedule", f"{lg_name} 일정·결과", main, ("schedule.js",), today)
 
 

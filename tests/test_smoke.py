@@ -11,7 +11,7 @@ from http.server import ThreadingHTTPServer
 
 os.environ.setdefault("DB_PATH", os.path.join(tempfile.mkdtemp(), "test.db"))
 
-from tracker import chat, maint, player_extra, share  # noqa: E402
+from tracker import chat, maint, matchinfo, player_extra, share  # noqa: E402
 from tracker.core import init_db  # noqa: E402
 from tracker.web import server  # noqa: E402
 
@@ -24,7 +24,7 @@ class SmokeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         init_db()
-        for m in (chat, player_extra, maint, share):
+        for m in (chat, player_extra, maint, share, matchinfo):
             m.init()
         server.load_static()
         cls.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
@@ -62,6 +62,10 @@ class SmokeTest(unittest.TestCase):
         for name in server.STATIC:
             with self.subTest(name):
                 self.assertEqual(self.get(f"/static/{name}")[0], 200)
+
+    def test_match_api_only_known_matches(self):
+        self.assertEqual(self.get("/api/match?league=lck&id=nope")[0], 404)
+        self.assertEqual(self.get("/api/match?league=zzz&id=x")[0], 404)
 
     def test_root_redirects_and_404(self):
         self.assertEqual(self.get("/")[0], 200)          # /lck 로 넘어감

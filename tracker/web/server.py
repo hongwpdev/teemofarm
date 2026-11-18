@@ -9,7 +9,7 @@ import threading
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from .. import archive, chat, jobs, maint, player_extra, riot, schedule, share
+from .. import archive, champs, chat, jobs, maint, matchinfo, player_extra, riot, schedule, share
 from ..cargo import RATE_MSG, is_rate_limit
 from ..config import DEFAULT_LEAGUE, FA_INTERVAL, LEAGUES, NEWS_INTERVAL, PORT, WIKI_INTERVAL, log
 from ..core import db, init_db
@@ -121,6 +121,22 @@ class Handler(BaseHTTPRequestHandler):
             lg = one("league", DEFAULT_LEAGUE)
             return self._send(200, json.dumps(schedule.get(lg if lg in LEAGUES else DEFAULT_LEAGUE), ensure_ascii=False).encode(),
                               "application/json; charset=utf-8", cache="no-cache")
+        if u.path == "/api/match":                        # 경기 상세(세트별 밴픽·선수·챔피언·KDA). 일정에 있는 경기만
+            lg, mid = one("league", DEFAULT_LEAGUE), one("id")
+            m = next((x for x in (schedule.get(lg).get("matches") or []) if x["id"] == mid), None) if lg in LEAGUES and mid else None
+            if not m:
+                return self._send(404, json.dumps({"msg": "경기를 찾을 수 없어요"}, ensure_ascii=False).encode(), "application/json; charset=utf-8")
+            try:
+                d = matchinfo.get(mid)
+                names = {g[s]["team"] for g in d["games"] for s in ("blue", "red")} | {m["t1"], m["t2"]}
+                d["teams"] = views.match_teams(lg, names)
+                d["match"] = {k: m[k] for k in ("t1", "t2", "s1", "s2", "win", "at", "bo", "tab", "page")}
+                body, code = json.dumps(d, ensure_ascii=False), 200
+            except Exception as e:  # noqa: BLE001
+                log.warning("match %s failed: %s", mid, e)
+                msg = RATE_MSG if is_rate_limit(e) else "경기 기록을 불러오지 못했어요. 잠시 뒤 다시 눌러 보세요"
+                body, code = json.dumps({"msg": msg}, ensure_ascii=False), 502
+            return self._send(code, body.encode(), "application/json; charset=utf-8", cache="no-cache")
         if u.path == "/healthz":
             return self._send(200, b"ok", "text/plain")
 
@@ -226,6 +242,8 @@ def main():
     player_extra.start()
     maint.init()
     share.init()
+    matchinfo.init()
+    champs.start()                       # 챔피언 한국어 이름·아이콘(Data Dragon, 하루 한 번)
     maint.start()
     riot.start()
     # 지난 시즌 기록이 없으면 한 번 모아 둠(있으면 파일만 읽음). 켜자마자 몰리는 수집과 겹치지 않게 2분 뒤

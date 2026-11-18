@@ -27,8 +27,79 @@
   });
   if (my && tabs.querySelector('a[data-t="' + my + '"]')) show(my);
 
-  // 스포 방지: 흐린 점수를 누르면 그 경기만 보여 줌
+  // 스포 방지: 우승 카드는 누르면 보여 줌
   document.addEventListener("click", e => {
-    const el = e.target.closest(".mt.done, .sch-champ"); if (el) el.classList.add("lit");
+    const el = e.target.closest(".sch-champ"); if (el) el.classList.add("lit");
   });
+
+  // ── 경기 상세 팝업: 끝난 경기를 누르면 세트별 밴픽·선수·챔피언·KDA ──
+  const dim = document.getElementById("dim"), pbody = document.getElementById("pbody");
+  if (!dim) return;
+  const LG = document.body.dataset.league;
+  const POS = { Top: "탑", Jungle: "정글", Mid: "미드", Bot: "원딜", Support: "서폿" };
+  const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const num = v => v == null ? "–" : v.toLocaleString("ko-KR");
+  const k1 = v => v == null ? "–" : (v / 1000).toFixed(1) + "k";
+  let pushed = false, data = null, cur = 0;
+
+  function show() { dim.classList.add("show"); dim.setAttribute("aria-hidden", "false"); document.body.style.overflow = "hidden"; dim.querySelector(".x").focus();
+    if (!pushed) { try { history.pushState({ pop: 1 }, ""); pushed = true; } catch (e) {} } }
+  function hide() { dim.classList.remove("show"); dim.setAttribute("aria-hidden", "true"); document.body.style.overflow = ""; }
+  function close() { if (pushed) { pushed = false; history.back(); } else hide(); }
+  window.addEventListener("popstate", () => { if (dim.classList.contains("show")) { pushed = false; hide(); } });
+  dim.addEventListener("click", e => { if (e.target === dim) close(); });
+  dim.querySelector(".x").addEventListener("click", close);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && dim.classList.contains("show")) close(); });
+
+  const team = n => (data.teams && data.teams[n]) || { short: n, logo: "" };
+  const logo = n => { const t = team(n); return t.logo ? '<img class="logo" src="' + esc(t.logo) + '" alt="" width="20" height="20">' : '<span class="logo txt" aria-hidden="true">' + esc((t.short || "?")[0]) + "</span>"; };
+  const champ = (c, cls) => c && c.img ? '<img class="ch ' + (cls || "") + '" src="' + esc(c.img) + '" alt="' + esc(c.ko) + '" title="' + esc(c.ko) + '" width="32" height="32" loading="lazy">'
+    : '<span class="ch none ' + (cls || "") + '" title="' + esc(c ? c.ko : "") + '">' + esc(c && c.ko && c.ko !== "None" ? c.ko[0] : "–") + "</span>";
+
+  function side(g, s) {
+    const t = g[s], win = g.win === s;
+    const rows = t.players.map(p => '<li><span class="ps">' + esc(POS[p.role] || p.role) + "</span>" + champ(p.champ) +
+      '<span class="pn2"><b>' + esc(p.name) + "</b><small>" + esc(p.champ.ko) + "</small></span>" +
+      '<span class="kda"><b>' + p.k + "/" + p.d + "/" + p.a + "</b><small>CS " + num(p.cs) + " · " + k1(p.gold) + "</small></span>" +
+      '<span class="dmg" title="챔피언에게 준 피해량">' + num(p.dmg) + "</span></li>").join("");
+    const obj = [t.kills != null ? "⚔️ " + t.kills : "", t.towers != null ? "🏰 " + t.towers : "", t.dragons != null ? "🐉 " + t.dragons : "",
+      t.barons != null ? "👾 " + t.barons : "", t.gold != null ? "💰 " + k1(t.gold) : ""].filter(Boolean).join(" ");
+    return '<section class="gside ' + s + (win ? " won" : "") + '"><header>' + logo(t.team) + "<b>" + esc(team(t.team).short) + "</b>" +
+      '<span class="sd">' + (s === "blue" ? "블루" : "레드") + "</span>" + (win ? '<span class="wb">승리</span>' : "") + "</header>" +
+      '<p class="obj">' + obj + "</p>" +
+      '<div class="bans"><span>밴</span>' + (t.bans.length ? t.bans.map(c => champ(c, "ban")).join("") : "<small>기록 없음</small>") + "</div>" +
+      (rows ? '<ul class="plist">' + rows + "</ul>" : '<p class="nodata">선수 기록이 아직 없어요</p>') + "</section>";
+  }
+
+  function draw() {
+    const m = data.match, gs = data.games || [];
+    const head = '<div class="mh"><div class="mh-t">' + logo(m.t1) + "<b>" + esc(team(m.t1).short) + '</b></div><div class="mh-s">' +
+      esc(m.s1 || "0") + "<i>:</i>" + esc(m.s2 || "0") + '</div><div class="mh-t r"><b>' + esc(team(m.t2).short) + "</b>" + logo(m.t2) + "</div></div>";
+    let body;
+    if (!gs.length) body = '<p class="nodata">리그피디아에 이 경기의 세트 기록이 아직 없어요.<br>경기가 끝나고 기록이 올라오기까지 시간이 걸릴 수 있어요.</p>';
+    else {
+      const g = gs[Math.min(cur, gs.length - 1)];
+      const tabs = gs.length > 1 ? '<nav class="gtabs" aria-label="세트">' + gs.map((x, i) => '<button type="button" data-g="' + i + '" class="' + (i === cur ? "on" : "") + '">' + x.n + "세트</button>").join("") + "</nav>" : "";
+      const meta = [g.len ? "⏱ " + g.len : "", g.patch ? "패치 " + g.patch : ""].filter(Boolean).join(" · ");
+      body = tabs + '<p class="gmeta">' + esc(meta) + (g.vod ? ' <a class="lp" href="' + esc(g.vod) + '" target="_blank" rel="noopener">다시보기</a>' : "") + "</p>" +
+        '<div class="gsides">' + side(g, "blue") + side(g, "red") + "</div>";
+    }
+    pbody.innerHTML = '<div class="mpop"><h2 id="pn" class="sr">경기 상세</h2>' + head + body +
+      '<p class="src">기록 출처 리그피디아 · 챔피언 이미지 Riot Games</p></div>';
+  }
+
+  pbody.addEventListener("click", e => { const b = e.target.closest("button[data-g]"); if (b) { cur = +b.dataset.g; draw(); } });
+
+  function open(row) {
+    row.classList.add("lit");
+    data = null; cur = 0;
+    pbody.innerHTML = '<div class="mpop"><p class="nodata">경기 기록을 불러오는 중… 🍄</p></div>';
+    show();
+    fetch("/api/match?league=" + encodeURIComponent(LG) + "&id=" + encodeURIComponent(row.dataset.id))
+      .then(r => r.json().then(j => ({ ok: r.ok, j })))
+      .then(({ ok, j }) => { if (!ok) throw new Error(j.msg || "error"); data = j; draw(); })
+      .catch(err => { pbody.innerHTML = '<div class="mpop"><p class="nodata">' + esc(err.message && err.message !== "error" ? err.message : "경기 기록을 불러오지 못했어요. 잠시 뒤 다시 눌러 보세요") + "</p></div>"; });
+  }
+  document.addEventListener("click", e => { const r = e.target.closest(".mt[data-id]"); if (r) open(r); });
+  document.addEventListener("keydown", e => { const r = e.target.closest && e.target.closest(".mt[data-id]"); if (r && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); open(r); } });
 })();
