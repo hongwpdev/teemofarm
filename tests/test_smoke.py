@@ -1,0 +1,72 @@
+"""배포 전 점검: 서버를 이 프로세스 안에서 띄워(수집·인터넷 없이) 주요 화면·API가 200으로 열리는지 확인.
+실행: python -m unittest discover -s tests"""
+import json
+import os
+import tempfile
+import threading
+import unittest
+import urllib.error
+import urllib.request
+from http.server import ThreadingHTTPServer
+
+os.environ.setdefault("DB_PATH", os.path.join(tempfile.mkdtemp(), "test.db"))
+
+from tracker import chat, maint, player_extra, share  # noqa: E402
+from tracker.core import init_db  # noqa: E402
+from tracker.web import server  # noqa: E402
+
+PAGES = ["/lck", "/lck/roster", "/lck/fa", "/lck/schedule", "/lck/builder", "/lck/game", "/lpl",
+         "/lck?team=t1", "/lck?q=faker", "/lck?hot=0&src=news"]
+APIS = ["/api/items", "/api/people", "/api/schedule", "/api/status", "/api/chat", "/healthz"]
+
+
+class SmokeTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+        for m in (chat, player_extra, maint, share):
+            m.init()
+        server.load_static()
+        cls.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
+        cls.base = f"http://127.0.0.1:{cls.httpd.server_address[1]}"
+        threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+
+    def get(self, path):
+        try:
+            with urllib.request.urlopen(self.base + path, timeout=10) as r:
+                return r.status, r.read().decode("utf-8")
+        except urllib.error.HTTPError as e:
+            return e.code, e.read().decode("utf-8", "replace")
+
+    def test_pages(self):
+        for p in PAGES:
+            with self.subTest(p):
+                code, body = self.get(p)
+                self.assertEqual(code, 200)
+                self.assertIn("</html>", body)
+                self.assertNotIn("{{ORIGIN}}", body)
+
+    def test_apis(self):
+        for p in APIS:
+            with self.subTest(p):
+                code, body = self.get(p)
+                self.assertEqual(code, 200)
+                if p != "/healthz":
+                    json.loads(body)
+
+    def test_static_files(self):
+        for name in server.STATIC:
+            with self.subTest(name):
+                self.assertEqual(self.get(f"/static/{name}")[0], 200)
+
+    def test_root_redirects_and_404(self):
+        self.assertEqual(self.get("/")[0], 200)          # /lck 로 넘어감
+        self.assertEqual(self.get("/nope/nope/nope")[0], 404)
+
+
+if __name__ == "__main__":
+    unittest.main()

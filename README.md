@@ -16,7 +16,13 @@ docker compose up -d --build      # 코드를 바꾼 뒤에는 꼭 --build
 # 브라우저: http://<서버>:8088
 ```
 로컬 테스트: `DB_PATH=./data/stove.db PORT=8088 python app.py` (파이썬 3.10+, 표준 라이브러리만 사용)
-테스트: `python -m unittest discover -s tests`
+테스트: `python -m unittest discover -s tests` (GitHub에 push하면 Actions에서도 자동으로 돌아요)
+
+**서버 자동 반영(`update.sh`, 1분마다 크론)**: GitHub `main`에 새 커밋이 오면
+1. 테스트를 먼저 돌려서(도커 `python:3.12-slim`) 실패하면 반영하지 않아요.
+2. 반영 후 2분 안에 주요 화면(`/healthz`·`/lck`·로스터·이적·일정)이 열리지 않으면 직전 코드로 되돌려요.
+3. 실패한 커밋은 `.deploy_bad`에 적어 두고 다시 시도하지 않아요. 고친 커밋을 올리면 다시 반영해요.
+커밋 메시지에 `[restart]`가 있으면 코드가 그대로여도 다시 띄워요.
 
 **자동 재시작**: `python app.py`로 직접 띄우면 app.py가 감독 역할만 하고 서버를 따로 띄워요.
 `tracker/` 아래 파일이 바뀌면 3~5초 안에 서버를 알아서 다시 띄우고, 서버가 죽어도 5초 뒤 다시 띄워요.

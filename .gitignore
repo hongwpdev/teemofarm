@@ -6,3 +6,5 @@ data/
 __pycache__/
 *.pyc
 .env
+# 반영 실패한 커밋 기록(update.sh)
+.deploy_bad
