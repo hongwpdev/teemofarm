@@ -772,3 +772,52 @@ body{padding-bottom:7rem}
 .shared-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.8rem;margin-top:1.2rem;padding:1.2rem 1.4rem;border-radius:1rem;background:var(--bg-accent);border:1px dashed var(--border-accent);font-size:1.4rem;color:var(--t1)}
 .shared-bar[hidden]{display:none}
 .shared-bar .btn{height:3.4rem;font-size:1.3rem}
+/* 일정·결과 */
+.sch-note{margin-bottom:1.2rem}
+.sch-grid{display:grid;gap:1.6rem;grid-template-columns:minmax(0,1fr)}
+.sch-grid>*{min-width:0}
+@media (min-width:1100px){.sch-grid{grid-template-columns:minmax(0,1fr) 34rem}.sch-grid aside{position:sticky;top:1rem;align-self:start}}
+.sch-tabs{margin-bottom:1.2rem}
+.sch-tabs .tabs{border-radius:1rem}
+.sblock{margin-bottom:1.6rem;overflow:hidden}
+.sblock[hidden],.sday[hidden],.smore[hidden],.mt[hidden]{display:none}
+.sblock h3{display:flex;align-items:baseline;flex-wrap:wrap;gap:.4rem 1rem;padding:1.4rem 1.6rem 1rem;font-size:1.6rem;color:var(--t1)}
+.sblock h3 small{font-size:1.15rem;font-weight:500;color:var(--t8)}
+.sday h4{display:flex;align-items:center;gap:.6rem;padding:.8rem 1.6rem;background:var(--bg-gray);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:1.3rem;font-weight:700;color:var(--t3)}
+.sday h4 em{font-style:normal;font-size:1.1rem;padding:.1rem .7rem;border-radius:1rem;background:var(--primary);color:#fff}
+.sday h4 em.tm2{background:var(--bg-accent);color:var(--primary-text)}
+.sday ul{list-style:none}
+.mt{display:grid;grid-template-columns:4.6rem minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"t a m b" ". s s s";align-items:center;gap:.2rem .8rem;padding:1rem 1.6rem;border-bottom:1px solid var(--line)}
+.mt:last-child{border-bottom:0}
+.mt time{grid-area:t;white-space:nowrap;font-size:1.3rem;font-weight:700;color:var(--t5);font-variant-numeric:tabular-nums}
+.mt .side{display:flex;align-items:center;gap:.6rem;min-width:0;font-size:1.5rem;color:var(--t3)}
+.mt .side b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt .side .logo{width:2.4rem;height:2.4rem;flex:none}
+.mt .side.a{grid-area:a;flex-direction:row-reverse}
+.mt .side.b{grid-area:b}
+.mt .side.w b{font-weight:800;color:var(--t1)}
+.mt.done .side:not(.w){opacity:.65}
+.mt .sc,.mt .vs,.mt .live{grid-area:m;min-width:6.4rem;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}
+.mt .sc{font-size:1.7rem;color:var(--t1)}
+.mt .sc i{font-style:normal;margin:0 .4rem;color:var(--t8)}
+.mt .vs{font-size:1.2rem;color:var(--t8)}
+.mt .live{font-size:1.15rem;color:#fff;background:var(--red);border-radius:1rem;padding:.2rem .8rem;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.6}}
+.mt .mm{grid-area:s;font-size:1.15rem;color:var(--t8);text-align:center}
+.mt.my{background:var(--bg-accent)}
+.mt.my time::after{content:"★";margin-left:.2rem;font-size:1rem;color:#f5a400}
+.smore summary b{font-weight:inherit}
+.smore{border-top:1px solid var(--line)}
+.smore summary{cursor:pointer;padding:1.2rem 1.6rem;font-size:1.35rem;font-weight:600;color:var(--primary-text)}
+.sch-stand h3{display:flex;align-items:baseline;gap:.6rem}
+.sch-stand h3 small{font-size:1.15rem;font-weight:500;color:var(--t8)}
+.sch-stand tr.my td{background:var(--bg-accent)}
+.sch-stand .src{margin-top:.8rem}
+@media (max-width:480px){.mt{grid-template-columns:4rem minmax(0,1fr) auto minmax(0,1fr);padding:.9rem 1.2rem;gap:.2rem .5rem}.mt .side{font-size:1.35rem;gap:.4rem}.mt .side .logo{width:2rem;height:2rem}.mt .sc,.mt .vs,.mt .live{min-width:5rem}}
+/* 스포 방지: 끝난 경기의 점수·승팀 표시와 우승 결과를 가림(누르면 보임) */
+[data-spoiler="on"] .mt.done:not(.lit) .sc{filter:blur(6px);cursor:pointer}
+[data-spoiler="on"] .mt.done:not(.lit) .side{opacity:1}
+[data-spoiler="on"] .mt.done:not(.lit) .side.w b{font-weight:600;color:var(--t3)}
+[data-spoiler="on"] .sch-champ:not(.lit) b,[data-spoiler="on"] .sch-champ:not(.lit) .sc-hide{filter:blur(6px);cursor:pointer}
+.sch-stand h4{font-size:1.3rem;color:var(--t5);margin:1rem 0 .2rem}
+.sch-stand h4:first-of-type{margin-top:0}

@@ -9,7 +9,7 @@ import threading
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from .. import archive, chat, jobs, maint, player_extra, riot, share
+from .. import archive, chat, jobs, maint, player_extra, riot, schedule, share
 from ..cargo import RATE_MSG, is_rate_limit
 from ..config import DEFAULT_LEAGUE, FA_INTERVAL, LEAGUES, NEWS_INTERVAL, PORT, WIKI_INTERVAL, log
 from ..core import db, init_db
@@ -117,6 +117,9 @@ class Handler(BaseHTTPRequestHandler):
                 after = 0
             body = json.dumps(chat.fetch(after, one("cid")), ensure_ascii=False).encode()
             return self._send(200, body, "application/json; charset=utf-8", cache="no-store")
+        if u.path == "/api/schedule":                     # 일정·결과·순위(리그피디아에서 받아 둔 그대로)
+            return self._send(200, json.dumps(schedule.get(), ensure_ascii=False).encode(),
+                              "application/json; charset=utf-8", cache="no-cache")
         if u.path == "/healthz":
             return self._send(200, b"ok", "text/plain")
 
@@ -226,6 +229,7 @@ def main():
     riot.start()
     # 지난 시즌 기록이 없으면 한 번 모아 둠(있으면 파일만 읽음). 켜자마자 몰리는 수집과 겹치지 않게 2분 뒤
     archive.start()
+    schedule.start()                     # 일정·결과: 저장해 둔 것부터 보여 주고 1분 뒤부터 새로 받음
     load_static()
     threading.Thread(target=jobs.loop, args=(jobs.poll_wiki, WIKI_INTERVAL), daemon=True).start()
     threading.Thread(target=jobs.loop, args=(jobs.poll_news, NEWS_INTERVAL), daemon=True).start()

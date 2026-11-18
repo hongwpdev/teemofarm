@@ -6,7 +6,8 @@ LPL·LEC·LCS·LCP·CBLOL은 화면에 '곧 추가'로 보입니다.
 - **소식** `/lck` — 리그피디아 팀 페이지 편집 기록(5분마다) + 구글 뉴스 RSS 검색(10분마다)
 - **로스터** `/lck/roster` — 리그피디아 계약 기준 현재 선수 5포지션 + 감독(30분마다)
 - **이적·FA** `/lck/fa` — 이번 스토브리그에 계약이 끝난 선수·코치와 이적·잔류·미정 상태(30분마다)
-- **일정·결과** `/lck/schedule` — 준비 중
+- **일정·결과** `/lck/schedule` — 리그피디아 경기 일정·결과·순위표(경기 날 5분마다, 평소 30분마다). 지금 시즌 일정이 아직 없으면(스토브리그) 지난 시즌 마지막 결과를 보여 주고,
+  새 시즌 일정이 올라오면 저절로 바뀌어요. 팀 탭으로 거르기, 내 팀 경기 강조, '스포 방지'를 켜면 점수를 가려요. JSON: `/api/schedule`
 - 예전 주소 `/`, `/fa`는 `/lck`, `/lck/fa`로 넘어가요(쿼리 그대로).
 
 ## 실행
@@ -15,6 +16,7 @@ docker compose up -d --build      # 코드를 바꾼 뒤에는 꼭 --build
 # 브라우저: http://<서버>:8088
 ```
 로컬 테스트: `DB_PATH=./data/stove.db PORT=8088 python app.py` (파이썬 3.10+, 표준 라이브러리만 사용)
+테스트: `python -m unittest discover -s tests`
 
 **자동 재시작**: `python app.py`로 직접 띄우면 app.py가 감독 역할만 하고 서버를 따로 띄워요.
 `tracker/` 아래 파일이 바뀌면 3~5초 안에 서버를 알아서 다시 띄우고, 서버가 죽어도 5초 뒤 다시 띄워요.
@@ -28,6 +30,7 @@ tracker/core.py        HTTP·DB·날짜 도우미     tracker/classify.py  기�
 tracker/cargo.py       리그피디아 Cargo 조회(간격·한도 재시도)
 tracker/wiki.py        수집: 편집 기록        tracker/news.py      수집: 뉴스(팀 검색어 + FA 본명)
 tracker/fa.py          수집: FA·로스터·선수 프로필
+tracker/schedule.py    수집: 경기 일정·결과·순위(data/schedule_lck.json 에도 저장)
 tracker/jobs.py        수집 일정·[조회]
 tracker/logos.py       팀 로고(배경 없는 PNG)
 tracker/web/views.py   화면 HTML              tracker/web/server.py 주소·API·시작
