@@ -89,24 +89,85 @@
     const STEPS = FA_ONLY ? [["fa", "FA·로스터"]] : [["wiki", "위키"], ["news", "뉴스"], ["fa", "FA·로스터"]];
     let ld = null;
     // '조회 중' 화면: 반투명 덮개 + 달리는 버섯 + 끝난 단계 표시. [가리기]를 누르면 뒤에서 계속 모음
+    // 조회 중 화면: 숲길을 따라 티모(라이엇 공식 챔피언 아이콘)가 돌아다니며 버섯(공식 아이콘)을 심음
+    // 길·부쉬는 사이트가 직접 그린 단순한 배경이고, 캐릭터·버섯은 라이엇 공식 이미지를 씀(Riot 팬 콘텐츠 정책)
+    const TEEMO_IMG = "https://ddragon.leagueoflegends.com/cdn/16.23.1/img/champion/Teemo.png";
+    let farm = null;
+    function farmLoop(canvas) {
+      const W = 240, H = 84, ctx = canvas.getContext("2d"), dpr = Math.min(window.devicePixelRatio || 1, 3);
+      canvas.width = W * dpr; canvas.height = H * dpr; ctx.scale(dpr, dpr);
+      const path = [{ x: 24, y: 58 }, { x: 74, y: 34 }, { x: 132, y: 56 }, { x: 188, y: 30 }, { x: 214, y: 54 }, { x: 158, y: 66 }, { x: 96, y: 62 }, { x: 42, y: 66 }];
+      const plantAt = [1, 2, 3, 5, 6], bushes = [[46, 22], [128, 20], [196, 64], [8, 30]];
+      const shroom = new Image(), teemo = new Image();
+      shroom.src = "/img/shroom.png"; teemo.src = TEEMO_IMG;
+      let seg = 0, t = 0, tick = 0, id = 0, mush = [];
+      const ok = im => im.complete && im.naturalWidth > 0;
+      const css = getComputedStyle(document.documentElement);
+      const pathColor = (css.getPropertyValue("--primary") || "#8b5cf6").trim();
+      function drawMap() {
+        ctx.save(); ctx.globalAlpha = .35; ctx.strokeStyle = pathColor; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+        ctx.beginPath(); path.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.closePath(); ctx.stroke(); ctx.restore();
+        bushes.forEach(([x, y]) => {           // 부쉬: 둥근 풀 덩어리 세 개
+          ctx.fillStyle = "#1f4d3a";
+          [[0, 4, 7], [8, 2, 8], [16, 5, 6]].forEach(([dx, dy, r]) => { ctx.beginPath(); ctx.arc(x + dx, y + dy, r, 0, Math.PI * 2); ctx.fill(); });
+          ctx.fillStyle = "rgba(74,222,128,.25)"; ctx.beginPath(); ctx.arc(x + 8, y, 4, 0, Math.PI * 2); ctx.fill();
+        });
+      }
+      function drawShroom(m) {
+        const grow = m.life < 12 ? .5 + m.life / 24 : 1;
+        const a = m.life > m.max - 60 ? Math.max(.22, (m.max - m.life) / 60) : 1;   // 서서히 투명해짐(은신)
+        const s = 20 * grow;
+        ctx.save(); ctx.globalAlpha = a;
+        ctx.fillStyle = "rgba(74,222,128,.18)"; ctx.beginPath(); ctx.ellipse(m.x, m.y + 2, s * .7, s * .3, 0, 0, Math.PI * 2); ctx.fill();
+        if (ok(shroom)) {                       // 공식 아이콘(네모)을 동그랗게 잘라서
+          const cx = m.x, cy = m.y - s / 2 + 3;
+          ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, s / 2, 0, Math.PI * 2); ctx.clip();
+          ctx.drawImage(shroom, cx - s / 2, cy - s / 2, s, s); ctx.restore();
+          ctx.strokeStyle = "rgba(163,230,53,.7)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, s / 2, 0, Math.PI * 2); ctx.stroke();
+        }
+        else { ctx.font = s + "px sans-serif"; ctx.textAlign = "center"; ctx.fillText("🍄", m.x, m.y + 2); }
+        ctx.restore();
+      }
+      function drawTeemo(x, y, hop) {
+        const r = 14, cy = y - r - 2 - hop;
+        ctx.fillStyle = "rgba(0,0,0,.4)"; ctx.beginPath(); ctx.ellipse(x, y + 1, 8 - hop * .6, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.save(); ctx.beginPath(); ctx.arc(x, cy, r, 0, Math.PI * 2); ctx.closePath();
+        if (ok(teemo)) { ctx.clip(); ctx.drawImage(teemo, x - r, cy - r, r * 2, r * 2); }
+        else { ctx.fillStyle = pathColor; ctx.fill(); }
+        ctx.restore();
+        ctx.strokeStyle = "#a3e635"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, cy, r, 0, Math.PI * 2); ctx.stroke();
+      }
+      function frame() {
+        tick++; ctx.clearRect(0, 0, W, H); drawMap();
+        const p1 = path[seg], p2 = path[(seg + 1) % path.length], dx = p2.x - p1.x, dy = p2.y - p1.y;
+        t += 1.15 / Math.hypot(dx, dy);
+        if (t >= 1) {
+          t = 0; seg = (seg + 1) % path.length;
+          if (plantAt.includes(seg)) { mush = mush.filter(m => Math.hypot(m.x - p2.x, m.y - p2.y) > 8); mush.push({ x: p2.x, y: p2.y, life: 0, max: 260 }); }
+        }
+        mush.forEach(m => { m.life++; drawShroom(m); }); mush = mush.filter(m => m.life < m.max);
+        const planting = t < .12 && plantAt.includes(seg);
+        drawTeemo(p1.x + dx * t, p1.y + dy * t, planting ? 0 : Math.abs(Math.sin(tick / 5)) * 3);
+        id = requestAnimationFrame(frame);
+      }
+      const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (still) { drawMap(); plantAt.forEach(i => drawShroom({ x: path[i].x, y: path[i].y, life: 99, max: 999 })); drawTeemo(path[0].x, path[0].y, 0); return { stop() {} }; }
+      id = requestAnimationFrame(frame);
+      return { stop() { cancelAnimationFrame(id); } };
+    }
     function overlay(on) {
-      if (!on) { if (ld) ld.hidden = true; return; }
+      if (!on) { if (ld) ld.hidden = true; if (farm) { farm.stop(); farm = null; } return; }
       if (!ld) {
         ld = document.createElement("div");
         ld.className = "loading"; ld.setAttribute("role", "status"); ld.setAttribute("aria-live", "polite");
-        const sprout = c => '<svg class="sprout ' + c + '" viewBox="0 0 40 40" aria-hidden="true"><rect x="15" y="20" width="10" height="20" rx="4" fill="#f4ead6"/><path d="M3 24 C3 10 12 4 20 4 C28 4 37 10 37 24Z" fill="#c9a36a"/></svg>';
-        ld.innerHTML = '<div class="ld"><div class="track">' + sprout("a") + sprout("b") + sprout("c") +
-          '<i class="dust"></i><i class="dust b"></i><div class="runner"></div></div>' +
+        ld.innerHTML = '<div class="ld"><div class="track farm"><canvas aria-hidden="true"></canvas></div>' +
           '<b class="ld-t">협곡에 버섯 심는 중…</b><p>' + (FA_ONLY ? "FA·로스터를" : "새 소식·로스터·FA를") + ' 모으고 있어요</p>' +
           '<div class="steps"></div><button class="hide" type="button">가리기 (뒤에서 계속 모아요)</button></div>';
-        const runner = ld.querySelector(".runner"), img = new Image();
-        img.className = "plant"; img.alt = ""; img.src = "/img/shroom.png";
-        img.onerror = () => { const e = document.createElement("span"); e.className = "plant emo"; e.textContent = "🍄"; img.replaceWith(e); };
-        runner.append(img);
-        ld.querySelector(".hide").addEventListener("click", () => { ld.hidden = true; });
+        ld.querySelector(".hide").addEventListener("click", () => { ld.hidden = true; if (farm) { farm.stop(); farm = null; } });
         document.body.append(ld);
       }
       steps([]); ld.hidden = false;
+      if (!farm) farm = farmLoop(ld.querySelector(".farm canvas"));
     }
     function steps(done) {
       if (!ld) return;
