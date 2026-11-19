@@ -144,6 +144,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(code, body.encode(), "application/json; charset=utf-8", cache="no-cache")
         if u.path == "/healthz":
             return self._send(200, b"ok", "text/plain")
+        if u.path in ("/about", "/privacy"):               # 사이트 소개·개인정보처리방침(애드센스 심사용)
+            page = views.render_policy(u.path[1:]).replace("{{ORIGIN}}", self._origin()).replace("{{PATH}}", u.path)
+            return self._send(200, page.encode(), "text/html; charset=utf-8", cache="public, max-age=0, s-maxage=300")
+        if u.path == "/ads.txt":                           # 애드센스 판매자 확인(site.json에 client를 넣으면 생김)
+            txt = views.ads_txt()
+            return self._send(200 if txt else 404, txt.encode(), "text/plain; charset=utf-8", cache="public, max-age=3600")
 
         # 리그 화면: /<리그>[/roster|/fa|/schedule]
         if parts and parts[0] in LEAGUES and len(parts) <= 2:
