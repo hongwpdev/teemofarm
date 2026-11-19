@@ -19,7 +19,9 @@ RENEW = EVENTS["renew"]
 LEAVE = EVENTS["leave"]                  # '3년 동행 마침표'처럼 재계약 단어가 있어도 떠나는 기사
 JOIN = EVENTS["join"] + ("이적", "합의", "손잡", "유니폼", "입성")
 NEG = ("불발", "결렬", "무산", "거절", "실패", "없던 일")   # '재계약 불발' 같은 기사는 행선지로 안 봄
-_CACHE = {"at": 0.0, "key": None, "val": {}}
+# 계약이 남은 선수는 이적 기사라는 표시가 제목에 있을 때만 봄('합류 후 100승' 같은 경기 기사 제외)
+MOVE_MARK = ("단독", "소식통", "오피셜", "공식", "유력", "임박", "합의", "예정", "근접", "협상", "이적")
+_CACHE = {}          # 이름 -> {"at", "key", "val"}
 _LOCK = threading.Lock()
 
 
@@ -38,18 +40,17 @@ def read_title(title: str, nick: str, team_from: str):
     return None
 
 
-def _guess(rows, news):
+def _guess(people, news, marks=None, allow_stay=True):
+    """people: [{"page", "nick", "team_from"}] → {page: 유력 정보}. marks를 주면 그 말이 제목에 있는 기사만 봄."""
     out = {}
-    for r in rows:
-        if r["status"] != "fa":
-            continue
+    for r in people:
         best = None
         for n in news:                          # 최신순
             kind = article_kind(n["title"])
-            if kind == "view":                  # 전망·분석 기사는 빼고
+            if kind == "view" or (marks and not any(w in n["title"] for w in marks)):     # 전망·분석 기사는 빼고
                 continue
             hit = read_title(n["title"], r["nick"], r["team_from"])
-            if not hit:
+            if not hit or (hit[1] and not allow_stay):
                 continue
             cand = {"team": hit[0], "stay": hit[1], "official": kind == "official", "title": n["title"],
                     "url": n["url"], "outlet": n["outlet"] or "", "published": n["published"]}
@@ -62,20 +63,37 @@ def _guess(rows, news):
     return out
 
 
-def rumors(rows) -> dict:
-    """FA 행 목록 → {page: {"team", "stay", "official", "title", "url", "outlet", "published"}}. 1분 캐시."""
-    key = tuple((r["page"], r["status"]) for r in rows)
-    with _LOCK:
-        if _CACHE["key"] == key and time.time() - _CACHE["at"] < CACHE_SEC:
-            return _CACHE["val"]
+def _recent_news():
     since = (datetime.now(timezone.utc) - timedelta(days=DAYS)).isoformat()
     try:
         with db() as c:
-            news = c.execute("SELECT title, MIN(url) url, MIN(outlet) outlet, MAX(published) published FROM items "
+            return c.execute("SELECT title, MIN(url) url, MIN(outlet) outlet, MAX(published) published FROM items "
                              "WHERE source='news' AND published >= ? GROUP BY title ORDER BY published DESC", (since,)).fetchall()
     except Exception:  # noqa: BLE001  표시용 참고 정보라 실패해도 화면은 그대로
-        news = []
-    val = _guess(rows, news)
+        return []
+
+
+def _cached(name, key, make):
     with _LOCK:
-        _CACHE.update(at=time.time(), key=key, val=val)
+        c = _CACHE.setdefault(name, {"at": 0.0, "key": None, "val": {}})
+        if c["key"] == key and time.time() - c["at"] < CACHE_SEC:
+            return c["val"]
+    val = make()
+    with _LOCK:
+        _CACHE[name] = {"at": time.time(), "key": key, "val": val}
     return val
+
+
+def rumors(rows) -> dict:
+    """FA 행 목록(미정인 선수만 봄) → {page: {"team", "stay", "official", "title", "url", "outlet", "published"}}. 1분 캐시."""
+    key = tuple((r["page"], r["status"]) for r in rows)
+    people = [{"page": r["page"], "nick": r["nick"], "team_from": r["team_from"]} for r in rows if r["status"] == "fa"]
+    return _cached("fa", key, lambda: _guess(people, _recent_news()))
+
+
+def movers(rows) -> dict:
+    """계약이 남은 로스터 선수(roster 행)의 이적 유력: 단독·소식통·오피셜·합의·예정 같은 말이 있는 기사에서 다른 팀 합류만 봄(잔류는 뺌).
+    예) "[소식통] '시우' 전시우, 2027 LCK 시즌 젠지 합류 예정" → Siwoo: DK → GEN 유력"""
+    key = tuple((r["page"], r["team"]) for r in rows)
+    people = [{"page": r["page"], "nick": r["nick"], "team_from": r["team"]} for r in rows if r["team"] and r["nick"]]
+    return _cached("roster", key, lambda: _guess(people, _recent_news(), marks=MOVE_MARK, allow_stay=False))
