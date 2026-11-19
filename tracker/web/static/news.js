@@ -128,12 +128,15 @@
       h += ' <button type="button" data-set="">해제</button>';
     } else if (t && t !== "all" && t !== "lck" && teamEl(t)) {
       h = '<button type="button" data-set="' + t + '">★ ' + teamEl(t).querySelector("span").textContent + "을(를) 내 팀으로 정하기</button> · 다음에 들어오면 바로 이 팀이 보여요";
-    } else {
-      h = "팀 탭을 고른 뒤 내 팀으로 정해 두면, 다음에 들어올 때 바로 그 팀이 보여요";
+    } else if (!S.store.get("myHintOff")) {          // 처음 온 사람용 안내: ×로 닫으면 다시 안 보임
+      h = "팀 탭을 고른 뒤 내 팀으로 정해 두면, 다음에 들어올 때 바로 그 팀이 보여요"
+        + ' <button type="button" class="hint-x" data-off="1" aria-label="안내 닫기">×</button>';
     }
     box.innerHTML = h;
+    box.hidden = !h;
   }
   box.addEventListener("click", e => {
+    if (e.target.closest("button[data-off]")) { S.store.set("myHintOff", "1"); draw(); return; }
     const b = e.target.closest("button[data-set]"); if (!b) return;
     S.store.set(S.MY, b.dataset.set); draw(); if (S.markMy) S.markMy();
   });

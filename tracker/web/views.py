@@ -203,7 +203,7 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
 {adsense_head()}</head><body data-league="{league}" data-sec="{active}" data-auto="{AUTO_MINUTES}" data-scope="{scope}"{extra_attr}>
 <header class="header"><div class="in">
 <h1 class="brand">{SHROOM_SVG}<a class="home" href="/{DEFAULT_LEAGUE}" title="메인 화면으로">{esc(SITE_NAME)}<small>협곡의 시야를 장악하듯, LoL 이스포츠 소식·로스터·이적을 한눈에</small></a></h1>
-<div class="stat">{head}<span class="tools"><button type="button" class="tbtn" id="spo" aria-pressed="false" title="경기 결과·루머 핵심을 흐리게 가려요">{ICON_EYE_OFF}스포 방지</button><button type="button" class="tbtn ico" id="thm" title="화면 밝기 바꾸기">{ICON_MOON}</button><a class="tbtn{" on" if active == "game" else ""}" href="/{league}/game">🍄 미니게임</a></span></div>
+<div class="stat">{head}<span class="tools"><button type="button" class="tbtn" id="spo" aria-pressed="false" title="경기 결과·루머 핵심을 흐리게 가려요" aria-label="스포 방지">{ICON_EYE_OFF}<span class="lb">스포 방지</span></button><button type="button" class="tbtn ico" id="thm" title="화면 밝기 바꾸기">{ICON_MOON}</button><a class="tbtn{" on" if active == "game" else ""}" href="/{league}/game" aria-label="미니게임">🍄<span class="lb">미니게임</span></a></span></div>
 </div>
 <div class="subnav">{lgsel}{ssel}<nav class="top_tab" aria-label="메뉴">{tabs}</nav></div>
 </header>

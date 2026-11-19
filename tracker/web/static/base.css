@@ -978,3 +978,32 @@ body{padding-bottom:7rem}
 .live-dot{display:inline-block;width:.8rem;height:.8rem;border-radius:50%;background:var(--red);margin-right:.6rem;vertical-align:.15rem}
 .champ>div{padding-left:.4rem}
 .spore{display:none}
+/* ── 4~6(2026.11): 그림자 대신 얇은 테두리, 보라색은 '선택됨'·주요 버튼에만, 휴대폰 머리말 줄이기 ── */
+.card,.rc,.bteam{box-shadow:none;border:1px solid var(--line)}
+.lgsel summary{background:var(--bg-gray);color:var(--t1);border:1px solid var(--border)}
+.tabs{border-bottom:1px solid var(--line)}
+.tabs a.on,:root:not([data-theme="dark"]) .tabs a.on{background:transparent;color:var(--primary-text);box-shadow:inset 0 -.3rem 0 var(--primary)}
+.tabs a.on .star{color:#f5a400}
+a.tbtn .lb{margin-left:.3rem}
+.tabs a.on .logo{background:none;padding:0}
+.st.today{background:none;color:var(--primary-text);font-weight:700;padding:0 .2rem}
+.chat-fab{transition:transform .25s,opacity .25s}
+.chat-fab.tuck{transform:translateY(160%);opacity:0;pointer-events:none}
+.chat-fab .ico{display:block}
+.hint-x{border:0;background:none;color:var(--t8);font-size:1.6rem;line-height:1;cursor:pointer;padding:0 .4rem}
+.myteam[hidden]{display:none}
+.bslot .plus{font-size:2rem;font-weight:300;color:var(--t8);opacity:.45}
+@media (max-width:719px){
+ .header .in{padding:1rem 1.2rem .8rem;gap:.4rem .8rem}
+ .header h1 small{display:none}
+ .header h1{font-size:1.75rem}
+ .tbtn .lb{display:none}
+ #spo .i{margin:0}
+ .stat{font-size:1.2rem;gap:.4rem}
+ .subnav{flex-wrap:wrap;gap:.6rem;padding:.6rem 1.2rem 0}
+ .subnav .top_tab{flex:1 0 100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;overflow:visible}
+ .subnav .top_tab a{text-align:center;font-size:1.45rem;padding:.9rem 0 .8rem}
+ .chat-fab{width:4.8rem;height:4.8rem;padding:0;justify-content:center;border-radius:50%;right:1.2rem;bottom:1.2rem}
+ .chat-fab .lb{display:none}
+ .chat-fab .n{position:absolute;top:-.2rem;right:-.2rem}
+}

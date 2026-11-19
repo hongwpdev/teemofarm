@@ -70,7 +70,7 @@
       + ROLES.map(r => { const p = byPage[board[t.k][r]];
         const lk = isLocked(t.k, r);
         return '<li class="bslot' + (p ? "" : " empty") + (lk ? " locked" : sel ? " target" : "") + '" data-t="' + t.k + '" data-r="' + r + '"><small>' + D.pos[r] + "</small><b>"
-          + (p ? esc(label(p)) : "비어 있음") + "</b>" + (p && !lk ? '<button type="button" class="rm" aria-label="빼기">×</button>' : "") + "</li>"; }).join("")
+          + (p ? esc(label(p)) : '<span class="plus" aria-label="비어 있음">+</span>') + "</b>" + (p && !lk ? '<button type="button" class="rm" aria-label="빼기">×</button>' : "") + "</li>"; }).join("")
       + "</ol></section>").join("");
   }
   const draw = () => { drawPool(); drawGrid(); };
