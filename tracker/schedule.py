@@ -112,35 +112,6 @@ def _groups(table, matches, page):
     return [{"name": n, "table": g} for n, g in zip(names, groups)]
 
 
-def _team_rows(names, gap):
-    """리그피디아 Teams 표에서 팀 약칭(BLG, G2 …)·로고 파일 이름. 못 받으면 빈 dict(화면은 긴 이름·글자 로고로).
-    일정의 팀 이름은 팀 문서 이름(OverviewPage)이라 그것으로 찾고, 못 찾은 이름(이름이 바뀐 팀)은 TeamRedirects로 한 번 더."""
-    def by_page(pages):
-        got = {}
-        pages = sorted(pages)
-        for i in range(0, len(pages), 40):
-            rows = cargo(gap, tables="Teams", fields="Name,OverviewPage,Short,Image",
-                         where=f'OverviewPage IN ({",".join(_cq(n) for n in pages[i:i + 40])})')
-            got.update({r["OverviewPage"]: r for r in rows})
-        return got
-    names = {n for n in names if n and n != "TBD"}
-    try:
-        out = by_page(names)
-        missing = sorted(names - set(out))
-        if missing:
-            redir = {}
-            for i in range(0, len(missing), 40):
-                rows = cargo(gap, tables="TeamRedirects", fields="AllName,_pageName=P",
-                             where=f'AllName IN ({",".join(_cq(n) for n in missing[i:i + 40])})')
-                redir.update({r["AllName"]: r["P"] for r in rows if r.get("P")})
-            found = by_page(set(redir.values()))
-            out.update({n: found[p] for n, p in redir.items() if p in found})
-    except Exception as e:  # noqa: BLE001
-        log.warning("schedule team names failed: %s", e)
-        return {}
-    return out
-
-
 def refresh(league: str = "lck", gap=None) -> bool:
     """대회 목록 → 그 시즌 모든 경기 → 지금(또는 마지막) 정규 대회 순위 → 팀 약칭. 실패하면 이전 내용을 그대로 둠."""
     global DATA
@@ -194,7 +165,7 @@ def refresh(league: str = "lck", gap=None) -> bool:
             names = {m[s] for m in matches for s in ("t1", "t2")}
             names |= {r["team"] for g in stand.get("groups") or [] for r in g["table"]}
             known = {t["name"]: t for t in (prev.get("teams") or {}).values() if t.get("image") or league == "lck"}
-            rows = {} if league == "lck" else _team_rows(names - set(known), gap)   # 처음 보는 팀만 물어봄
+            rows = {} if league == "lck" else teamlogos.team_rows(names - set(known), gap)   # 처음 보는 팀만 물어봄
             teams = {}
             for n in names:
                 k = team_id(league, n)

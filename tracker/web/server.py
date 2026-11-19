@@ -101,6 +101,14 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/player":
             try:
                 info = player_info(one("page"))
+                career = []                                # 커리어 팀 로고: LCK는 기존 로고, 그 밖은 받아 둔 해외 로고(없으면 뒤에서 받아 둠)
+                for c in info.get("career") or []:
+                    c = dict(c)
+                    if not c.get("key"):
+                        c["logo"] = teamlogos.url(teamlogos.slug(c.get("team")))
+                    career.append(c)
+                teamlogos.request(c["team"] for c in career if not c.get("key") and not c.get("logo"))
+                info = {**info, "career": career}
                 info["extra"] = player_extra.get(one("page").strip())    # 생년월일·시그니처 챔피언·SNS(있으면)
                 body, code = json.dumps(info, ensure_ascii=False), 200
             except Exception as e:  # noqa: BLE001
@@ -260,6 +268,7 @@ def main():
     riot.start()
     # 지난 시즌 기록이 없으면 한 번 모아 둠(있으면 파일만 읽음). 켜자마자 몰리는 수집과 겹치지 않게 2분 뒤
     archive.start()
+    teamlogos.start()                    # 해외 팀 로고(일정·선수 커리어). 처음 보는 팀은 뒤에서 2분마다 몇 팀씩
     schedule.start()                     # 일정·결과: 저장해 둔 것부터 보여 주고 1분 뒤부터 새로 받음
     load_static()
     threading.Thread(target=jobs.loop, args=(jobs.poll_wiki, WIKI_INTERVAL), daemon=True).start()

@@ -9,7 +9,7 @@ import threading
 import time
 import urllib.parse
 
-from .cargo import CARGO_GAP
+from .cargo import CARGO_GAP, _cq, cargo
 from .config import DB_PATH, WIKI_API, log
 from .core import http_get
 
@@ -21,6 +21,39 @@ RETRY_SEC = 6 * 3600           # 리그피디아에 로고가 정말 없을 때 
 TYPES = {b"\x89PNG": ("png", "image/png"), b"RIFF": ("webp", "image/webp"), b"GIF8": ("gif", "image/gif"),
          b"\xff\xd8\xff": ("jpg", "image/jpeg")}
 _KEY = re.compile(r"^[a-z0-9-]{1,60}$")
+_WANT, _WANT_LOCK = set(), threading.Lock()   # 로고를 받아 둘 팀 이름(선수 커리어 등에서 처음 본 팀)
+BATCH, BATCH_SEC = 40, 120
+
+
+def team_rows(names, gap=None, strict=False):
+    """리그피디아 Teams 표에서 팀 약칭(BLG, G2 …)·로고 파일 이름. 못 받으면 빈 dict(화면은 긴 이름·글자 로고로).
+    일정의 팀 이름은 팀 문서 이름(OverviewPage)이라 그것으로 찾고, 못 찾은 이름(이름이 바뀐 팀)은 TeamRedirects로 한 번 더."""
+    def by_page(pages):
+        got = {}
+        pages = sorted(pages)
+        for i in range(0, len(pages), 40):
+            rows = cargo(gap, tables="Teams", fields="Name,OverviewPage,Short,Image",
+                         where=f'OverviewPage IN ({",".join(_cq(n) for n in pages[i:i + 40])})')
+            got.update({r["OverviewPage"]: r for r in rows})
+        return got
+    names = {n for n in names if n and n != "TBD"}
+    try:
+        out = by_page(names)
+        missing = sorted(names - set(out))
+        if missing:
+            redir = {}
+            for i in range(0, len(missing), 40):
+                rows = cargo(gap, tables="TeamRedirects", fields="AllName,_pageName=P",
+                             where=f'AllName IN ({",".join(_cq(n) for n in missing[i:i + 40])})')
+                redir.update({r["AllName"]: r["P"] for r in rows if r.get("P")})
+            found = by_page(set(redir.values()))
+            out.update({n: found[p] for n, p in redir.items() if p in found})
+    except Exception as e:  # noqa: BLE001
+        if strict:
+            raise
+        log.warning("team names failed: %s", e)
+        return {}
+    return out
 
 
 def _sniff(data: bytes):
@@ -130,3 +163,55 @@ def ensure(images: dict):
             _save()
     log.info("team logos: %d new of %d", got, len(need))
     return got
+
+
+def slug(name: str) -> str:
+    """팀 이름 → 팀 키(schedule.slug와 같음). 예: 'Griffin (Korean Team)' → 'griffin-korean-team'."""
+    return re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")
+
+
+def known(key: str) -> bool:
+    """로고가 있거나, 최근에 찾아봤는데 없었던 팀."""
+    e = INDEX.get(key) or {}
+    return bool(e.get("file")) or time.time() - e.get("failed_at", 0) < RETRY_SEC
+
+
+def request(names):
+    """처음 보는 팀 로고를 뒤에서 받아 두도록 줄 세움(화면은 기다리지 않음 — 다음에 열 때 보임)."""
+    with _WANT_LOCK:
+        _WANT.update(n for n in names if n and not known(slug(n)))
+
+
+def _work():
+    """줄 선 팀을 BATCH_SEC마다 BATCH개씩: 리그피디아 Teams에서 로고 파일 이름을 찾아 받음. 못 찾은 팀은 RETRY_SEC 동안 다시 안 찾음."""
+    while True:
+        time.sleep(BATCH_SEC)
+        _batch()
+
+
+def _batch():
+    """줄 선 팀 한 묶음 처리(테스트에서 바로 부름)."""
+    with _WANT_LOCK:
+        names = sorted(_WANT)[:BATCH]
+        _WANT.difference_update(names)
+    names = [n for n in names if not known(slug(n))]
+    if not names:
+        return
+    try:
+        rows = team_rows(set(names), strict=True)
+    except Exception as e:  # noqa: BLE001
+        log.warning("team logos: lookup failed: %s", e)
+        with _WANT_LOCK:
+            _WANT.update(names)
+        return
+    ensure({slug(n): (rows.get(n) or {}).get("Image") or "" for n in names})
+    with _LOCK:                                    # 리그피디아에 로고가 없는 팀: 한동안 다시 안 찾음
+        for n in names:
+            if not (rows.get(n) or {}).get("Image") and not (INDEX.get(slug(n)) or {}).get("file"):
+                INDEX[slug(n)] = {"image": "", "failed_at": time.time()}
+        _save()
+
+
+def start():
+    load()
+    threading.Thread(target=_work, daemon=True).start()

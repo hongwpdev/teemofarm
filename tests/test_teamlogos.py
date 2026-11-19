@@ -46,6 +46,30 @@ class TeamLogosTest(unittest.TestCase):
         self.assertEqual(teamlogos._cands("G2 Esportslogo profile.png"), ["G2 Esportslogo square.png", "G2 Esportslogo profile.png"])
         self.assertEqual(teamlogos._cands("1TAP Dinologo square.png"), ["1TAP Dinologo square.png"])
 
+    def test_career_queue(self):
+        teamlogos._WANT.clear()
+        teamlogos.request(["Griffin (Korean Team)", "Nowhere Team", ""])
+        self.assertEqual(teamlogos._WANT, {"Griffin (Korean Team)", "Nowhere Team"})
+        got = {}
+        with mock.patch.object(teamlogos, "team_rows", lambda names, strict: {"Griffin (Korean Team)": {"Image": "Grifflogo.png"}}), \
+                mock.patch.object(teamlogos, "ensure", lambda imgs: got.update(imgs)):
+            teamlogos._batch()
+        self.assertEqual(got, {"griffin-korean-team": "Grifflogo.png", "nowhere-team": ""})
+        self.assertTrue(teamlogos.known("nowhere-team"))                  # 로고 없는 팀은 한동안 다시 안 찾음
+        teamlogos.request(["Nowhere Team"])
+        self.assertEqual(teamlogos._WANT, set())
+
+    def test_career_queue_retries_on_error(self):
+        teamlogos._WANT.clear()
+        teamlogos.request(["Some Team"])
+
+        def boom(names, strict):
+            raise RuntimeError("You've exceeded your rate limit")
+        with mock.patch.object(teamlogos, "team_rows", boom):
+            teamlogos._batch()
+        self.assertEqual(teamlogos._WANT, {"Some Team"})                  # 한도 오류: 다음 묶음에 다시
+        self.assertFalse(teamlogos.known("some-team"))
+
     def test_read_rejects_odd_keys(self):
         teamlogos.INDEX = {"../x": {"file": "../../etc/passwd", "type": "image/png", "v": "1"}}
         self.assertIsNone(teamlogos.read("../x"))
