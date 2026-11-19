@@ -1192,8 +1192,8 @@ class SchTeams:
         if k in TEAMS:
             return team_logo(k)
         src = teamlogos.url(k) if k else ""
-        if src:
-            return f'<img class="logo" src="{esc(src)}" alt="" width="20" height="20" loading="lazy">'
+        if src:   # 해외 로고는 리그피디아 이미지 서버로 넘어갈 수 있음: 다른 사이트 표시(Referer)가 있으면 회색 그림을 줘서 빼고 부름
+            return f'<img class="logo" src="{esc(src)}" alt="" width="20" height="20" loading="lazy" referrerpolicy="no-referrer">'
         return f'<span class="logo txt" aria-hidden="true">{esc((self.short(k, name) if k else "?")[:1])}</span>'
 
     def tname(self, k, name):

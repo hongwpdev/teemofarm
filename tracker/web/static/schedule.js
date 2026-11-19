@@ -60,7 +60,7 @@
   document.addEventListener("keydown", e => { if (e.key === "Escape" && mine && dim.classList.contains("show")) close(); });
 
   const team = n => (data.teams && data.teams[n]) || { short: n, logo: "" };
-  const logo = n => { const t = team(n); return t.logo ? '<img class="logo" src="' + esc(t.logo) + '" alt="" width="20" height="20">' : '<span class="logo txt" aria-hidden="true">' + esc((t.short || "?")[0]) + "</span>"; };
+  const logo = n => { const t = team(n); return t.logo ? '<img class="logo" src="' + esc(t.logo) + '" alt="" width="20" height="20" referrerpolicy="no-referrer">' : '<span class="logo txt" aria-hidden="true">' + esc((t.short || "?")[0]) + "</span>"; };
   const champ = (c, cls) => c && c.img ? '<img class="ch ' + (cls || "") + '" src="' + esc(c.img) + '" alt="' + esc(c.ko) + '" title="' + esc(c.ko) + '" width="32" height="32" loading="lazy">'
     : '<span class="ch none ' + (cls || "") + '" title="' + esc(c ? c.ko : "") + '">' + esc(c && c.ko && c.ko !== "None" ? c.ko[0] : "–") + "</span>";
 

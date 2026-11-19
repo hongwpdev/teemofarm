@@ -48,7 +48,7 @@
       if (d.career && d.career.length) {
         h += '<section class="pop_sec"><h3>커리어</h3><ul class="career">' + d.career.map(c =>
           '<li><span class="yr">' + esc(c.from) + " – " + esc(c.to) + '</span><span class="tn">'
-          + (c.key ? '<img class="logo" src="/logo/' + esc(c.key) + '.png" alt="">' : c.logo ? '<img class="logo" src="' + esc(c.logo) + '" alt="">' : '<i class="nologo"></i>') + esc(c.team) + "</span>"
+          + (c.key ? '<img class="logo" src="/logo/' + esc(c.key) + '.png" alt="">' : c.logo ? '<img class="logo" src="' + esc(c.logo) + '" alt="" referrerpolicy="no-referrer">' : '<i class="nologo"></i>') + esc(c.team) + "</span>"
           + (!c.to ? '<span class="now">현재</span>' : "") + "</li>").join("") + "</ul></section>";
       } else {
         h += '<section class="pop_sec"><h3>커리어</h3><p class="wait">리그피디아에 아직 커리어 기록이 없어요</p></section>';
