@@ -7,10 +7,9 @@ import os
 import re
 import threading
 import time
-import urllib.parse
 
-from .cargo import CARGO_GAP, _cq, cargo
-from .config import DB_PATH, WIKI_API, log
+from .cargo import _cq, api_get, cargo
+from .config import DB_PATH, log
 from .core import http_get
 
 _DIR = os.path.join(os.path.dirname(DB_PATH) or ".", "logos")
@@ -103,10 +102,8 @@ def _thumbs(images):
     out = {}
     for i in range(0, len(images), 40):
         chunk = images[i:i + 40]
-        q = urllib.parse.urlencode({"action": "query", "format": "json", "prop": "imageinfo", "iiprop": "url",
-                                    "iiurlwidth": 64, "titles": "|".join("File:" + x for x in chunk)})
-        time.sleep(CARGO_GAP)
-        d = json.loads(http_get(f"{WIKI_API}?{q}"))
+        d = api_get({"action": "query", "prop": "imageinfo", "iiprop": "url",          # 간격은 Cargo와 함께 맞춤
+                     "iiurlwidth": 64, "titles": "|".join("File:" + x for x in chunk)})
         if d.get("error"):                     # 요청 한도 등: '로고 없음'으로 적지 않고 다음에 다시
             raise RuntimeError((d["error"] or {}).get("info", "api error"))
         names = {n["to"]: n["from"] for n in (d.get("query") or {}).get("normalized") or []}

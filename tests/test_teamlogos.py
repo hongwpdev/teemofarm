@@ -32,7 +32,9 @@ class TeamLogosTest(unittest.TestCase):
         def fake_get(url):
             calls.append(url)
             return api if "api.php" in url else WEBP if url.endswith("g2") else b"<html>not an image"
-        with mock.patch.object(teamlogos, "http_get", fake_get), mock.patch.object(teamlogos, "CARGO_GAP", 0), \
+        def fake_api(params):
+            return json.loads(fake_get("api.php"))
+        with mock.patch.object(teamlogos, "http_get", fake_get), mock.patch.object(teamlogos, "api_get", fake_api), \
                 mock.patch.object(teamlogos.time, "sleep", lambda s: None):
             self.assertEqual(teamlogos.ensure({"g2-esports": "G2 logo.png", "bad-team": "Bad.png"}), 1)
             self.assertTrue(teamlogos.url("g2-esports").startswith("/tlogo/g2-esports?v="))

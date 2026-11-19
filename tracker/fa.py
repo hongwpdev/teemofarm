@@ -1,4 +1,5 @@
 """수집: FA 현황·로스터·선수 프로필(Leaguepedia Cargo: RosterChanges·Players·Tenures)."""
+import hashlib
 import json
 import os
 import re
@@ -105,13 +106,36 @@ def classify_fa(rc, exp, players, today: str):
     return list(out.values())
 
 
-def poll_fa(gap=None):
+FA_FULL_SEC = 3 * 3600      # 이적 기록이 그대로여도 이 시간마다 한 번은 계약·로스터를 전부 새로 받음
+
+
+def _meta_get(k):
+    with db() as c:
+        r = c.execute("SELECT v FROM meta WHERE k=?", (k,)).fetchone()
+    return r[0] if r else ""
+
+
+def poll_fa(gap=None, max_age=FA_FULL_SEC):
+    """FA·로스터·프로필. 요청을 줄이려고 이적 기록(RosterChanges, 요청 1번)이 지난번과 같고
+    마지막 전체 갱신이 max_age초 안이면 나머지(계약·로스터·프로필, 5번 안팎)를 건너뜀."""
     try:
         since = fa_since()
         today = datetime.now(KST).date().isoformat()
         names = ",".join(_cq(t["wiki"]) for t in TEAMS.values() if t.get("wiki"))
         rc = cargo(gap, tables="RosterChanges", fields="Date_Sort=D,Player,Direction,Team,Role",
                    where=f'Date_Sort>="{since}" AND Team IN ({names})', order_by="Date_Sort")
+        sig = hashlib.sha1(json.dumps([today, rc], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        try:
+            full_at = float(_meta_get("fa_full_at") or 0)
+        except ValueError:
+            full_at = 0
+        if sig == _meta_get("fa_sig") and time.time() - full_at < max_age:
+            with db() as c:
+                if c.execute("SELECT COUNT(*) FROM fa").fetchone()[0]:
+                    c.execute("INSERT OR REPLACE INTO meta VALUES('fa_updated', ?)", (datetime.now(timezone.utc).isoformat(),))
+                    log.info("fa: no roster changes, skipped")
+                    set_status("fa", "fa", True, "변동 없음")
+                    return
         exp = cargo(gap, tables="Players", fields=PLAYER_FIELDS,
                     where=f'Team IN ({names}) AND Contract>="{since}" AND Contract<"{today}"')
         pages = sorted({r["Player"] for r in rc})
@@ -133,6 +157,8 @@ def poll_fa(gap=None):
         try:
             roster, roster_players = poll_roster(gap, names, today, rows, rc)
             log.info("roster: %d", roster)
+            with db() as c:                       # 로스터까지 받았으면 다음엔 이적 기록이 그대로일 때 건너뜀
+                c.executemany("INSERT OR REPLACE INTO meta VALUES(?,?)", [("fa_sig", sig), ("fa_full_at", str(time.time()))])
         except Exception as e:  # noqa: BLE001  (로스터 실패해도 FA 목록은 그대로)
             roster_players = []
             note = " · 로스터는 이전 것 유지"

@@ -21,9 +21,17 @@ def loop(fn, interval, lock=COLLECT_LOCK):
         time.sleep(interval)
 
 
-def poll_fa_locked(gap=None):
+def poll_fa_locked(gap=None, max_age=None):
     with FA_LOCK:
-        poll_fa(gap)
+        if max_age is None:
+            poll_fa(gap)
+        else:
+            poll_fa(gap, max_age)
+
+
+def poll_fa_manual(gap=None):
+    """[조회] 버튼: 이적 기록이 그대로여도 마지막 전체 갱신이 30분 넘었으면 전부 새로."""
+    poll_fa_locked(gap, 1800)
 
 
 def manual_collect():
@@ -38,7 +46,7 @@ def manual_collect():
         try:
             ts = [threading.Thread(target=part, args=("wiki", poll_wiki)),
                   threading.Thread(target=part, args=("news", poll_news)),
-                  threading.Thread(target=part, args=("fa", poll_fa_locked))]
+                  threading.Thread(target=part, args=("fa", poll_fa_manual))]
             for t in ts:
                 t.start()
             for t in ts:
@@ -64,7 +72,7 @@ def request_manual():
 def fa_collect():
     """FA 화면 [조회]: FA만 빠르게 한 번(뉴스·위키 수집을 기다리지 않음)."""
     try:
-        poll_fa_locked(MANUAL_GAP)
+        poll_fa_manual(MANUAL_GAP)
     finally:
         FA_MANUAL["running"] = False
         FA_MANUAL["last_done"] = datetime.now(timezone.utc).isoformat()

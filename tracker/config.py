@@ -23,7 +23,7 @@ MANUAL_COOLDOWN = int(os.getenv("MANUAL_COOLDOWN_SEC", "120"))  # 소식 [조회
 FA_COOLDOWN = int(os.getenv("FA_COOLDOWN_SEC", "30"))        # FA·로스터 [조회] 재실행 최소 간격
 AUTO_MINUTES = int(os.getenv("AUTO_MINUTES", "5"))           # 자동 조회 간격
 CARGO_GAP = float(os.getenv("CARGO_GAP_SEC", "2"))           # 리그피디아 Cargo 요청 사이 최소 간격(모든 스레드 공통)
-PROFILE_MAX_AGE = int(os.getenv("PROFILE_MAX_AGE_SEC", str(6 * 3600)))   # 프로필(커리어)은 6시간마다만 새로 받음
+PROFILE_MAX_AGE = int(os.getenv("PROFILE_MAX_AGE_SEC", str(24 * 3600)))  # 프로필(커리어)은 하루에 한 번만 새로 받음(이적은 FA 목록으로 바로 보임)
 FA_NAME_BATCH = int(os.getenv("FA_NAME_BATCH", "5"))         # FA 선수 본명 검색: 한 번에 묶는 인원
 
 WIKI_API = "https://lol.fandom.com/api.php"

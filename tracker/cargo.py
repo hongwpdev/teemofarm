@@ -20,16 +20,28 @@ def is_rate_limit(e) -> bool:
     return "rate limit" in str(e).lower()
 
 
+def _pace():
+    """리그피디아(lol.fandom.com API)로 가는 모든 요청 사이를 CARGO_GAP초 이상 띄움(모든 스레드 공통).
+    Cargo뿐 아니라 위키 편집 기록·로고 정보 요청도 여기를 거침 — 한꺼번에 몰리면 요청 한도에 걸림."""
+    with _CARGO_LOCK:
+        wait = CARGO_GAP - (time.time() - _CARGO_LAST[0])
+        if wait > 0:
+            time.sleep(wait)
+        _CARGO_LAST[0] = time.time()
+
+
+def api_get(params: dict) -> dict:
+    """리그피디아 MediaWiki API(편집 기록·파일 정보) 한 번. 간격은 Cargo와 함께 맞춤."""
+    _pace()
+    return json.loads(http_get(f"{WIKI_API}?{urllib.parse.urlencode({'format': 'json', **params})}"))
+
+
 def cargo(gap, retry=True, **params):
     """Cargo 조회. 요청 사이 CARGO_GAP초 이상 띄우고, 한도 초과면 retry=True일 때 20초 뒤 한 번 더."""
     time.sleep(REQUEST_GAP if gap is None else gap)
     q = urllib.parse.urlencode({"action": "cargoquery", "format": "json", "limit": 500, **params})
     for attempt in (1, 2):
-        with _CARGO_LOCK:
-            wait = CARGO_GAP - (time.time() - _CARGO_LAST[0])
-            if wait > 0:
-                time.sleep(wait)
-            _CARGO_LAST[0] = time.time()
+        _pace()
         data = json.loads(http_get(f"{WIKI_API}?{q}"))
         err = data.get("error")
         if err and is_rate_limit(err.get("info", "")) and retry and attempt == 1:
