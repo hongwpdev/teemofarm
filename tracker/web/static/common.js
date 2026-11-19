@@ -228,13 +228,20 @@
 
   // ── 메뉴(소식·로스터·이적·일정)를 오가도 고른 필터가 남도록(이 브라우저 탭에서만) ──
   try {
+    // 시즌(?season=)은 기억하지 않음: 예전엔 한 번 고른 지난 시즌이 메뉴를 누를 때마다 되살아나서
+    // '시즌'을 누르면 2026, '스토브리그'를 누르면 2025처럼 메뉴마다 시즌이 달라 보였음
     const key = "qs:" + LG + ":" + SEC;
-    const keep = () => sessionStorage.setItem(key, location.search);
+    const noSeason = qs => { const q = new URLSearchParams(qs || ""); q.delete("season"); const t = q.toString(); return t ? "?" + t : ""; };
+    const keep = () => sessionStorage.setItem(key, noSeason(location.search));
     keep(); window.addEventListener("pagehide", keep);
     document.querySelectorAll("a[data-sec]").forEach(a => {
       a.addEventListener("click", keep);
-      const saved = sessionStorage.getItem("qs:" + LG + ":" + a.dataset.sec);
-      if (saved && a.dataset.sec !== SEC) a.href = a.getAttribute("href").split("?")[0] + saved;
+      const saved = noSeason(sessionStorage.getItem("qs:" + LG + ":" + a.dataset.sec));
+      if (!saved || a.dataset.sec === SEC) return;
+      const [path, own] = a.getAttribute("href").split("?");
+      const q = new URLSearchParams(saved), season = new URLSearchParams(own || "").get("season");
+      if (season) q.set("season", season);           // 지금 보고 있는 시즌(서버가 링크에 넣어 줌)은 그대로 따라감
+      a.href = path + "?" + q.toString();
     });
   } catch (e) {}
 
