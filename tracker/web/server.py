@@ -71,6 +71,14 @@ class Handler(BaseHTTPRequestHandler):
                               cache="public, max-age=31536000, immutable" if "v" in qs else "public, max-age=86400")
         if len(parts) == 2 and parts[0] == "tlogo":        # 해외 팀 로고(리그피디아에서 받아 둔 것)
             hit = teamlogos.read(parts[1])
+            far = "" if hit else teamlogos.remote(parts[1])
+            if far:                                          # 서버가 직접 못 받은 로고: 리그피디아 이미지로 넘김
+                self.send_response(302)
+                self.send_header("Location", far)
+                self.send_header("Cache-Control", "public, max-age=3600")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
             if not hit:
                 return self._send(404, b"", "image/png", cache="no-store")
             return self._send(200, hit[0], hit[1], cache="public, max-age=31536000, immutable" if "v" in qs else "public, max-age=86400")

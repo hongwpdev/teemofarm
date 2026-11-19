@@ -79,10 +79,24 @@ def _save():
     os.replace(tmp, _INDEX)
 
 
+LAST_ERROR = {"at": "", "msg": ""}   # 마지막으로 이미지를 못 받은 이유(/api/diag 에 보임)
+
+
 def url(key: str) -> str:
     """화면용 주소(없으면 ''). 로고가 바뀌면 ?v= 가 바뀌어 브라우저가 새로 받음."""
     e = INDEX.get(key) or {}
-    return f"/tlogo/{key}?v={e['v']}" if e.get("file") else ""
+    if e.get("file"):
+        return f"/tlogo/{key}?v={e['v']}"
+    if e.get("remote"):                       # 서버가 이미지를 직접 못 받음: 리그피디아 이미지 주소로 안내
+        return f"/tlogo/{key}?v=r"
+    return ""
+
+
+def remote(key: str) -> str:
+    """서버가 직접 못 받은 로고의 리그피디아 이미지 주소(없으면 ''). /tlogo/<키> 가 이 주소로 넘겨 줌."""
+    e = INDEX.get(key) or {}
+    u = e.get("remote") or ""
+    return u if _KEY.match(key or "") and u.startswith("https://static.wikia.nocookie.net/") else ""
 
 
 def read(key: str):
@@ -126,7 +140,7 @@ def ensure(images: dict):
     images = {k: "|".join(_cands(v)) for k, v in images.items() if v}
     now = time.time()
     need = {k: img for k, img in images.items() if img and _KEY.match(k)
-            and ((INDEX.get(k) or {}).get("image") != img or
+            and ((INDEX.get(k) or {}).get("image") != img or (INDEX.get(k) or {}).get("remote") or
                  (not (INDEX.get(k) or {}).get("file") and now - (INDEX.get(k) or {}).get("failed_at", 0) > RETRY_SEC))}
     if not need:
         return 0
@@ -147,7 +161,14 @@ def ensure(images: dict):
                 data = http_get(src)
                 t = _sniff(data)
             except Exception as e:  # noqa: BLE001
-                log.warning("team logo %s failed: %s", k, e)   # 받기 실패(일시적): 적지 않고 다음 갱신 때 다시
+                # 서버에서 이미지 서버로 못 감(네트워크·인증서 등): 주소만 적어 두고 브라우저가 직접 받게 함.
+                # 다음 갱신 때 다시 직접 받아 보고, 되면 파일로 바꿈
+                log.warning("team logo %s download failed, browser will load it directly: %s", k, e)
+                LAST_ERROR.update(at=time.strftime("%Y-%m-%d %H:%M:%S"), msg=f"{type(e).__name__}: {e}"[:300])
+                with _LOCK:
+                    if not (INDEX.get(k) or {}).get("file"):
+                        INDEX[k] = {"image": img, "remote": src}
+                        _save()
                 continue
         with _LOCK:
             if t and len(data) < 200_000:

@@ -224,6 +224,17 @@ def start():
     _load()
     teamlogos.load()
 
+    def logos_once():                       # 켜질 때 한 번: 저장된 일정의 팀 로고 중 없는 것만(리그당 요청 1번 안팎)
+        time.sleep(45)
+        for lg in leagues():
+            if lg == "lck":
+                continue
+            try:
+                teamlogos.ensure({k: t["image"] for k, t in (get(lg).get("teams") or {}).items() if t.get("image")})
+            except Exception as e:  # noqa: BLE001
+                log.warning("schedule %s logos failed: %s", lg, e)
+    threading.Thread(target=logos_once, daemon=True).start()
+
     def loop():
         time.sleep(90)                          # 켜자마자 몰리는 다른 수집(위키·FA·아카이브)과 겹치지 않게
         due = {}

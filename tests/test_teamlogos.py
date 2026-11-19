@@ -72,6 +72,22 @@ class TeamLogosTest(unittest.TestCase):
         self.assertEqual(teamlogos._WANT, {"Some Team"})                  # 한도 오류: 다음 묶음에 다시
         self.assertFalse(teamlogos.known("some-team"))
 
+    def test_download_blocked_falls_back_to_browser(self):
+        api = json.dumps({"query": {"pages": {"1": {"title": "File:G2 logo.png",
+                                                    "imageinfo": [{"thumburl": "https://static.wikia.nocookie.net/x/g2.png"}]}}}}).encode()
+
+        def blocked(url):
+            raise OSError("CERTIFICATE_VERIFY_FAILED")
+        with mock.patch.object(teamlogos, "http_get", blocked), mock.patch.object(teamlogos, "api_get", lambda p: json.loads(api)), \
+                mock.patch.object(teamlogos.time, "sleep", lambda s: None):
+            teamlogos.ensure({"g2-esports": "G2 logo.png"})
+        self.assertEqual(teamlogos.url("g2-esports"), "/tlogo/g2-esports?v=r")
+        self.assertEqual(teamlogos.remote("g2-esports"), "https://static.wikia.nocookie.net/x/g2.png")
+        self.assertIsNone(teamlogos.read("g2-esports"))
+        self.assertIn("CERTIFICATE", teamlogos.LAST_ERROR["msg"])
+        teamlogos.INDEX["bad"] = {"remote": "https://evil.example/x.png"}      # 리그피디아 이미지 주소가 아니면 안 넘김
+        self.assertEqual(teamlogos.remote("bad"), "")
+
     def test_read_rejects_odd_keys(self):
         teamlogos.INDEX = {"../x": {"file": "../../etc/passwd", "type": "image/png", "v": "1"}}
         self.assertIsNone(teamlogos.read("../x"))

@@ -74,7 +74,9 @@ def snapshot() -> dict:
                      "teams": len(d.get("teams") or {}), "error": d.get("error", "")}
     idx = dict(teamlogos.INDEX)
     logos = {"saved": sum(1 for e in idx.values() if e.get("file")),
-             "failed": sorted(k for k, e in idx.items() if not e.get("file") and e.get("image")),
+             "browser_direct": sum(1 for e in idx.values() if not e.get("file") and e.get("remote")),
+             "last_download_error": dict(teamlogos.LAST_ERROR),
+             "failed": sorted(k for k, e in idx.items() if not e.get("file") and not e.get("remote") and e.get("image")),
              "not_on_wiki": sum(1 for e in idx.values() if not e.get("file") and not e.get("image")),
              "queued": len(teamlogos._WANT)}
     return {
