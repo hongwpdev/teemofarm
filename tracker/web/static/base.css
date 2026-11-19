@@ -1007,3 +1007,6 @@ a.tbtn .lb{margin-left:.3rem}
  .chat-fab .lb{display:none}
  .chat-fab .n{position:absolute;top:-.2rem;right:-.2rem}
 }
+/* 수다방 날짜 구분선(절취선) */
+.msgs .day-sep{flex:none;display:flex;align-items:center;gap:1rem;margin:.4rem 0 -.2rem;font-size:1.15rem;font-weight:600;color:var(--t8)}
+.msgs .day-sep::before,.msgs .day-sep::after{content:"";flex:1;border-top:1px dashed var(--border)}

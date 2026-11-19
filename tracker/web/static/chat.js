@@ -51,10 +51,26 @@
     if (m < 1) return "방금"; if (m < 60) return m + "분 전";
     return d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Seoul" });
   };
+  // 날짜 구분선: 날짜(한국 시간)가 바뀌는 곳에 '- - 오늘 · 11월 19일 (목) - -'
+  const dayKey = iso => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date(iso));   // 2026-11-19
+  const dayLabel = key => {
+    const d = new Date(key + "T12:00:00+09:00"), today = dayKey(new Date().toISOString());
+    const yday = dayKey(new Date(Date.now() - 864e5).toISOString());
+    const txt = d.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short", timeZone: "Asia/Seoul" })
+      .replace(/\s*\((.)\)$/, " ($1)").replace(/(\d+일) (.)요일$/, "$1 ($2)");
+    return (key === today ? "오늘 · " : key === yday ? "어제 · " : "") + txt;
+  };
   function add(m) {
     if (list.querySelector('[data-id="' + m.id + '"]')) return;
+    const key = dayKey(m.at), prev = list.lastElementChild;
+    if (!prev || prev.dataset.day !== key) {
+      const sep = document.createElement("div");
+      sep.className = "day-sep"; sep.dataset.day = key; sep.setAttribute("role", "separator");
+      sep.innerHTML = "<span></span>"; sep.firstChild.textContent = dayLabel(key);
+      list.append(sep);
+    }
     const d = document.createElement("div");
-    d.className = "msg" + (m.mine ? " mine" : ""); d.dataset.id = m.id; d.dataset.at = m.at;
+    d.className = "msg" + (m.mine ? " mine" : ""); d.dataset.id = m.id; d.dataset.at = m.at; d.dataset.day = key;
     d.innerHTML = '<span class="who">' + (m.mine ? "" : esc(m.name)) + '<em></em></span><span class="bub"></span>';
     d.querySelector("em").textContent = when(m.at);
     d.querySelector(".bub").textContent = m.text;
@@ -79,6 +95,7 @@
         if (!list.childElementCount) list.innerHTML = '<div class="sys empty">아직 대화가 없어요. 첫 마디를 남겨 보세요!</div>';
         else { const e = list.querySelector(".sys.empty"); if (e) e.remove(); }
         list.querySelectorAll(".msg em").forEach(e => { e.textContent = when(e.closest(".msg").dataset.at); });
+        list.querySelectorAll(".day-sep").forEach(e => { e.firstChild.textContent = dayLabel(e.dataset.day); });   // 자정이 지나면 오늘→어제
         if (atEnd || r.msgs.some(m => m.mine)) list.scrollTop = list.scrollHeight;
         seen = r.last; S.set("chatSeen", String(seen));
       }
