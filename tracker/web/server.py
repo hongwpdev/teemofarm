@@ -171,7 +171,7 @@ class Handler(BaseHTTPRequestHandler):
             txt = views.ads_txt()
             return self._send(200 if txt else 404, txt.encode(), "text/plain; charset=utf-8", cache="public, max-age=3600")
 
-        # 리그 화면: /<리그>[/roster|/fa|/schedule]
+        # 리그 화면: /<리그>[/fa|/builder|/stove (스토브리그) · /schedule|/results (시즌) · /roster|/teams (팀)]
         if parts and parts[0] in LEAGUES and len(parts) <= 2:
             league, sec = parts[0], (parts[1] if len(parts) == 2 else "")
             try:
@@ -180,11 +180,14 @@ class Handler(BaseHTTPRequestHandler):
                 season = 0
             season = season if season in archive.archive_years() else None
             if not LEAGUES[league]["enabled"]:          # 아직 켜지지 않은 리그: 일정·결과만, 나머지는 '곧 추가'
-                page = views.render_schedule(league) if sec == "schedule" and LEAGUES[league].get("wiki") else views.render_soon(league)
-            elif season and sec == "schedule" and not schedule.get(league).get("current") and schedule.get(league).get("season") == season:
-                page = views.render_schedule(league, season)   # 지난 시즌 경기 결과가 아직 일정 데이터에 있음: 결과·순위·경기 상세 그대로
-            elif season and sec in ("", "roster", "fa", "schedule"):
-                page = views.render_archive(league, sec, season, one("t"))
+                page = (views.render_schedule(league, None, "results" if sec == "results" else "plan")
+                        if sec in ("schedule", "results") and LEAGUES[league].get("wiki") else views.render_soon(league))
+            elif season and sec in ("schedule", "results") and any(
+                    f"/{season} Season/" in (m.get("page") or "") for m in schedule.get(league).get("matches") or []):
+                # 그 시즌 경기가 아직 일정 데이터에 있음(지난 시즌 + 지금 시즌): 일정·결과·경기 상세 그대로
+                page = views.render_schedule(league, season, "results" if sec == "results" else "plan")
+            elif season and sec in ("", "roster", "fa", "schedule", "results", "stove"):
+                page = views.render_archive(league, "fa" if sec == "stove" else sec, season, one("t"))
             elif sec == "":
                 page = views.render_news(league, one("team"), one("src", "all"), parse_hot(one("hot")),
                                          one("from"), one("to"), one("q"))
@@ -193,7 +196,13 @@ class Handler(BaseHTTPRequestHandler):
             elif sec == "fa":
                 page = views.render_fa(league)
             elif sec == "schedule":
-                page = views.render_schedule(league)
+                page = views.render_schedule(league, None, "plan")
+            elif sec == "results":
+                page = views.render_schedule(league, None, "results")
+            elif sec == "stove":
+                page = views.render_stove(league)
+            elif sec == "teams":
+                page = views.render_teams(league)
             elif sec == "builder":
                 page = views.render_builder(league, season, one("r"), one("n"))
             elif sec == "game":

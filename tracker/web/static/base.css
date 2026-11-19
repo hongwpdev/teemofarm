@@ -1010,3 +1010,37 @@ a.tbtn .lb{margin-left:.3rem}
 /* 수다방 날짜 구분선(절취선) */
 .msgs .day-sep{flex:none;display:flex;align-items:center;gap:1rem;margin:.4rem 0 -.2rem;font-size:1.15rem;font-weight:600;color:var(--t8)}
 .msgs .day-sep::before,.msgs .day-sep::after{content:"";flex:1;border-top:1px dashed var(--border)}
+/* 일정·결과 나누기: 대회 일정, 결과 제목 */
+.tours{padding:1.4rem 1.6rem;margin-bottom:1.6rem}
+.tours h3{font-size:1.6rem;color:var(--t1);margin-bottom:.8rem}
+.tours ul{list-style:none;display:grid;gap:0}
+.tours li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:1.2rem;padding:.9rem 0;border-top:1px solid var(--line);font-size:1.4rem}
+.tours li:first-child{border-top:0}
+.tours li b{color:var(--t1);font-weight:600}
+.tours li time{color:var(--t5);font-variant-numeric:tabular-nums}
+.tours .tst{font-size:1.15rem;font-weight:700;color:var(--t8);min-width:4.4rem;text-align:right}
+.tours li.now .tst{color:var(--red)}
+.tours li.up .tst{color:var(--primary-text)}
+.tours li.done b,.tours li.done time{color:var(--t8)}
+.tours .hint{font-size:1.35rem;color:var(--t5)}
+.sblock .hint{padding:0 1.6rem 1.4rem;font-size:1.35rem;color:var(--t5)}
+.res-title{display:flex;align-items:baseline;flex-wrap:wrap;gap:.4rem 1rem;margin:0 0 1.2rem;font-size:2rem;color:var(--t1)}
+.res-title small{font-size:1.25rem;font-weight:500;color:var(--t8)}
+.sch-grid.one{grid-template-columns:minmax(0,1fr)}
+.squad+.stove-sch,.squad+.tours,.squad+.res-title,.squad+.card{margin-top:1.2rem}
+/* 메뉴 다시 짜기(소식·스토브리그·시즌·팀): 스토브리그 > 일정, 팀 > 구단 안내 */
+.stove-now{padding:1.4rem 1.6rem;margin-bottom:1.6rem}
+.stove-now h3{display:flex;justify-content:space-between;align-items:center;font-size:1.6rem;color:var(--t1);margin-bottom:1rem}
+.stove-now h3 a{font-size:1.25rem;font-weight:600;color:var(--primary-text)}
+.stove-now .mini{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem}
+.stove-now .mini a{display:flex;flex-direction:column;align-items:center;padding:1rem;border:1px solid var(--line);border-radius:.8rem;font-size:1.25rem;color:var(--t5)}
+.stove-now .mini b{font-size:2.2rem;color:var(--t1)}
+.stove-now .mini a.m b{color:var(--green)}
+.tgrid{display:grid;gap:1.2rem}
+@media (min-width:720px){.tgrid{grid-template-columns:1fr 1fr}}
+@media (min-width:1100px){.tgrid{grid-template-columns:1fr 1fr 1fr}}
+.tcard{display:flex;flex-direction:column}
+.tcard .tprof{flex:1;margin:0;padding:1.4rem 1.6rem}
+.tcard .tgo{display:flex;gap:1.2rem;justify-content:flex-end;padding:.6rem .4rem 0;font-size:1.3rem}
+.tcard .tgo a{color:var(--primary-text);font-weight:600}
+.squad+.stove-sch,.squad+.tgrid,.squad+.bld-head{margin-top:1.2rem}

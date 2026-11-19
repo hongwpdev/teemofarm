@@ -62,21 +62,29 @@ class ScheduleTest(unittest.TestCase):
         table = [{"team": t, "key": "", "place": str(i + 1), "w": "1", "l": "0", "gw": "0", "gl": "0"} for i, t in enumerate("ABC")]
         self.assertEqual(schedule._groups(table, [], "P"), [{"name": "", "table": table}])
 
-    def test_lck_follows_season_picker(self):
+    def test_lck_schedule_and_results(self):
         import re
         now = datetime.now(timezone.utc)
         old = [_m("A", "B", _f(now - timedelta(days=60)), "1", "2", "0", page="LCK/2026 Season/Rounds 3-4")]
-        schedule.DATA = {"lck": {"season": 2026, "current": False, "at": now.isoformat(), "standings": {}, "matches": old}}
+        schedule.DATA = {"lck": {"season": 2026, "current": False, "at": now.isoformat(), "standings": {}, "matches": old,
+                                 "tours": [{"page": "LCK/2026 Season/Rounds 3-4", "name": "LCK 2026 Rounds 3-4",
+                                            "start": "2026-07-29", "end": "2026-08-23", "playoff": False}]}}
         cs = views.current_season(datetime.now(views.KST).date())
         pick = lambda page: re.search(r'aria-label="시즌 고르기"><b>(\d+)', page).group(1)   # noqa: E731
-        now_page = views.render_schedule("lck")                       # 지금(2027): 안내 + 2026 결과로 가는 버튼
-        self.assertEqual(pick(now_page), str(cs))
-        self.assertIn("아직 안 나왔어요", now_page)
-        self.assertIn('href="/lck/schedule?season=2026"', now_page)
-        self.assertNotIn('class="mt ', now_page)
-        past = views.render_schedule("lck", 2026)                     # 2026을 고름: 2026 결과
+        plan = views.render_schedule("lck")                           # 일정(2027): 대회 일정 안내, 결과로 가는 링크
+        self.assertEqual(pick(plan), str(cs))
+        self.assertIn(f"{cs} LCK 대회 일정", plan)
+        self.assertIn('href="/lck/results"', plan)
+        self.assertNotIn('class="mt ', plan)
+        res = views.render_schedule("lck", None, "results")           # 결과(2027): 가장 최근 시즌(2026) 결과
+        self.assertEqual(pick(res), str(cs))
+        self.assertIn("2026 시즌 결과", res)
+        self.assertIn('class="mt done"', res)
+        past = views.render_schedule("lck", 2026, "results")          # 2026을 고름
         self.assertEqual(pick(past), "2026")
         self.assertIn('class="mt done"', past)
+        plan26 = views.render_schedule("lck", 2026)                   # 2026 일정: 그 시즌 대회 일정
+        self.assertIn("정규 3·4라운드", plan26)
         self.assertEqual(pick(views.render_roster("lck")), str(cs))   # 다른 탭과 같은 시즌 표시
 
     def test_render_empty_and_full(self):
@@ -84,17 +92,20 @@ class ScheduleTest(unittest.TestCase):
         self.assertIn("일정·결과", views.render_schedule("lck"))
         self.assertIn("일정·결과", views.render_schedule("lpl"))
         now = datetime.now(timezone.utc)
-        ms = [_m("A", "B", _f(now + timedelta(days=1))), _m("C", "D", _f(now - timedelta(days=1)), "1", "2", "0")]
+        pg = "LPL/2027 Season/Split 1"
+        ms = [_m("A", "B", _f(now + timedelta(days=1)), page=pg), _m("C", "D", _f(now - timedelta(days=1)), "1", "2", "0", page=pg)]
         ms[1]["k1"], ms[1]["k2"] = "c-team", "d-team"
         schedule.DATA = {"lpl": {"season": 2027, "current": True, "at": now.isoformat(), "standings": {}, "matches": ms,
                                  "teams": {"c-team": {"name": "C Team", "short": "CT"}, "d-team": {"name": "D Team", "short": "DT"}}}}
-        page = views.render_schedule("lpl")
-        self.assertIn("<b>CT</b>", page)
-        self.assertIn('data-t="c-team"', page)
-        self.assertIn("다가오는 경기", page)
-        self.assertIn("최근 결과", page)
-        self.assertIn('class="mt up"', page)
-        self.assertIn('class="mt done"', page)
+        plan = views.render_schedule("lpl")                           # 일정: 다가오는 경기
+        self.assertIn("다가오는 경기", plan)
+        self.assertIn('class="mt up"', plan)
+        self.assertNotIn('class="mt done"', plan)
+        res = views.render_schedule("lpl", None, "results")           # 결과: 끝난 경기
+        self.assertIn("<b>CT</b>", res)
+        self.assertIn('data-t="c-team"', res)
+        self.assertIn('class="mt done"', res)
+        self.assertNotIn('class="mt up"', res)
 
 
 if __name__ == "__main__":

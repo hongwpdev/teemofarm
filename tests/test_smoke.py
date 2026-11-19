@@ -15,7 +15,7 @@ from tracker import chat, maint, matchinfo, player_extra, share  # noqa: E402
 from tracker.core import init_db  # noqa: E402
 from tracker.web import server  # noqa: E402
 
-PAGES = ["/lck", "/lck/roster", "/lck/fa", "/lck/schedule", "/lck/builder", "/lck/game", "/lpl", "/lpl/schedule", "/lec/schedule", "/cblol/roster",
+PAGES = ["/lck", "/lck/roster", "/lck/fa", "/lck/schedule", "/lck/results", "/lck/stove", "/lck/teams", "/lpl/results", "/lck/builder", "/lck/game", "/lpl", "/lpl/schedule", "/lec/schedule", "/cblol/roster",
          "/lck?team=t1", "/lck?q=faker", "/lck?hot=0&src=news"]
 APIS = ["/api/items", "/api/people", "/api/schedule", "/api/schedule?league=lpl", "/api/status", "/api/chat", "/healthz"]
 
