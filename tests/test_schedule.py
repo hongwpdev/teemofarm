@@ -70,14 +70,16 @@ class ScheduleTest(unittest.TestCase):
                                  "tours": [{"page": "LCK/2026 Season/Rounds 3-4", "name": "LCK 2026 Rounds 3-4",
                                             "start": "2026-07-29", "end": "2026-08-23", "playoff": False}]}}
         cs = views.current_season(datetime.now(views.KST).date())
+        # 시즌 고르기 표시: 스토브리그 기간엔 시작한 해('2026 스토브리그'), 시즌 중엔 그 시즌('2027')
+        shown = str(cs - 1) if views.stove_phase(datetime.now(views.KST).date()) else str(cs)
         pick = lambda page: re.search(r'aria-label="시즌 고르기"><b>(\d+)', page).group(1)   # noqa: E731
         plan = views.render_schedule("lck")                           # 일정(2027): 대회 일정 안내, 결과로 가는 링크
-        self.assertEqual(pick(plan), str(cs))
+        self.assertEqual(pick(plan), shown)
         self.assertIn(f"{cs} LCK 대회 일정", plan)
         self.assertIn('href="/lck/results"', plan)
         self.assertNotIn('class="mt ', plan)
         res = views.render_schedule("lck", None, "results")           # 결과(2027): 가장 최근 시즌(2026) 결과
-        self.assertEqual(pick(res), str(cs))
+        self.assertEqual(pick(res), shown)
         self.assertIn("2026 시즌 결과", res)
         self.assertIn('class="mt done"', res)
         past = views.render_schedule("lck", 2026, "results")          # 2026을 고름
@@ -85,7 +87,7 @@ class ScheduleTest(unittest.TestCase):
         self.assertIn('class="mt done"', past)
         plan26 = views.render_schedule("lck", 2026)                   # 2026 일정: 그 시즌 대회 일정
         self.assertIn("정규 3·4라운드", plan26)
-        self.assertEqual(pick(views.render_roster("lck")), str(cs))   # 다른 탭과 같은 시즌 표시
+        self.assertEqual(pick(views.render_roster("lck")), shown)   # 다른 탭과 같은 시즌 표시
 
     def test_render_empty_and_full(self):
         schedule.DATA = {}

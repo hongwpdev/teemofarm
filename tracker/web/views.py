@@ -37,7 +37,7 @@ FA_POS = {"Top": "탑", "Jungle": "정글", "Mid": "미드", "Bot": "원딜", "S
 FA_ST = {"move": ("이적 확정", "s-move"), "stay": ("잔류", "s-stay"), "fa": ("미정", "s-fa")}
 KIND = {"official": ("오피셜", "k-official"), "rumor": ("단독·유력", "k-rumor"),
         "view": ("전망·분석", "k-view"), "edit": ("편집", "k-edit")}
-SECTIONS = [("news", "", "소식"), ("roster", "/roster", "로스터"), ("fa", "/fa", "이적·FA"), ("builder", "/builder", "로스터 짜기"),
+SECTIONS = [("news", "", "소식"), ("roster", "/roster", "로스터"), ("fa", "/fa", "이적·FA"), ("builder", "/builder", "단장 놀이"),
             ("schedule", "/schedule", "일정·결과"), ("game", "/game", "🍄 미니게임")]
 esc = html.escape
 
@@ -176,12 +176,13 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
     sq = f"?season={season}" if season else ""
     # 시즌 고르기: 지금 시즌 + 지난 시즌 기록
     now_y = current_season(today)
-    now_label = f"{now_y} 스토브리그" if stove else f"{now_y} 시즌"
+    # 스토브리그는 시작한 해로 부름(2026년 11월에 시작 → '2026 스토브리그'). 데이터상 시즌(now_y)은 그다음 해
+    now_label = f"{now_y - 1} 스토브리그" if stove else f"{now_y} 시즌"
     here = SEC_PATH.get(active, "")
     s_items = (f'<li><a class="{"" if season else "on"}" href="/{league}{here}">{now_label}<small>지금</small></a></li>'
                + "".join(f'<li><a class="{"on" if season == y else ""}" href="/{league}{here}?season={y}">{y} 시즌<small>기록</small></a></li>'
                          for y in archive_years()))
-    ssel = "" if not cur["enabled"] else (f'<details class="lgsel ssel"><summary aria-label="시즌 고르기"><b>{season or now_y}</b><i aria-hidden="true">▾</i></summary>'
+    ssel = "" if not cur["enabled"] else (f'<details class="lgsel ssel"><summary aria-label="시즌 고르기"><b>{season or (now_label if stove else now_y)}</b><i aria-hidden="true">▾</i></summary>'
             f'<ul>{s_items}</ul></details>')
     bar = (f'<div class="archive-bar">지금 <b>{season} 시즌</b> 기록을 보고 있어요. '
            f'<a href="/{league}{here}">{now_label}(최신)으로 돌아가기 →</a></div>' if season else "")
@@ -671,13 +672,13 @@ def render_fa(league: str) -> str:
     since = parse_day(fa_since())
     rms = rumors(rows)
     board = moves_board(rows, rms)
-    main = f"""{squad_toggle(league, "fa")}{board}<section class="card panel fa" aria-label="조회와 필터">
+    main = f"""{squad_toggle(league, "fa")}{page_head("이적 시장", "계약이 끝난 선수와 코치가 어디로 가는지 모았어요.")}{stove_dates(today)}{board}<section class="card panel fa" aria-label="조회와 필터">
 <div class="ptop"><nav class="view_tab" id="grp" aria-label="묶어 보기"><a href="#" data-g="p">포지션별</a><a href="#" data-g="t">팀별</a><a href="#" data-g="s">상태별</a></nav>{ACT}</div>{MSG}
 <div class="sum">{summ}</div>
 <div class="chips" id="pos">
 <button data-p="all">전체 포지션</button><button data-p="탑">탑</button><button data-p="정글">정글</button><button data-p="미드">미드</button><button data-p="원딜">원딜</button><button data-p="서폿">서폿</button><button data-p="감독">감독</button><button data-p="코치">코치</button>
 </div>
-<p class="src">원소속 팀 기준 · 리그피디아 계약·로스터 변동 기록({f"{since.month}/{since.day}" if since else fa_since()} 이후) · {faupd} · 공식 발표가 리그피디아에 반영돼야 상태가 바뀌어요 · <b class="st2 s-rm">유력</b>은 최근 기사 제목 기준 참고 표시</p>
+<p class="src">팀은 원래 소속 기준이에요. 상태는 리그피디아에 공식 발표가 올라오면 바뀌고, <b class="st2 s-rm">유력</b>은 기사 제목을 보고 붙여요. {faupd}</p>
 </section>
 <section class="card">
 <div class="tabs-wrap"><nav class="tabs" id="tabs" aria-label="원소속 팀">{nav}</nav></div>
@@ -716,12 +717,12 @@ def _toggle(league, on, season, label, items):
 
 
 def stove_toggle(league: str, on: str, season=None) -> str:
-    """'스토브리그' 탭 안: 이적·FA | 로스터 짜기 | 스토브리그 일정."""
+    """'스토브리그' 탭 안: 이적 시장 | 구단별 | 행선지 맞히기 | 단장 놀이."""
     if season:
-        return _toggle(league, on, season, "스토브리그 보기", [("fa", "/fa", f"{season} 스토브리그 이동")])
+        return _toggle(league, on, season, "스토브리그 보기", [("fa", "/fa", f"{season - 1} 스토브리그 이동")])
     return _toggle(league, on, None, "스토브리그 보기",
-                   [("fa", "/fa", "이적·FA"), ("summary", "/summary", "팀별 요약"), ("predict", "/predict", "예측"),
-                    ("builder", "/builder", "로스터 짜기"), ("stove", "/stove", "일정")])
+                   [("fa", "/fa", "이적 시장"), ("summary", "/summary", "구단별"), ("predict", "/predict", "행선지 맞히기"),
+                    ("builder", "/builder", "단장 놀이")])
 
 
 def team_toggle(league: str, on: str, season=None) -> str:
@@ -783,7 +784,7 @@ def moves_board(fa_rows, rms=None) -> str:
     if not items:
         return ""
     items.sort(key=lambda x: x[0], reverse=True)
-    return (f'<details class="card moves" open><summary>이동 보드 <small>누가 어디서 어디로 · {len(items)}건{f" (해외·2군 등 LCK 밖에서 온 영입 {outside}건 포함, 아래 FA 목록엔 없어요)" if outside else ""}</small></summary>'
+    return (f'<details class="card moves" open><summary>이동 보드 <small>{len(items)}건{f" · LCK 밖에서 온 영입 {outside}건 포함" if outside else ""}</small></summary>'
             f'<ul>{"".join(h for _, h in items)}</ul></details>')
 
 
@@ -820,8 +821,8 @@ def shared_roster_og(r: str, by: str):
         return None
     by = " ".join((by or "").split())[:12]
     year = current_season()
-    return {"title": f"{by + '님의 ' if by else ''}{year} LCK 예상 로스터 🍄",
-            "desc": " | ".join(lines[:3]) + (" … 10팀 전체 보고 내 버전도 짜 보기" if len(lines) > 3 else "")}
+    return {"title": f"{by + ' 단장의 ' if by else '내가 단장이라면: '}{year} LCK 로스터 🍄",
+            "desc": " | ".join(lines[:3]) + (" … 10개 팀 전부 보고 나도 단장 해 보기" if len(lines) > 3 else "")}
 
 
 def render_builder(league: str, season=None, shared: str = "", by: str = "", code: str = "") -> str:
@@ -832,8 +833,8 @@ def render_builder(league: str, season=None, shared: str = "", by: str = "", cod
                        "shared": {"r": shared, "n": by} if code and shared else None},
                       ensure_ascii=False).replace("<", "\\u003c")
     main = f"""{stove_toggle(league, "builder") if not season else ""}<section class="card panel bld-head">
-<h2>🍄 나만의 버섯농장 짜기 <small>내년 시즌 10팀 주전 로스터 예상</small></h2>
-<p class="src">선수를 고른 뒤 빈칸을 누르거나(모바일), 끌어다 놓으세요(PC). 이 브라우저에 자동 저장돼요.</p>
+<h2>내가 단장이라면 <small>{current_season()} 시즌 10개 팀 주전을 내 마음대로</small></h2>
+<p class="src">선수를 고른 뒤 빈칸을 누르세요. PC에서는 끌어다 놓아도 돼요. 짠 로스터는 이 브라우저에 저장되고, 이미지나 링크로 자랑할 수 있어요.</p>
 <div class="bld-act"><button class="btn primary" type="button" id="bsave">이미지로 저장</button><button class="btn" type="button" id="bshare">링크로 공유</button>
 <button class="btn" type="button" id="breset">지금 로스터로 되돌리기</button>{"".join(f'<button class="btn" type="button" data-arch="{y}">{y} 로스터 불러오기</button>' for y in archive_years())}<button class="btn" type="button" id="bclear">모두 비우기</button></div>
 </section>
@@ -849,7 +850,7 @@ def render_builder(league: str, season=None, shared: str = "", by: str = "", cod
 {popular_rosters() if not season and not code else ""}
 <script type="application/json" id="bdata">{data}</script>"""
     og = shared_roster_og(shared, by) if shared else None
-    return shell(league, "builder", "로스터 짜기", main, ("builder.js",), today, season=season, og=og)
+    return shell(league, "builder", "단장 놀이", main, ("builder.js",), today, season=season, og=og)
 
 
 # ── 미니게임: 협곡 버섯 지뢰찾기 ────────────────────────────────────────
@@ -943,7 +944,7 @@ def about_body() -> str:
 <ul>
 <li><b>소식</b>: 구글 뉴스와 리그피디아 편집 기록을 모아, 같은 내용의 기사는 하나로 묶고 오피셜·루머를 구분해 보여 줘요.</li>
 <li><b>로스터·이적</b>: 구단별 현재 로스터와 계약이 끝난 선수(FA)의 이적·잔류 현황을 정리해요.</li>
-<li><b>로스터 짜기</b>: 다음 시즌 로스터를 직접 조합해 이미지로 저장하거나 링크로 공유할 수 있어요.</li>
+<li><b>단장 놀이</b>: 다음 시즌 10개 팀 로스터를 내 마음대로 짜서 이미지로 저장하거나 링크로 공유할 수 있어요.</li>
 <li><b>리그·구단 안내와 시즌 기록</b>: 리그 구조, 구단 이력, 지난 시즌 우승팀·로스터·이적을 볼 수 있어요.</li>
 <li><b>수다방·미니게임</b>: 로그인 없이 쓰는 대화방과 협곡 버섯 지뢰찾기가 있어요.</li>
 </ul>
@@ -1128,7 +1129,7 @@ def render_archive(league: str, sec: str, year: int, t_sel: str = "") -> str:
         lis = "".join(f'<li>{_tname(m["fkey"], m["from"])}<span class="ar">➔</span>{_tname(m["tkey"], m["to"])}'
                       f'<span class="mv-who"><small>{esc(m["date"][5:].replace("-", "."))}</small><b>{esc(m["nick"])}</b></span></li>'
                       for m in reversed(items))
-        return (f'<details class="card moves" open><summary>{year} 스토브리그 이동 <small>{year - 1}.11 ~ {year}.01 · {len(moves)}건</small></summary>'
+        return (f'<details class="card moves" open><summary>{year - 1} 스토브리그 이동 <small>{year} 시즌 준비 · {year - 1}.11 ~ {year}.01 · {len(moves)}건</small></summary>'
                 f'<ul>{lis}</ul></details>')
 
     if active == "roster":
@@ -1519,42 +1520,72 @@ def render_soon(league: str) -> str:
     return shell(league, "", lg["name"], main, (), today)
 
 
-# ── 스토브리그 > 팀별 요약 ──────────────────────────────────────────────
+# ── 스토브리그 새 화면 공통 ─────────────────────────────────────────────
+def page_head(title: str, sub: str, stats: str = "") -> str:
+    """화면 맨 위 한 줄: 제목 · 무엇을 하는 화면인지 · 핵심 숫자."""
+    return (f'<header class="phead"><div><h2>{title}</h2><p>{sub}</p></div>'
+            f'{f"<div class=pstat>{stats}</div>" if stats else ""}</header>')
+
+
+def stove_dates(today) -> str:
+    """이적 시장 맨 위 한 줄: 스토브리그 주요 날짜(지난 건 흐리게)."""
+    cs = current_season(today)
+    first = min((_sch_at(m) for m in schedule.get("lck").get("matches") or []
+                 if _m_year(m) == str(cs) and _sch_at(m)), default=None)
+    items = [("11.15", "코치 영입 시작", True), ("11.17", "선수 FA 개장", True), ("미정", "KeSPA컵", False)]
+    if first:
+        f = first.astimezone(KST)
+        items.append((f"{f.month}.{f.day:02d}", f"{cs} LCK 개막", f.date() <= today))
+    else:
+        items.append(("미정", f"{cs} LCK 개막", False))
+    lis = "".join(f'<li class="{"done" if d else ""}"><time>{t}</time>{esc(n)}</li>' for t, n, d in items)
+    return f'<section class="sdates" aria-label="스토브리그 일정"><ol>{lis}</ol></section>'
+
+
+# ── 스토브리그 > 구단별 ─────────────────────────────────────────────────
 def _chip(p, cls="", extra="", pos=None):
     pos = pos or FA_POS.get(p.get("role", ""), p.get("role", ""))
     return f'<span class="pc {cls}" title="{esc(extra)}">{esc(p["nick"])}<small>{esc(pos)}</small></span>'
 
 
 def render_summary(league: str) -> str:
-    """팀마다 한 줄: +영입 · -이탈 · =재계약 · 미정 · 유력(뉴스) · 마지막 변동일."""
+    """구단마다 이번 겨울 들어온 사람·나간 사람·재계약·미정, 그리고 기사로만 나온 소문(따로)."""
     today = datetime.now(KST).date()
     keys = team_keys()
     sm = stv.team_summary(keys)
     rms = rumor_slots()
-    rows = []
+    cards = []
     for k in keys:
         v = sm[k]
-        ins = "".join(_chip(p, "in", f'{team_short(p["from"])}에서' if p.get("from") else "LCK 밖에서") for p in v["in"])
-        ins += "".join(_chip(x, "rm", f'{x["rm"]["outlet"]} · {x["rm"]["title"]}', x.get("pos"))
-                       for xs in rms.get(k, {}).values() for x in xs if not x["rm"]["stay"])
-        outs = "".join(_chip(p, "out", f'→ {team_short(p["to"]) if p.get("to") else (p.get("to_name") or "LCK 밖")}') for p in v["out"])
-        stays = "".join(_chip(p, "stay") for p in v["stay"])
-        opens = "".join(_chip(p, "open") for p in v["open"])
+        rumor = [x for xs in rms.get(k, {}).values() for x in xs if not x["rm"]["stay"]]
+        lines = []
+
+        def line(label, cls, chips):
+            if chips:
+                lines.append(f'<div class="sl {cls}"><em>{label}</em><div>{chips}</div></div>')
+        line("들어옴", "in", "".join(_chip(p, "in", f'{team_short(p["from"])}에서' if p.get("from") else "LCK 밖에서") for p in v["in"]))
+        line("나감", "out", "".join(_chip(p, "out", "→ " + (team_short(p["to"]) if p.get("to") else (p.get("to_name") or "LCK 밖"))) for p in v["out"]))
+        line("재계약", "stay", "".join(_chip(p, "stay") for p in v["stay"]))
+        line("소문", "rm", "".join(_chip(x, "rm", f'{x["rm"]["outlet"]}: {x["rm"]["title"]}', x.get("pos")) for x in rumor))
+        line("미정", "open", "".join(_chip(p, "open") for p in v["open"]))
+        moved = len(v["in"]) + len(v["out"]) + len(v["stay"])
         d = parse_day(v["updated"]) if v["updated"] else None
-        rows.append(f'<div class="mvrow" id="m-{k}" style="--tc:{team_color(k)}"><div class="mvt">{team_logo(k, "logo big")}<b>{esc(team_short(k))}</b>'
-                    f'<small>{f"{d.month}/{d.day} 변동" if d else "변동 없음"}</small></div>'
-                    f'<div class="mvc"><em class="g-in">+ 영입</em>{ins or "<i>-</i>"}</div>'
-                    f'<div class="mvc"><em class="g-out">− 이탈</em>{outs or "<i>-</i>"}</div>'
-                    f'<div class="mvc"><em class="g-stay">= 재계약</em>{stays or "<i>-</i>"}</div>'
-                    f'<div class="mvc"><em class="g-open">? 미정</em>{opens or "<i>-</i>"}</div></div>')
-    main = f"""{stove_toggle(league, "summary")}<section class="card panel"><p class="src">팀마다 이번 스토브리그 변동을 한 줄로 · 리그피디아 공식 기록 기준 ·
-<span class="pc rm">유력</span>은 최근 기사 제목 기준(공식 확정 전) · 이름 위에 올리면 어디서 왔는지·어디로 갔는지 보여요 ·
-<a href="/{league}/feed.xml">RSS로 받아 보기</a></p></section>
-<section class="card mvtab">{"".join(rows)}</section>"""
-    return shell(league, "summary", "팀별 이적 요약", main, (), today)
+        meta = f"확정 {moved}건" + (f" · 마지막 {d.month}/{d.day}" if d else "")
+        cards.append((-moved, -len(rumor), keys.index(k),
+                      f'<article class="scard" id="m-{k}" style="--tc:{team_color(k)}"><header>{team_logo(k, "logo big")}'
+                      f'<b>{esc(team_name(k))}</b><small>{meta}</small></header>{"".join(lines) or "<p class=sl-empty>아직 변동이 없어요</p>"}</article>'))
+    cards.sort()
+    cnt = fa_counts()
+    stats = (f'<span><b>{cnt.get("move", 0)}</b>이적</span><span><b>{cnt.get("stay", 0)}</b>재계약</span>'
+             f'<span><b>{cnt.get("fa", 0)}</b>미정</span>')
+    main = (f'{stove_toggle(league, "summary")}<div class="stack">'
+            + page_head("구단별", "이번 겨울 구단마다 누가 오고 갔는지 모았어요. 확정은 리그피디아 기록, 소문은 기사 제목 기준이에요.", stats)
+            + f'<div class="sgrid">{"".join(c[3] for c in cards)}</div>'
+            + f'<p class="plinks"><a href="/{league}/feed.xml">이적 소식 RSS</a></p></div>')
+    return shell(league, "summary", "구단별 이적", main, (), today)
 
 
-# ── 스토브리그 > 예측: 행선지 투표 + 소식통 적중률 ─────────────────────
+# ── 스토브리그 > 행선지 맞히기 ──────────────────────────────────────────
 def render_predict(league: str) -> str:
     today = datetime.now(KST).date()
     keys = team_keys()
@@ -1562,47 +1593,74 @@ def render_predict(league: str) -> str:
         fa = [dict(r) for r in c.execute("SELECT * FROM fa WHERE league='lck'").fetchall()]
     rms = rumors(fa)
     tal = vote.tally()
-    opts = "".join(f'<button type="button" data-c="{k}" title="{esc(team_name(k))}">{team_logo(k)}<span>{esc(team_short(k))}</span></button>'
-                   for k in keys) + f'<button type="button" data-c="{vote.OTHER}"><span>LCK 밖</span></button>'
-    open_, done = [], []
-    for r in sorted(fa, key=lambda r: (r["page"] not in rms, keys.index(r["team_from"]) if r["team_from"] in keys else 99, r["role"])):
-        if r["role"] not in FA_ROLES:
-            continue
+    order = lambda r: (keys.index(r["team_from"]) if r["team_from"] in keys else 99, r["role"])   # noqa: E731
+
+    def row(r):
         pos = FA_POS[r["role"]]
-        head = (f'<div class="vh"><span class="av tc" style="--tc:{team_color(r["team_from"])}">{esc(pos)}</span>'
-                f'<div><b>{esc(r["nick"])}</b><small>{team_logo(r["team_from"])}{esc(team_short(r["team_from"]))} · {esc(pos)}</small></div></div>')
-        if r["status"] == "fa":
-            rm = rms.get(r["page"])
-            hint = (f'<p class="vhint">기사: <b>{esc(team_short(rm["team"]))} {"잔류" if rm["stay"] else ""}{"발표" if rm["official"] else "유력"}</b>'
-                    f' · {esc(rm["outlet"])}</p>' if rm else "")
-            open_.append(f'<li class="vcard" data-page="{esc(r["page"])}">{head}{hint}<div class="vopts">{opts}</div><div class="vres" hidden></div></li>')
-        elif tal.get(r["page"]):
-            ans = r["team_to"] if r["status"] == "move" else r["team_from"]
-            t = tal[r["page"]]
-            n = sum(t.values())
-            right = t.get(ans or vote.OTHER, 0)
-            lbl = f'{team_short(ans)} {"잔류" if r["status"] == "stay" else "이적"}' if ans else "LCK 밖"
-            done.append(f'<li class="vcard done">{head}<p class="vans">정답 <b>{esc(lbl)}</b> · 맞힌 사람 <b>{round(100 * right / n)}%</b> <small>({n}표)</small></p></li>')
+        rm = rms.get(r["page"])
+        hint = (f'<span class="vh-rm">{esc(team_short(rm["team"]))} {"잔류 " if rm["stay"] else ""}{"발표" if rm["official"] else "유력"}'
+                f'<small>{esc(rm["outlet"])}</small></span>' if rm else "")
+        return (f'<li class="vrow" data-page="{esc(r["page"])}" data-nick="{esc(r["nick"])}">'
+                f'<span class="av tc" style="--tc:{team_color(r["team_from"])}">{esc(pos)}</span>'
+                f'<div class="vwho"><b>{esc(r["nick"])}</b><small>{team_logo(r["team_from"])}{esc(team_short(r["team_from"]))}에서</small></div>'
+                f'{hint}<span class="vtop"></span><button type="button" class="btn vpick">고르기</button></li>')
+    players = [r for r in fa if r["role"] in FA_ROLES]
+    hot = sorted((r for r in players if r["status"] == "fa" and r["page"] in rms), key=order)
+    rest = sorted((r for r in players if r["status"] == "fa" and r["page"] not in rms), key=order)
+    done = []
+    for r in sorted((r for r in players if r["status"] != "fa" and tal.get(r["page"])), key=order):
+        ans = r["team_to"] if r["status"] == "move" else r["team_from"]
+        t = tal[r["page"]]
+        n = sum(t.values())
+        right = t.get(ans or vote.OTHER, 0)
+        lbl = f'{team_short(ans)} {"재계약" if r["status"] == "stay" else "이적"}' if ans else "LCK 밖"
+        done.append(f'<li class="vdone"><b>{esc(r["nick"])}</b><span>정답 {esc(lbl)}</span><em>{round(100 * right / n)}% 맞힘</em><small>{n}표</small></li>')
+    votes = sum(sum(v.values()) for v in tal.values())
+    sheet = ('<dialog class="vsheet" id="vsheet"><form method="dialog"><button class="pol-x" aria-label="닫기">✕</button></form>'
+             '<p class="vs-t"><b id="vs-nick"></b> 어디로 갈까요?</p><div class="vopts">'
+             + "".join(f'<button type="button" data-c="{k}">{team_logo(k)}<span>{esc(team_short(k))}</span></button>' for k in keys)
+             + f'<button type="button" data-c="{vote.OTHER}"><span>LCK 밖</span></button></div>'
+             '<p class="vs-n">발표 전까지는 몇 번이든 바꿀 수 있어요.</p></dialog>')
+    lists = ""
+    if hot:
+        lists += f'<section class="card vsec"><h3>기사가 나온 선수 <small>{len(hot)}명</small></h3><ul class="vlist">{"".join(row(r) for r in hot)}</ul></section>'
+    if rest:
+        lists += (f'<details class="card vsec"{"" if hot else " open"}><summary><h3>나머지 미정 선수 <small>{len(rest)}명</small></h3></summary>'
+                  f'<ul class="vlist">{"".join(row(r) for r in rest)}</ul></details>')
+    if not (hot or rest):
+        lists = '<p class="note">지금은 행선지가 안 정해진 선수가 없어요.</p>'
+    if done:
+        lists += f'<section class="card vsec"><h3>정답이 나온 선수</h3><ul class="vlist">{"".join(done)}</ul></section>'
+    stats = f'<span><b>{len(hot) + len(rest)}</b>미정</span><span><b>{votes}</b>표</span>'
+    main = (f'{stove_toggle(league, "predict")}<div class="stack">'
+            + page_head("행선지 맞히기", "행선지가 안 정해진 선수, 어디로 갈 것 같나요? 발표가 나면 정답과 맞힌 비율을 알려 드려요.", stats)
+            + lists + source_board() + f'</div>{sheet}')
+    return shell(league, "predict", "행선지 맞히기", main, ("predict.js",), today)
+
+
+def source_board() -> str:
+    """소식통 성적표: 결과가 난 예측이 있는 매체만 표로, 나머지는 '결과 기다리는 기사'로."""
     preds = stv.predictions()
-    acc = stv.accuracy(preds)
-    acc_rows = "".join(
-        f'<tr><th>{esc(a["outlet"])}</th><td class="h">{a["hit"]}</td><td class="m">{a["miss"]}</td><td>{a["wait"]}</td>'
-        f'<td><b>{str(a["rate"]) + "%" if a["rate"] is not None else "-"}</b></td></tr>' for a in acc)
-    res_lbl = {"hit": ("맞음", "h"), "miss": ("틀림", "m"), "wait": ("대기", "w")}
-    plist = "".join(
-        f'<li><span class="pr {res_lbl[p["result"]][1]}">{res_lbl[p["result"]][0]}</span><b>{esc(p["nick"])}</b>'
-        f'<span class="to">→ {esc(team_short(p["team"]))}{" 잔류" if p["stay"] else ""}</span>'
-        f'<a href="{esc(p["url"])}" target="_blank" rel="noopener">{esc(p["outlet"])} ↗</a></li>' for p in preds[:20])
-    main = f"""{stove_toggle(league, "predict")}<section class="card panel"><p class="src">아직 행선지가 안 정해진 FA 선수가 어디로 갈지 한 표씩 · 로그인 없이 이 브라우저 기준 한 사람 한 표(다시 누르면 바꿔요) ·
-행선지가 정해지면 정답과 맞힌 비율을 보여 줘요</p></section>
-<section class="card vote"><h3>🔮 행선지 투표 <small>{len(open_)}명</small></h3>
-{f'<ul class="vlist" id="vlist">{"".join(open_)}</ul>' if open_ else '<p class="note">지금 투표할 미정 선수가 없어요.</p>'}</section>
-{f'<section class="card vote"><h3>✅ 결과 나온 투표</h3><ul class="vlist">{"".join(done)}</ul></section>' if done else ""}
-<section class="card acc"><h3>📰 소식통 적중률 <small>최근 2주 단독·유력 기사 기준</small></h3>
-<p class="src">기사 제목에서 선수와 행선지를 읽어, 나중에 공식 발표(리그피디아)와 맞는지 비교해요 · 대기는 아직 결과가 안 나온 것</p>
-{f'<table class="acct"><thead><tr><th>매체</th><td>맞음</td><td>틀림</td><td>대기</td><td>적중률</td></tr></thead><tbody>{acc_rows}</tbody></table><ul class="plist">{plist}</ul>' if acc else '<p class="note">아직 모인 예측 기사가 없어요.</p>'}
-</section>"""
-    return shell(league, "predict", "예측", main, ("predict.js",), today)
+    acc = [a for a in stv.accuracy(preds) if a["hit"] + a["miss"]]
+    res = {"hit": ("맞음", "h"), "miss": ("틀림", "m"), "wait": ("대기", "w")}
+    table = "".join(f'<tr><th>{esc(a["outlet"])}</th><td><b>{a["rate"]}%</b></td><td>{a["hit"]}/{a["hit"] + a["miss"]}</td>'
+                    f'<td class="w">{a["wait"] or ""}</td></tr>' for a in acc)
+
+    def item(p):
+        lbl, cls = res[p["result"]]
+        return (f'<li><span class="pr {cls}">{lbl}</span><b>{esc(p["nick"])}</b><span class="to">{esc(team_short(p["team"]))}'
+                f'{" 잔류" if p["stay"] else ""}</span><a href="{esc(p["url"])}" target="_blank" rel="noopener">{esc(p["outlet"])}</a></li>')
+    waiting = [p for p in preds if p["result"] == "wait"]
+    decided = [p for p in preds if p["result"] != "wait"]
+    body = (f'<table class="acct"><thead><tr><th>매체</th><td>적중률</td><td>맞힘</td><td>대기</td></tr></thead><tbody>{table}</tbody></table>'
+            if acc else '<p class="note">아직 발표로 확인된 기사가 없어요. 발표가 나는 대로 채워져요.</p>')
+    if decided:
+        body += f'<ul class="plist">{"".join(item(p) for p in decided[:10])}</ul>'
+    if waiting:
+        body += (f'<details class="pwait"><summary>발표를 기다리는 기사 {len(waiting)}건</summary>'
+                 f'<ul class="plist">{"".join(item(p) for p in waiting[:20])}</ul></details>')
+    return (f'<section class="card acc"><h3>소식통 성적표 <small>최근 2주</small></h3>'
+            f'<p class="sub">단독·소식통 기사가 실제 발표와 맞았는지 세어 봤어요.</p>{body}</section>')
 
 
 # ── 팀 > 계약 만료 ──────────────────────────────────────────────────────
@@ -1619,41 +1677,41 @@ def render_contracts(league: str) -> str:
             until = ("~" + r["until"][:7].replace("-", ".")) if r["until"] else "날짜 미공개"
             return (f'<li><span class="tm">{team_logo(r["team"])}{esc(team_short(r["team"]))}</span>'
                     f'<span class="ps">{esc(FA_POS.get(r["role"], r["role"]))}</span><b>{esc(r["nick"])}</b>{real}<em>{until}</em></li>')
-        items = "".join(li(r) for r in rs)
-        title = f"{y}년 계약 만료" if y != "미공개" else "계약 기간 미공개"
-        secs.append(f'<section class="card ctr" id="y-{y}"><h3>{title} <small>{len(rs)}명</small></h3><ul>{items}</ul></section>')
-    jump = "".join(f'<a href="#y-{y}">{y if y != "미공개" else "미공개"}</a>' for y in by_year)
-    main = (f'{team_toggle(league, "contracts")}<section class="card panel"><p class="src">지금 로스터 선수·감독의 계약이 끝나는 때(리그피디아 기준) · '
-            f'계약이 끝나는 해 11월 스토브리그에 FA가 돼요</p><nav class="chips yjump">{jump}</nav></section>{"".join(secs)}'
-            + ("" if rows else '<p class="note">로스터 정보를 모으는 중이에요.</p>'))
+        title = f"{y}년에 끝나요" if y != "미공개" else "계약 기간 미공개"
+        secs.append(f'<section class="card ctr" id="y-{y}"><h3>{title} <small>{len(rs)}명</small></h3><ul>{"".join(li(r) for r in rs)}</ul></section>')
+    jump = "".join(f'<a href="#y-{y}">{y}</a>' for y in by_year)
+    stats = "".join(f'<span><b>{len(v)}</b>{y}</span>' for y, v in list(by_year.items())[:2] if y != "미공개")
+    main = (f'{team_toggle(league, "contracts")}<div class="stack">'
+            + page_head("계약 만료", "지금 로스터의 계약이 언제 끝나는지 모았어요. 계약이 끝나는 해 11월에 FA가 돼요.", stats)
+            + (f'<nav class="chips yjump">{jump}</nav>' if len(by_year) > 1 else "")
+            + ("".join(secs) or '<p class="note">로스터 정보를 모으는 중이에요.</p>') + "</div>")
     return shell(league, "contracts", "계약 만료", main, (), today)
 
 
 # ── 로스터 짜기 > 인기 로스터 ───────────────────────────────────────────
 def popular_rosters() -> str:
+    """공유된 로스터가 모이면 팀·자리마다 가장 많이 고른 선수. 모이기 전엔 아무것도 안 보여 줌."""
     keys = team_keys()
     pop = stv.popular(keys)
     if not pop["teams"]:
-        return (f'<section class="card poprs"><h3>🔥 인기 로스터</h3><p class="note">공유된 로스터가 3개 넘게 모이면 팀·자리마다 가장 많이 고른 선수를 보여 드려요 '
-                f'(지금 {pop["n"]}개)</p></section>')
+        return ""
     nick = {p["page"]: (p.get("ko") or p["nick"]) for p in people_list()}
     cards = []
     for k in keys:
         lines = []
         for role in stv.ROLES:
             top = pop["teams"][k][role]
-            tot = sum(n for _, n in top) or 1
             if top:
                 pg, n = top[0]
                 lines.append(f'<li><span>{FA_POS[role]}</span><b>{esc(nick.get(pg, pg.split(" (")[0]))}</b><em>{round(100 * n / pop["n"])}%</em></li>')
             else:
                 lines.append(f'<li><span>{FA_POS[role]}</span><i>-</i></li>')
         cards.append(f'<div class="prc" style="--tc:{team_color(k)}"><p>{team_logo(k)}<b>{esc(team_short(k))}</b></p><ul>{"".join(lines)}</ul></div>')
-    return (f'<section class="card poprs"><h3>🔥 인기 로스터 <small>공유된 로스터 {pop["n"]}개 중 가장 많이 고른 선수</small></h3>'
+    return (f'<section class="card poprs"><h3>다들 이렇게 짰어요 <small>공유된 로스터 {pop["n"]}개</small></h3>'
             f'<div class="prgrid">{"".join(cards)}</div></section>')
 
 
-# ── 팀 > 구단 안내: 계보 그림 ──────────────────────────────────────────
+# ── 팀 > 구단 안내: 계보 ───────────────────────────────────────────────
 def lineage_map(league: str) -> str:
     rows = []
     for k in team_keys():
@@ -1665,4 +1723,4 @@ def lineage_map(league: str) -> str:
         rows.append(f'<li style="--tc:{team_color(k)}"><a class="lt" href="#tc-{k}">{team_logo(k)}<b>{esc(team_short(k))}</b></a><div class="lchain">{chain}</div></li>')
     if not rows:
         return ""
-    return f'<section class="card lmap"><h3>🌳 구단 계보 <small>왼쪽이 옛 이름, 오른쪽 끝이 지금 이름</small></h3><ul>{"".join(rows)}</ul></section>'
+    return f'<section class="card lmap"><h3>구단 계보 <small>왼쪽이 옛 이름</small></h3><ul>{"".join(rows)}</ul></section>'

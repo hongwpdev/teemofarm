@@ -143,11 +143,15 @@ async function memory(p) {
 
 async function vote(p) {
   await p.goto(B + '/lck/predict');
-  const b = await p.$('.vcard .vopts button');
-  if (!b) return;
-  await click(p, b, '행선지 투표');
+  const pick = await p.$('.vrow .vpick >> visible=true');
+  if (!pick) return;
+  await click(p, pick, '행선지 [고르기]');
+  if (!(await p.$eval('#vsheet', d => d.open).catch(() => false))) { bad('행선지 [고르기]를 눌러도 팀 고르는 창이 안 뜸'); return; }
+  await click(p, '#vsheet .vopts button[data-c="hle"]', '행선지 팀 고르기');
   await p.waitForTimeout(500);
-  if (!(await p.$eval('.vcard .vres', e => !e.hidden && e.innerText.trim().length > 0).catch(() => false))) bad('투표를 눌러도 결과가 안 보임');
+  if (await p.$eval('#vsheet', d => d.open).catch(() => false)) bad('팀을 골라도 창이 안 닫힘');
+  const txt = await p.$eval('.vrow .vpick', e => e.textContent).catch(() => '');
+  if (!txt.includes('HLE')) bad(`투표한 뒤에도 내 선택이 안 보임 ('${txt}')`);
 }
 
 (async () => {

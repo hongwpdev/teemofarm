@@ -1133,3 +1133,77 @@ a.tbtn .lb{margin-left:.3rem}
 .ln::after{content:'';position:absolute;right:-.1rem;top:-.3rem;border:.4rem solid transparent;border-left-color:var(--btn-border);border-right:0}
 @media (max-width:719px){.lmap li{align-items:flex-start}.lmap .lt{width:5.6rem}}
 .vlist,.plist,.ctr ul,.lmap ul,.prc ul{list-style:none}
+/* ── 스토브리그 새 화면 다듬기: 머리 한 줄 · 영역 간격 · 일정 띠 ── */
+.stack{display:grid;gap:1.6rem}
+.stack>.card,.stack>details.card{margin:0}
+.phead{display:flex;align-items:flex-end;justify-content:space-between;gap:1.2rem 2rem;flex-wrap:wrap;margin:1.6rem 0 1.2rem;padding:0 .4rem}
+.stack>.phead{margin:0}
+.phead h2{font-size:2rem;font-weight:800;color:var(--t1);letter-spacing:-.03rem}
+.phead p{margin-top:.4rem;font-size:1.35rem;color:var(--t5);line-height:1.55;max-width:60rem}
+.pstat{display:flex;gap:1.6rem}
+.pstat span{display:flex;flex-direction:column;align-items:flex-end;font-size:1.15rem;color:var(--t8)}
+.pstat b{font-size:2rem;line-height:1.2;color:var(--t1);font-variant-numeric:tabular-nums}
+.plinks{text-align:right;font-size:1.25rem}
+.plinks a{color:var(--t5);text-decoration:underline;text-underline-offset:.3rem}
+.sdates{margin:0 0 1.2rem}
+.sdates ol{display:flex;gap:.6rem;overflow-x:auto;scrollbar-width:none;padding:.2rem .4rem}
+.sdates ol::-webkit-scrollbar{display:none}
+.sdates li{flex:none;display:flex;align-items:center;gap:.6rem;padding:.6rem 1.2rem;border:1px solid var(--line);border-radius:2rem;background:var(--card);font-size:1.25rem;color:var(--t3);white-space:nowrap}
+.sdates time{font-weight:800;color:var(--primary-text);font-variant-numeric:tabular-nums}
+.sdates li.done{opacity:.55}
+.sdates li.done time{color:var(--t8)}
+/* 구단별 */
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(36rem,1fr));gap:1.2rem}
+.scard{background:var(--card);border-radius:1rem;box-shadow:var(--shadow);border-top:.3rem solid var(--tc);padding:1.4rem 1.6rem 1.6rem}
+.scard header{display:flex;align-items:center;gap:.8rem;margin-bottom:1rem}
+.scard header .logo{width:2.8rem;height:2.8rem}
+.scard header b{font-size:1.55rem;color:var(--t1)}
+.scard header small{margin-left:auto;font-size:1.15rem;color:var(--t8)}
+.sl{display:grid;grid-template-columns:5.2rem 1fr;gap:.6rem;align-items:start;padding:.6rem 0;border-top:1px solid var(--line)}
+.sl em{font-style:normal;font-size:1.2rem;font-weight:700;line-height:2.4rem}
+.sl>div{display:flex;flex-wrap:wrap;gap:.4rem}
+.sl.in em{color:var(--green)}.sl.out em{color:#ef4444}.sl.stay em{color:var(--primary-text)}.sl.rm em{color:#f59e0b}.sl.open em{color:var(--t8)}
+:root:not([data-theme="dark"]) .sl.rm em{color:#b45309}
+.sl.open .pc{background:transparent;box-shadow:inset 0 0 0 1px var(--line);color:var(--t5)}
+.sl-empty{font-size:1.3rem;color:var(--t8)}
+/* 행선지 맞히기 */
+.vsec{padding:0}
+.vsec h3,.vsec summary h3{display:inline-flex;align-items:baseline;gap:.6rem;padding:1.4rem 1.6rem;font-size:1.55rem;color:var(--t1)}
+.vsec summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding-right:1.6rem}
+.vsec summary::-webkit-details-marker{display:none}
+.vsec summary::after{content:'펼치기';font-size:1.2rem;color:var(--t5)}
+.vsec[open] summary::after{content:'접기'}
+.vsec .vlist{display:block;padding:0 1.6rem 1rem}
+.vrow{display:grid;grid-template-columns:auto 1fr auto auto;grid-template-areas:"av who rm btn" "av who top btn";align-items:center;gap:.2rem 1rem;padding:1rem 0;border-top:1px solid var(--line)}
+.vrow .av{grid-area:av}
+.vwho{grid-area:who;min-width:0}
+.vwho b{display:block;font-size:1.5rem;color:var(--t1)}
+.vwho small{display:inline-flex;align-items:center;gap:.3rem;font-size:1.15rem;color:var(--t8)}
+.vwho small .logo{width:1.4rem;height:1.4rem}
+.vh-rm{grid-area:rm;justify-self:end;font-size:1.2rem;font-weight:700;color:#f59e0b}
+.vh-rm small{margin-left:.4rem;font-weight:500;color:var(--t8)}
+:root:not([data-theme="dark"]) .vh-rm{color:#b45309}
+.vtop{grid-area:top;justify-self:end;font-size:1.15rem;color:var(--t5);font-variant-numeric:tabular-nums}
+.vpick{grid-area:btn;height:3.4rem;padding:0 1.2rem;font-size:1.3rem;white-space:nowrap}
+.vpick.on{border-color:var(--primary);color:var(--primary-text)}
+.vdone{display:flex;align-items:baseline;gap:.8rem;flex-wrap:wrap;padding:1rem 0;border-top:1px solid var(--line);font-size:1.35rem;color:var(--t3)}
+.vdone b{color:var(--t1)}.vdone em{font-style:normal;font-weight:700;color:var(--green)}.vdone small{color:var(--t8)}
+.vsheet{width:min(42rem,calc(100vw - 3.2rem));margin:auto;padding:0;border:1px solid var(--border);border-radius:1.2rem;background:var(--card);color:var(--t3)}
+.vsheet::backdrop{background:rgba(0,0,0,.55)}
+.vsheet form{position:absolute;right:0;top:0}
+.vsheet.busy{opacity:.6;pointer-events:none}
+.vs-t{padding:1.8rem 5rem .4rem 1.8rem;font-size:1.5rem;color:var(--t3)}
+.vs-t b{color:var(--t1);font-size:1.7rem}
+.vsheet .vopts{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;padding:1.2rem 1.8rem}
+.vsheet .vopts button{height:4.4rem;justify-content:center;font-size:1.35rem}
+.vs-n{padding:0 1.8rem 1.8rem;font-size:1.2rem;color:var(--t8)}
+@media (max-width:719px){.vrow{grid-template-columns:auto 1fr auto;grid-template-areas:"av who btn" "av rm btn" "av top btn"}.vh-rm,.vtop{justify-self:start}}
+/* 소식통 성적표 */
+.acc{padding-bottom:.6rem}
+.acc .sub{padding:0 1.6rem 1rem;font-size:1.3rem;color:var(--t5)}
+.acc .note{margin:0 1.6rem 1.2rem}
+.acc .acct td.w{color:var(--t8)}
+.pwait{margin:0 1.6rem 1rem;border-top:1px solid var(--line)}
+.pwait summary{padding:1rem 0;font-size:1.3rem;color:var(--t5);cursor:pointer}
+.pwait .plist{padding:0 0 .6rem}
+@media (max-width:719px){.sgrid{grid-template-columns:1fr}.phead h2{font-size:1.8rem}.pstat{gap:1.2rem}}

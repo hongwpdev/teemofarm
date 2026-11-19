@@ -85,7 +85,7 @@ class Handler(BaseHTTPRequestHandler):
         if len(parts) == 2 and parts[0] == "s":            # 공유 로스터 짧은 주소
             hit = share.get(parts[1])
             if not hit:
-                return self._send(404, "공유한 로스터를 찾을 수 없어요. <a href='/lck/builder'>로스터 짜기로</a>".encode(), "text/html; charset=utf-8")
+                return self._send(404, "공유한 로스터를 찾을 수 없어요. <a href='/lck/builder'>단장 놀이 하러 가기</a>".encode(), "text/html; charset=utf-8")
             page = views.render_builder(DEFAULT_LEAGUE, None, hit[0], hit[1], code=parts[1])
             page = page.replace("{{ORIGIN}}", self._origin()).replace("{{PATH}}", html.escape(u.path, quote=True))
             return self._send(200, page.encode(), "text/html; charset=utf-8", cache="public, max-age=0, s-maxage=300")
@@ -202,8 +202,8 @@ class Handler(BaseHTTPRequestHandler):
                 page = views.render_schedule(league, None, "plan")
             elif sec == "results":
                 page = views.render_schedule(league, None, "results")
-            elif sec == "stove":
-                page = views.render_stove(league)
+            elif sec == "stove":                         # 스토브리그 일정은 '이적 시장' 맨 위 한 줄로 옮김
+                return self._redirect(f"/{league}/fa")
             elif sec == "teams":
                 page = views.render_teams(league)
             elif sec == "summary":
