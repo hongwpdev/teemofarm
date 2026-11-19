@@ -303,7 +303,7 @@ def _ts(r):
 
 
 def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: str = "", q: str = "") -> str:
-    """hot: 1=오피셜(기본), 2=오피셜+루머, 0=전체. team: '' = 지정 없음(내 팀이 있으면 화면에서 그 팀으로)."""
+    """hot: 0=전체(기본), 1=오피셜, 2=오피셜+루머. team: '' = 지정 없음(내 팀이 있으면 화면에서 그 팀으로)."""
     d_from, d_to = parse_day(frm), parse_day(to)
     if d_from and d_to and d_from > d_to:
         d_from, d_to = d_to, d_from          # 순서를 거꾸로 넣어도 동작
@@ -361,13 +361,13 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
     base = f"/{league}"
 
     def url(t=team, s=src, h=hot, f=frm, e=to, k=q):
-        # 기본값(지정 없음·모든 출처·오피셜·전체 기간)은 주소에서 뺌 → 짧은 주소
+        # 기본값(지정 없음·모든 출처·전체 보기·전체 기간)은 주소에서 뺌 → 짧은 주소
         q = {"q": k} if k else {}
         if t in TEAMS or t == "all":
             q["team"] = t
         if s in ("news", "wiki"):
             q["src"] = s
-        if h != (0 if k else 1):                # 검색 중엔 '전체'가 기본
+        if h:                                   # '전체'(0)가 기본
             q["hot"] = h
         if f:
             q["from"] = f
@@ -391,7 +391,7 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
     hidden = "".join(f'<input type="hidden" name="{k}" value="{esc(str(v))}">'
                      for k, v in (("team", team if (team in TEAMS or team == "all") else ""),
                                   ("src", src if src in ("news", "wiki") else ""),
-                                  ("hot", "" if hot == 1 else hot)) if v != "")
+                                  ("hot", hot or "")) if v != "")
     period_form = (f'<form id="dates" class="dates{" show" if custom else ""}" method="get" action="{base}">{hidden}'
                    f'<input type="date" name="from" value="{frm}" max="{today}" aria-label="시작일">'
                    f'<span>~</span><input type="date" name="to" value="{to}" max="{today}" aria-label="종료일">'
