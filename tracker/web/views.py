@@ -169,7 +169,8 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
     season_t = ("schedule", "/schedule", "시즌", ("schedule", "results"))
     team_t = ("roster", "/roster", "팀", ("roster", "teams"))
     tab_defs = [news_t, stove_t, season_t, team_t] if stove else [news_t, season_t, team_t, stove_t]
-    hot = {}                                                 # 'HOT' 배지는 뺌(메뉴 대부분에 붙어 의미가 없었음)
+    # 'HOT'은 지금 시기에 앞으로 온 메뉴 하나에만: 스토브리그 기간엔 '스토브리그', 시즌 중엔 '시즌'. 지난 시즌 기록을 볼 땐 안 붙임
+    hot = {} if season else {(stove_t if stove else season_t)[0]: True}
     sq = f"?season={season}" if season else ""
     # 시즌 고르기: 지금 시즌 + 지난 시즌 기록
     now_y = current_season(today)
