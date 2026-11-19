@@ -913,3 +913,37 @@ body{padding-bottom:7rem}
 .mpl:hover,.mpl:focus-visible{color:var(--primary-text);text-decoration:underline}
 .pback{margin:1.2rem 0 0 1.6rem;height:3.2rem;padding:0 1.2rem;border:1px solid var(--line);border-radius:1.6rem;background:var(--bg-gray);color:var(--primary-text);font-size:1.3rem;font-weight:600;cursor:pointer}
 .pop_now .mv .ch{width:2.4rem;height:2.4rem;vertical-align:middle;border-radius:.4rem}
+/* 조회·자동 갱신: 필터 밖, 늘 보이는 작은 버튼(↻ 남은 시간) + 자동 스위치 */
+.rfr{flex:none;display:flex;align-items:center;gap:.6rem;margin-left:auto}
+.rbtn{display:inline-flex;align-items:center;gap:.5rem;height:4rem;padding:0 1.2rem;border:1px solid var(--primary);border-radius:.4rem;background:var(--primary);color:#fff;font-size:1.4rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.rbtn:hover{background:var(--primary-hover)}
+.rbtn:disabled{opacity:.6;cursor:default}
+.rbtn .ico{font-size:1.7rem;line-height:1;display:inline-block}
+.rbtn.busy .ico{animation:spin .8s linear infinite}
+.rbtn .next{color:#fff;opacity:.85;font-size:1.2rem;font-weight:600}
+.rbtn .next:empty{display:none}
+.rbtn .next::before{content:'·';margin-right:.4rem}
+.sw{display:inline-flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none;font-size:1.3rem;font-weight:600;color:var(--t5)}
+.sw input{position:absolute;opacity:0;width:1px;height:1px}
+.sw .knob{position:relative;width:3.4rem;height:2rem;border-radius:1rem;background:var(--btn-border);transition:background .2s}
+.sw .knob::after{content:'';position:absolute;top:.2rem;left:.2rem;width:1.6rem;height:1.6rem;border-radius:50%;background:#fff;box-shadow:0 .1rem .3rem rgba(0,0,0,.3);transition:transform .2s}
+.sw input:checked+.knob{background:var(--primary)}
+.sw input:checked+.knob::after{transform:translateX(1.4rem)}
+.sw input:checked~.swl{color:var(--primary-text)}
+.sw input:focus-visible+.knob{outline:.2rem solid var(--accent);outline-offset:.2rem}
+.fbar .msg,.panel .msg{margin-top:.6rem}
+.ptop{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap}
+.ptop .view_tab{flex:1;min-width:0;max-width:40rem}
+.panel.fa .ptop{grid-column:1/-1}
+.panel.fa .msg{grid-column:1/-1}
+@media (max-width:719px){
+ .fbar .top{gap:.6rem}
+ .rbtn{padding:0 1rem}
+ .rbtn .lbl{display:none}
+ .rbtn.busy .lbl{display:inline}
+ .sw{flex-direction:column;gap:.1rem;font-size:1rem}
+ .ptop .src{order:2;flex-basis:100%}
+}
+.ptop .src{flex:1 1 30rem;min-width:0;margin:0}
+.fbar .view_tab a{white-space:nowrap}
+@media (max-width:379px){.rbtn .next{display:none}.fbar .view_tab a{padding-left:.4rem;padding-right:.4rem}}

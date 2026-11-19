@@ -8,7 +8,8 @@
   rows.forEach(r => { if (my && (" " + r.dataset.teams + " ").includes(" " + my + " ")) r.classList.add("my"); });
   document.querySelectorAll(".sch-stand tr[data-team]").forEach(tr => { if (my && tr.dataset.team === my) tr.classList.add("my"); });
 
-  function show(t) {
+  // 이름이 아래 경기 팝업의 show()와 같으면 함수 선언이 덮여서, 팀 탭을 누를 때 빈 팝업이 떴음 → showTeam
+  function showTeam(t) {
     tabs.querySelectorAll("a").forEach(a => { const on = a.dataset.t === t; a.classList.toggle("on", on); on ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"); });
     rows.forEach(r => { r.hidden = t !== "all" && !(" " + r.dataset.teams + " ").includes(" " + t + " "); });
     document.querySelectorAll(".sday").forEach(d => { d.hidden = !d.querySelector(".mt:not([hidden])"); });
@@ -23,9 +24,9 @@
   }
   tabs.addEventListener("click", e => {
     const a = e.target.closest("a[data-t]"); if (!a) return;
-    e.preventDefault(); show(a.dataset.t);
+    e.preventDefault(); showTeam(a.dataset.t);
   });
-  if (my && tabs.querySelector('a[data-t="' + my + '"]')) show(my);
+  if (my && tabs.querySelector('a[data-t="' + my + '"]')) showTeam(my);
 
   // 스포 방지: 우승 카드는 누르면 보여 줌
   document.addEventListener("click", e => {
