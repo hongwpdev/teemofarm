@@ -9,7 +9,7 @@ import threading
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from .. import archive, champs, chat, jobs, maint, matchinfo, player_extra, riot, schedule, share
+from .. import archive, champs, chat, jobs, maint, matchinfo, player_extra, riot, schedule, share, teamlogos
 from ..cargo import RATE_MSG, is_rate_limit
 from ..config import DEFAULT_LEAGUE, FA_INTERVAL, LEAGUES, NEWS_INTERVAL, PORT, WIKI_INTERVAL, log
 from ..core import db, init_db
@@ -68,6 +68,11 @@ class Handler(BaseHTTPRequestHandler):
         if parts and parts[0] == "logo" and len(parts) == 2 and parts[1].endswith(".png") and parts[1][:-4] in LOGO_PNG:
             return self._send(200, LOGO_PNG[parts[1][:-4]], "image/png",
                               cache="public, max-age=31536000, immutable" if "v" in qs else "public, max-age=86400")
+        if len(parts) == 2 and parts[0] == "tlogo":        # 해외 팀 로고(리그피디아에서 받아 둔 것)
+            hit = teamlogos.read(parts[1])
+            if not hit:
+                return self._send(404, b"", "image/png", cache="no-store")
+            return self._send(200, hit[0], hit[1], cache="public, max-age=31536000, immutable" if "v" in qs else "public, max-age=86400")
         if len(parts) == 2 and parts[0] == "s":            # 공유 로스터 짧은 주소
             hit = share.get(parts[1])
             if not hit:

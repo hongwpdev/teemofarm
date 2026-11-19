@@ -15,7 +15,7 @@ from ..fa import FA_ROLES, fa_since
 from ..filters import is_lol_news, ko_nicks
 from ..insight import is_spoiler, overseas_tag, search_terms, trust
 from ..archive import archive_years, current_season
-from .. import archive, schedule
+from .. import archive, schedule, teamlogos
 from ..logos import TEAM_LOGOS
 
 # 제목 옆 버섯: 그림 대신 기기 기본 버섯 이모지(🍄). '조회 중' 화면에서도 같은 이모지가 뛰어감
@@ -943,7 +943,7 @@ def match_teams(league: str, names) -> dict:
     out = {}
     for n in names:
         k = schedule.team_id(league, n)
-        out[n] = {"short": T.short(k, n), "logo": logo_src(k) if k in TEAMS else ""}
+        out[n] = {"short": T.short(k, n), "logo": logo_src(k) if k in TEAMS else teamlogos.url(k) if k else ""}
     return out
 
 
@@ -970,6 +970,9 @@ class SchTeams:
     def logo(self, k, name):
         if k in TEAMS:
             return team_logo(k)
+        src = teamlogos.url(k) if k else ""
+        if src:
+            return f'<img class="logo" src="{esc(src)}" alt="" width="20" height="20" loading="lazy">'
         return f'<span class="logo txt" aria-hidden="true">{esc((self.short(k, name) if k else "?")[:1])}</span>'
 
     def tname(self, k, name):

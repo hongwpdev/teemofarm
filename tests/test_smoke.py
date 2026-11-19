@@ -70,6 +70,8 @@ class SmokeTest(unittest.TestCase):
     def test_root_redirects_and_404(self):
         self.assertEqual(self.get("/")[0], 200)          # /lck 로 넘어감
         self.assertEqual(self.get("/nope/nope/nope")[0], 404)
+        self.assertEqual(self.get("/tlogo/unknown-team")[0], 404)
+        self.assertEqual(self.get("/tlogo/..%2F..%2Fetc%2Fpasswd")[0], 404)
 
 
 if __name__ == "__main__":

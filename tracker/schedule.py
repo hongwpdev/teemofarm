@@ -12,6 +12,7 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 
+from . import teamlogos
 from .archive import current_season, team_key
 from .cargo import _cq, cargo
 from .config import DB_PATH, KST, LEAGUES, log
@@ -110,18 +111,32 @@ def _groups(table, matches, page):
     return [{"name": n, "table": g} for n, g in zip(names, groups)]
 
 
-def _short_names(names, gap):
-    """리그피디아 Teams 표에서 팀 약칭(BLG, G2 …). 못 받으면 빈 dict(화면은 긴 이름으로)."""
-    out = {}
-    names = sorted(n for n in names if n and n != "TBD")
-    for i in range(0, len(names), 40):
-        try:
-            rows = cargo(gap, tables="Teams", fields="Name,Short",
-                         where=f'Name IN ({",".join(_cq(n) for n in names[i:i + 40])})')
-        except Exception as e:  # noqa: BLE001
-            log.warning("schedule team names failed: %s", e)
-            return out
-        out.update({r["Name"]: r["Short"] for r in rows if r.get("Short")})
+def _team_rows(names, gap):
+    """리그피디아 Teams 표에서 팀 약칭(BLG, G2 …)·로고 파일 이름. 못 받으면 빈 dict(화면은 긴 이름·글자 로고로).
+    일정의 팀 이름은 팀 문서 이름(OverviewPage)이라 그것으로 찾고, 못 찾은 이름(이름이 바뀐 팀)은 TeamRedirects로 한 번 더."""
+    def by_page(pages):
+        got = {}
+        pages = sorted(pages)
+        for i in range(0, len(pages), 40):
+            rows = cargo(gap, tables="Teams", fields="Name,OverviewPage,Short,Image",
+                         where=f'OverviewPage IN ({",".join(_cq(n) for n in pages[i:i + 40])})')
+            got.update({r["OverviewPage"]: r for r in rows})
+        return got
+    names = {n for n in names if n and n != "TBD"}
+    try:
+        out = by_page(names)
+        missing = sorted(names - set(out))
+        if missing:
+            redir = {}
+            for i in range(0, len(missing), 40):
+                rows = cargo(gap, tables="TeamRedirects", fields="AllName,_pageName=P",
+                             where=f'AllName IN ({",".join(_cq(n) for n in missing[i:i + 40])})')
+                redir.update({r["AllName"]: r["P"] for r in rows if r.get("P")})
+            found = by_page(set(redir.values()))
+            out.update({n: found[p] for n, p in redir.items() if p in found})
+    except Exception as e:  # noqa: BLE001
+        log.warning("schedule team names failed: %s", e)
+        return {}
     return out
 
 
@@ -171,8 +186,10 @@ def refresh(league: str = "lck", gap=None) -> bool:
             # 팀 목록(키 → 이름·약칭). LCK는 기존 팀 정보를 쓰므로 약칭을 따로 받지 않음
             names = {m[s] for m in matches for s in ("t1", "t2")}
             names |= {r["team"] for g in stand.get("groups") or [] for r in g["table"]}
-            short = {} if league == "lck" else _short_names(names, gap)
-            teams = {team_id(league, n): {"name": n, "short": short.get(n) or n} for n in names if team_id(league, n)}
+            rows = {} if league == "lck" else _team_rows(names, gap)
+            teams = {team_id(league, n): {"name": n, "short": (rows.get(n) or {}).get("Short") or n,
+                                          "image": (rows.get(n) or {}).get("Image") or ""}
+                     for n in names if team_id(league, n)}
             d = {"league": league, "season": season, "current": season == cs, "at": datetime.now(timezone.utc).isoformat(),
                  "tours": [{"page": t["OverviewPage"], "name": t["Name"], "start": t.get("DateStart") or "",
                             "end": t.get("Date") or "", "playoff": t.get("IsPlayoffs") == "1"} for t in tours],
@@ -191,7 +208,12 @@ def refresh(league: str = "lck", gap=None) -> bool:
             log.warning("schedule %s save failed: %s", league, e)
         log.info("schedule %s %s: %d matches, standings %d", league, season, len(matches),
                  sum(len(g["table"]) for g in stand.get("groups") or []))
-        return True
+    if league != "lck":                                # 해외 팀 로고(없는 것만 받음)
+        try:
+            teamlogos.ensure({k: t["image"] for k, t in teams.items() if t.get("image")})
+        except Exception as e:  # noqa: BLE001
+            log.warning("schedule %s logos failed: %s", league, e)
+    return True
 
 
 def busy(league: str) -> bool:
@@ -207,6 +229,7 @@ def busy(league: str) -> bool:
 def start():
     """켜자마자 저장해 둔 내용을 읽고, 1분 뒤부터 리그마다 정해진 간격으로 새로 받음(LCK 먼저)."""
     _load()
+    teamlogos.load()
 
     def loop():
         time.sleep(60)

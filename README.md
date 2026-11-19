@@ -40,6 +40,7 @@ tracker/wiki.py        수집: 편집 기록        tracker/news.py      수집:
 tracker/fa.py          수집: FA·로스터·선수 프로필
 tracker/schedule.py    수집: 리그별 경기 일정·결과·순위(data/schedule_<리그>.json 에도 저장)
 tracker/matchinfo.py   경기 상세(세트별 밴픽·선수 기록)      tracker/champs.py    챔피언 한국어 이름·아이콘(Data Dragon)
+tracker/teamlogos.py   해외 팀 로고(리그피디아에서 64px로 한 번 받아 data/logos/ 에 저장, /tlogo/<팀> 으로 내보냄)
 tracker/jobs.py        수집 일정·[조회]
 tracker/logos.py       팀 로고(배경 없는 PNG)
 tracker/web/views.py   화면 HTML              tracker/web/server.py 주소·API·시작
