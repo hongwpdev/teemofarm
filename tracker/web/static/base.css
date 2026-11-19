@@ -951,3 +951,10 @@ body{padding-bottom:7rem}
 .rc .rmo{display:inline-flex;align-items:center;gap:.3rem;margin-top:.2rem;font-size:1.05rem;font-weight:700;color:#f59e0b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .rc .rmo .logo{width:1.4rem;height:1.4rem}
 :root:not([data-theme="dark"]) .rc .rmo{color:#b45309}
+/* 지난 시즌 로스터: 대회 고르기, 지금 로스터 화면의 바로가기 */
+.ar-tours{margin:0 0 1.2rem;overflow-x:auto;scrollbar-width:none}
+.ar-tours::-webkit-scrollbar{display:none}
+.ar-tours a{flex:0 0 auto;white-space:nowrap;padding:0 1.4rem;font-size:1.35rem}
+.past-link{margin:0 0 1rem;font-size:1.3rem;color:var(--t5)}
+.past-link a{color:var(--primary-text);font-weight:700;margin:0 .2rem}
+.rc header b[title]{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}

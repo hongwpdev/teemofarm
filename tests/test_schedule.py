@@ -30,6 +30,7 @@ class ScheduleTest(unittest.TestCase):
     def test_tour_ko(self):
         self.assertEqual(views.tour_ko("LCK/2026 Season/Season Playoffs"), "플레이오프")
         self.assertEqual(views.tour_ko("LCK/2026 Season/Rounds 3-4"), "정규 3·4라운드")
+        self.assertEqual(views.tour_ko("LCK/2025 Season/Rounds 3-5"), "정규 3~5라운드")
         self.assertEqual(views.tour_ko("LCK/2026 Season/Cup"), "LCK 컵")
         self.assertEqual(views.tour_ko("CBLOL/2026 Season/Cup", "CBLOL"), "CBLOL 컵")
         self.assertEqual(views.tour_ko("LPL/2026 Season/Split 1 Playoffs", "LPL"), "스플릿 1 플레이오프")

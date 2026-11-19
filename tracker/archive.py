@@ -62,7 +62,7 @@ def get(year: int):
                     d = _CACHE[year] = json.load(f)
             except (OSError, ValueError):
                 d = None
-    if d is None or (d.get("missing") and (time.time() - d.get("at", 0) > 600 or "errors" not in d)):
+    if d is None or "rosters" not in d or (d.get("missing") and (time.time() - d.get("at", 0) > 600 or "errors" not in d)):
         build_async(year)
     return d
 
@@ -76,6 +76,30 @@ def start():
                 get(y)
             time.sleep(600)
     threading.Thread(target=loop, daemon=True).start()
+
+
+def _roster_rows(rows):
+    """TournamentRosters 행 → [{team(지금 팀 키), team_name(그 당시 이름), role, page, nick}]. 첫 코치를 감독 칸에."""
+    out = []
+    for r in rows:
+        links = [x for x in (r.get("RosterLinks") or "").split(";;")]
+        roles = [x for x in (r.get("Roles") or "").split(";;")]
+        k = team_key(r["Team"])
+        coach = False
+        for i, page in enumerate(links):
+            page = page.strip()
+            if not page:
+                continue
+            role_raw = (roles[i] if i < len(roles) else "").split(",")[0].strip().lower()
+            role = ROLE.get(role_raw, "")
+            if role == "Coach" and not coach:
+                role, coach = "Head Coach", True          # 첫 코치를 감독 칸에
+            elif role == "Head Coach":
+                coach = True
+            if not role:
+                continue
+            out.append({"team": k, "team_name": r["Team"], "role": role, "page": page, "nick": _nick(page)})
+    return out
 
 
 def build_async(year: int):
@@ -93,7 +117,7 @@ def _nick(page: str) -> str:
 def _build(year: int):
     old = _CACHE.get(year) or {}
     d = {"year": year, "stages": old.get("stages"), "champion": old.get("champion"), "roster": old.get("roster"),
-         "moves": old.get("moves"), "missing": [], "errors": {}}
+         "moves": old.get("moves"), "rosters": old.get("rosters"), "missing": [], "errors": {}}
     try:
         tours = cargo(None, tables="Tournaments", fields="OverviewPage,Name,DateStart,IsPlayoffs,TournamentLevel",
                       where=f'OverviewPage LIKE "LCK/{year} Season/%" AND TournamentLevel="Primary"', order_by="DateStart")
@@ -152,27 +176,17 @@ def _build(year: int):
     def roster():
         if not regular:
             return []
-        rows = cargo(None, tables="TournamentRosters", fields="Team,RosterLinks,Roles",
-                     where=f'OverviewPage={_cq(regular[-1]["OverviewPage"])}')
+        return _roster_rows(cargo(None, tables="TournamentRosters", fields="Team,RosterLinks,Roles",
+                                  where=f'OverviewPage={_cq(regular[-1]["OverviewPage"])}'))
+
+    def rosters():
+        """대회별 등록 로스터(그 당시 팀 이름 그대로): [{name, page, playoff, roster: [...]}] — 대회 순서대로"""
         out = []
-        for r in rows:
-            links = [x for x in (r.get("RosterLinks") or "").split(";;")]
-            roles = [x for x in (r.get("Roles") or "").split(";;")]
-            k = team_key(r["Team"])
-            coach = False
-            for i, page in enumerate(links):
-                page = page.strip()
-                if not page:
-                    continue
-                role_raw = (roles[i] if i < len(roles) else "").split(",")[0].strip().lower()
-                role = ROLE.get(role_raw, "")
-                if role == "Coach" and not coach:
-                    role, coach = "Head Coach", True          # 첫 코치를 감독 칸에
-                elif role == "Head Coach":
-                    coach = True
-                if not role:
-                    continue
-                out.append({"team": k, "team_name": r["Team"], "role": role, "page": page, "nick": _nick(page)})
+        for t in tours:
+            rows = _roster_rows(cargo(None, tables="TournamentRosters", fields="Team,RosterLinks,Roles",
+                                      where=f'OverviewPage={_cq(t["OverviewPage"])}'))
+            if rows:
+                out.append({"name": t["Name"], "page": t["OverviewPage"], "playoff": t.get("IsPlayoffs") == "1", "roster": rows})
         return out
 
     def moves():
@@ -206,6 +220,7 @@ def _build(year: int):
     part("stages", stages)
     part("champion", champion)
     part("roster", roster)
+    part("rosters", rosters)
     part("moves", moves)
     if not tours:
         d["missing"].append("tournaments")

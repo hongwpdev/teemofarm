@@ -268,7 +268,8 @@ def rumor_slots() -> dict:
     return out
 
 
-def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True) -> str:
+def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True, name_then: str = "") -> str:
+    """name_then: 지난 시즌 기록에서 그 당시 팀 이름(지금 이름과 다르면 제목에 쓰고 아래에 '지금: …')."""
     by = {}
     for r in rows:
         if r["team"] == k:
@@ -306,8 +307,14 @@ def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True) -> str:
         cells.append(f'<li><span class="pk">{FA_POS[p]}</span>{pn(r)}{out}{subs}'
                      f'{"<i class=in>영입</i>" if r["joined"] else ""}</li>')
     return (f'<article class="rc{extra_cls}" data-team="{k}" style="--tc:{team_color(k)}"><header>{team_logo(k, "logo big")}'
-            f'<div><b>{esc(team_short(k))}</b><small>{esc(team_name(k))}</small></div><span class="fill">{filled}/5</span></header>'
+            f'<div>{_rc_title(k, name_then)}</div><span class="fill">{filled}/5</span></header>'
             f'<ul>{"".join(cells)}</ul></article>')
+
+
+def _rc_title(k: str, name_then: str = "") -> str:
+    if name_then and name_then.lower() != (TEAMS.get(k, {}).get("wiki") or "").lower():
+        return f'<b title="그 당시 팀 이름">{esc(name_then)}</b><small>지금: {esc(team_name(k))}</small>'
+    return f'<b>{esc(team_short(k))}</b><small>{esc(team_name(k))}</small>'
 
 
 def narrow_roster(league: str, team: str) -> str:
@@ -681,7 +688,8 @@ def render_roster(league: str) -> str:
         u = datetime.fromisoformat(upd["v"]).astimezone(KST)
         when = f" · {u.month}/{u.day} {u:%H:%M} 갱신"
     empty = '' if rows else '<p class="note">아직 로스터 정보를 모으는 중이에요. [조회]를 눌러 보세요.</p>'
-    main = f"""{squad_toggle(league, "roster")}<section class="card panel fa" aria-label="조회"><div class="ptop"><p class="src">리그피디아 계약 기준 현재 로스터{when} · 빗금 칸은 아직 미정인 자리, '영입'은 이번 스토브리그에 새로 온 사람 · <i class="in rm">유력</i>은 최근 기사 제목 기준 참고 표시(공식 확정 전) · 이름을 누르면 프로필</p>{ACT}</div>{MSG}
+    past = " · ".join(f'<a href="/{league}/roster?season={y}">{y} 시즌</a>' for y in archive_years())
+    main = f"""{squad_toggle(league, "roster")}<p class="past-link">📜 지난 시즌 로스터 보기: {past}</p><section class="card panel fa" aria-label="조회"><div class="ptop"><p class="src">리그피디아 계약 기준 현재 로스터{when} · 빗금 칸은 아직 미정인 자리, '영입'은 이번 스토브리그에 새로 온 사람 · <i class="in rm">유력</i>은 최근 기사 제목 기준 참고 표시(공식 확정 전) · 이름을 누르면 프로필</p>{ACT}</div>{MSG}
 </section>
 <div class="rgrid" id="rgrid">{cards}</div>{empty}
 {POPUP}"""
@@ -694,7 +702,8 @@ def squad_toggle(league: str, on: str, season=None) -> str:
 
     def a(k, path, label):
         return f'<a class="{"on" if k == on else ""}" href="/{league}{path}{sq}" data-sec="{k}"{" aria-current=page" if k == on else ""}>{label}</a>'
-    return f'<nav class="view_tab squad" aria-label="로스터·이적 보기">{a("roster", "/roster", "현재 로스터")}{a("fa", "/fa", "이적·FA 현황")}</nav>'
+    r_label, f_label = (f"{season} 로스터", f"{season} 스토브리그 이동") if season else ("현재 로스터", "이적·FA 현황")
+    return f'<nav class="view_tab squad" aria-label="로스터·이적 보기">{a("roster", "/roster", r_label)}{a("fa", "/fa", f_label)}</nav>'
 
 
 # ── 이동 보드(이적·FA 위) ───────────────────────────────────────────────
@@ -1049,7 +1058,7 @@ def _tname(key, name):
             else f'<span class="tm ext">{esc(name or "LCK 밖")}</span>')
 
 
-def render_archive(league: str, sec: str, year: int) -> str:
+def render_archive(league: str, sec: str, year: int, t_sel: str = "") -> str:
     """?season=2026 처럼 지난 시즌을 고르면: 소식=시즌 요약, 로스터=최종 로스터, 이적=그 시즌 스토브리그 이동, 일정=순위표."""
     today = datetime.now(KST).date()
     d = archive.get(year)
@@ -1091,10 +1100,26 @@ def render_archive(league: str, sec: str, year: int) -> str:
                 f'<ul>{lis}</ul></details>')
 
     if active == "roster":
+        tours = d.get("rosters") or []
+        default = max((i for i, t in enumerate(tours) if not t.get("playoff")), default=len(tours) - 1)  # 마지막 정규 대회
+        try:
+            ti = int(t_sel) if str(t_sel).strip() != "" else default
+        except ValueError:
+            ti = default
+        ti = ti if 0 <= ti < len(tours) else default
+        src_rows = tours[ti]["roster"] if tours else roster
         rows = [{"team": r["team"], "role": r["role"], "page": r["page"], "nick": r["nick"], "real": "", "until": "", "joined": 0}
-                for r in roster if r["team"]]
-        cards = "".join(roster_card(k, rows, rm=False) for k in team_keys() if any(r["team"] == k for r in rows))
-        main = (f'{squad_toggle(league, "roster", year)}<section class="card panel"><p class="src">{year} 시즌 마지막 정규 대회에 등록된 로스터(리그피디아) · 지금 팀 이름·로고로 표시</p>{note}</section>'
+                for r in src_rows if r["team"]]
+        then = {r["team"]: r.get("team_name", "") for r in src_rows if r["team"]}
+        cards = "".join(roster_card(k, rows, rm=False, name_then=then.get(k, "")) for k in team_keys() if any(r["team"] == k for r in rows))
+        tabs = ""
+        if len(tours) > 1:
+            tabs = ('<nav class="view_tab ar-tours" aria-label="대회 고르기">' + "".join(
+                f'<a class="{"on" if i == ti else ""}" href="/{league}/roster?season={year}&amp;t={i}"{" aria-current=page" if i == ti else ""}>'
+                f'{esc(tour_ko(t["page"], "LCK"))}</a>' for i, t in enumerate(tours)) + '</nav>')
+        what = f'{esc(tour_ko(tours[ti]["page"], "LCK"))}에 등록된 로스터' if tours else '시즌 마지막 정규 대회에 등록된 로스터'
+        main = (f'{squad_toggle(league, "roster", year)}{tabs}<section class="card panel"><p class="src">{year} {what}(리그피디아) · '
+                f'팀 이름은 그 당시 이름, 로고는 지금 것</p>{note}</section>'
                 f'<div class="rgrid">{cards or "<p class=note>로스터 기록이 없어요.</p>"}</div>{POPUP}')
         scripts = ("player.js",)
     elif active == "fa":
@@ -1129,6 +1154,10 @@ def tour_ko(page: str, lg_name: str = "LCK") -> str:
     t = (page or "").split("Season/", 1)[-1]
     if t == "Cup":
         return f"{lg_name} 컵"
+    m = re.fullmatch(r"Rounds (\d+)-(\d+)", t)          # 'Rounds 1-2' → 정규 1·2라운드, 'Rounds 3-5' → 정규 3~5라운드
+    if m:
+        a, b = int(m.group(1)), int(m.group(2))
+        return f"정규 {a}{'·' if b - a == 1 else '~'}{b}라운드"
     for en, ko in TOUR_KO:
         t = t.replace(en, ko)
     return t.strip()

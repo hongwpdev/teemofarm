@@ -173,7 +173,7 @@ class Handler(BaseHTTPRequestHandler):
             elif season and sec == "schedule" and not schedule.get(league).get("current") and schedule.get(league).get("season") == season:
                 return self._redirect(f"/{league}/schedule")   # 일정·결과가 이미 그 시즌 결과를 보여 주는 중: 같은 화면으로
             elif season and sec in ("", "roster", "fa", "schedule"):
-                page = views.render_archive(league, sec, season)
+                page = views.render_archive(league, sec, season, one("t"))
             elif sec == "":
                 page = views.render_news(league, one("team"), one("src", "all"), parse_hot(one("hot")),
                                          one("from"), one("to"), one("q"))
