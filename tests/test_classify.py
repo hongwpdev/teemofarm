@@ -14,6 +14,14 @@ class WikiSummaryTest(unittest.TestCase):
         self.assertEqual(wiki_ko("/* Current */ added Faker"), "로스터 변경: Faker 합류")
         self.assertEqual(wiki_ko("/* Former */ moved Zeus to former members"), "로스터 변경: Zeus 이탈")
 
+    def test_reverts_and_markup(self):
+        for t in ("Rejected the last 2 text changes (by [[Special:Contributions/X|X]]) and restored revision 4353174 by Lynnellet",
+                  "Undo revision 123 by Foo", "Reverted edits by Foo (talk) to last revision by Bar", "rv vandalism",
+                  "Disambiguating Key to Key (Kim Han-gi)"):
+            self.assertTrue(is_minor_wiki(t), t)
+        self.assertEqual(wiki_ko("/* Current */ added [[Faker]]"), "로스터 변경: Faker 합류")
+        self.assertEqual(wiki_ko("added [[Kim Han-gi|Key]] as support"), "로스터 변경: Key 합류")
+
     def test_old_rules_kept(self):
         self.assertTrue(is_minor_wiki("fix typo"))
         self.assertEqual(wiki_ko("Roster change: Chovy re-signed"), "로스터 변경: Chovy 재계약")

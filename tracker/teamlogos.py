@@ -151,7 +151,7 @@ def ensure(images: dict):
     except Exception as e:  # noqa: BLE001
         log.warning("team logos: thumb urls failed: %s", e)
         return 0
-    got = 0
+    got, blocked = 0, []
     for k, img in need.items():
         data, t = None, None
         src = next((thumbs[c] for c in img.split("|") if thumbs.get(c)), "")
@@ -163,7 +163,7 @@ def ensure(images: dict):
             except Exception as e:  # noqa: BLE001
                 # 서버에서 이미지 서버로 못 감(네트워크·인증서 등): 주소만 적어 두고 브라우저가 직접 받게 함.
                 # 다음 갱신 때 다시 직접 받아 보고, 되면 파일로 바꿈
-                log.warning("team logo %s download failed, browser will load it directly: %s", k, e)
+                blocked.append(k)                                  # 팀마다 경고를 남기면 진짜 오류가 묻혀서 끝에 한 줄로 요약
                 LAST_ERROR.update(at=time.strftime("%Y-%m-%d %H:%M:%S"), msg=f"{type(e).__name__}: {e}"[:300])
                 with _LOCK:
                     if not (INDEX.get(k) or {}).get("file"):
@@ -181,6 +181,9 @@ def ensure(images: dict):
             elif not (INDEX.get(k) or {}).get("file"):           # 받아 둔 예전 로고가 있으면 그대로 둠
                 INDEX[k] = {"image": img, "failed_at": now}   # (예전 "failed" 표시는 무시 → 한 번 다시 받음)
             _save()
+    if blocked:
+        log.warning("team logos: %d팀 이미지 서버에서 직접 못 받음(%s) → 브라우저가 직접 받음. 예: %s",
+                    len(blocked), LAST_ERROR["msg"][:60], ", ".join(blocked[:3]))
     log.info("team logos: %d new of %d", got, len(need))
     return got
 

@@ -57,15 +57,19 @@ def article_kind(title: str, source: str = "news") -> str:
 
 # 리그피디아에서 숨길 사소한 편집(표 정리·오타 등). 로스터 변동 단어가 있으면 숨기지 않음
 _MINOR = re.compile(r"format|typo|fix|cleanup|clean up|layout|template|infobox|image|photo|link|"
-                    r"sort|style|wording|grammar|spelling|^\(편집 요약 없음\)$|^update[sd]?$", re.I)
+                    r"sort|style|wording|grammar|spelling|^\(편집 요약 없음\)$|^update[sd]?$|"
+                    # 되돌리기·거절·관리용 편집(무엇을 바꿨는지 알 수 없음): 'Rejected the last 2 text changes', 'Undo revision', 'Reverted edits by', 'rv'
+                    r"^rejected the last|^undo revision|^undid revision|^reverted (edits|\d+ edits)|^rv\b|^revert|"
+                    r"^disambiguat|^moved page|^protected|^changed protection", re.I)
+_WIKILINK = re.compile(r"\[\[(?:[^|\]]*\|)?([^\]]*)\]\]")   # [[문서|보이는 글]] → 보이는 글
 
 
 _SECTION = re.compile(r"/\*.*?\*/")   # 리그피디아가 문서 한 칸을 고칠 때 자동으로 붙이는 칸 이름('/* Current */')
 
 
 def strip_section(summary: str) -> str:
-    """'/* Current */ added Faker' → 'added Faker'. 칸 이름만 있으면 ''."""
-    return _SECTION.sub("", summary or "").strip(" -–:")
+    """'/* Current */ added [[Faker]]' → 'added Faker'. 칸 이름만 있으면 ''. 위키 링크 문법도 글자만 남김."""
+    return _WIKILINK.sub(r"\1", _SECTION.sub("", summary or "")).strip(" -–:")
 
 
 def is_minor_wiki(summary: str) -> bool:
