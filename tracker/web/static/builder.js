@@ -45,7 +45,7 @@
       + '<a class="btn" href="/lck/builder">내 로스터 보기</a>';
     document.getElementById("bmine").onclick = () => {
       sharedMode = false; save(); history.replaceState(null, "", "/lck/builder");
-      bar.innerHTML = "✅ 내 로스터로 가져왔어요. 고친 뒤 '링크로 공유'로 친구에게 보내 보세요!";
+      bar.innerHTML = "내 로스터로 가져왔어요. 고친 뒤 '링크로 공유'로 친구에게 보내 보세요!";
     };
   }
   let sel = null, posF = "all", q = "", freeOnly = false, lock = localStorage.getItem(KEY + ":lock") === "1" && !sharedMode;   // 공유 로스터는 잠금 없이 그대로
@@ -188,9 +188,9 @@
     if (navigator.share && matchMedia("(pointer: coarse)").matches) {
       try { await navigator.share({ title: "나만의 LCK 예상 로스터 · 티모의 버섯농장", text, url }); return; } catch (e) { if (e && e.name === "AbortError") return; }
     }
-    try { await navigator.clipboard.writeText(url); btn.textContent = "✅ 링크 복사됨!"; }
+    try { await navigator.clipboard.writeText(url); btn.textContent = "링크 복사됨"; }
     catch (e) { prompt("이 주소를 복사해서 보내세요", url); }
-    setTimeout(() => { btn.textContent = "🔗 링크로 공유"; }, 2500);
+    setTimeout(() => { btn.textContent = "링크로 공유"; }, 2500);
   };
   draw();
 })();

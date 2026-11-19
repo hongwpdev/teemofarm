@@ -39,9 +39,9 @@
       let h = "";
       // 기본 정보: 생년월일 · 프로 데뷔(첫 소속) · 시그니처 챔피언 · 공식 SNS
       const ex = d.extra || {}, first = (d.career || []).map(c => c.from).filter(Boolean).sort()[0] || "";
-      const cells = [["🎂 생년월일", ex.birth ? ex.birth.replace(/-/g, ".") : ""], ["🚀 프로 데뷔", first ? first.slice(0, 4) + "년" : ""]]
+      const cells = [["생년월일", ex.birth ? ex.birth.replace(/-/g, ".") : ""], ["프로 데뷔", first ? first.slice(0, 4) + "년" : ""]]
         .filter(x => x[1]).map(x => '<div><small>' + x[0] + "</small><b>" + esc(x[1]) + "</b></div>").join("");
-      const champs = (ex.champs || []).length ? '<div class="wide"><small>⚔️ 시그니처 챔피언</small><b>' + ex.champs.map(esc).join(" · ") + "</b></div>" : "";
+      const champs = (ex.champs || []).length ? '<div class="wide"><small>시그니처 챔피언</small><b>' + ex.champs.map(esc).join(" · ") + "</b></div>" : "";
       if (cells || champs) h += '<section class="pop_sec"><div class="pinfo">' + cells + champs + "</div></section>";
       if ((ex.links || []).length) h += '<section class="pop_sec"><div class="plinks">' + ex.links.map(l =>
         '<a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.label) + "</a>").join("") + "</div></section>";

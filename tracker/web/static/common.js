@@ -11,7 +11,11 @@
 
   // ── 화면 밝기(협곡의 밤/낮) · 스포 방지(실명 다트) ──
   const root = document.documentElement, thm = document.getElementById("thm"), spo = document.getElementById("spo");
-  const syncTheme = () => { if (thm) { const d = root.dataset.theme !== "light"; thm.textContent = d ? "🌙" : "☀️"; thm.setAttribute("aria-label", d ? "밝은 화면으로" : "어두운 화면으로"); } };
+  // 테마 버튼: 선 아이콘(달/해) — 서버가 처음엔 달을 그리고, 여기서 지금 테마에 맞춰 바꿈
+  const SVG = '<svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+  const MOON = SVG + '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
+  const SUN = SVG + '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  const syncTheme = () => { if (thm) { const d = root.dataset.theme !== "light"; thm.innerHTML = d ? MOON : SUN; thm.setAttribute("aria-label", d ? "밝은 화면으로" : "어두운 화면으로"); } };
   if (thm) thm.addEventListener("click", () => { root.dataset.theme = root.dataset.theme === "light" ? "dark" : "light"; store.set("theme", root.dataset.theme); syncTheme(); });
   syncTheme();
   const syncSpo = () => { if (spo) spo.setAttribute("aria-pressed", root.dataset.spoiler === "on" ? "true" : "false"); };
@@ -42,7 +46,7 @@
 
   // ── 맨 위로(긴 목록에서) ──
   const top = document.createElement("button");
-  top.type = "button"; top.className = "totop"; top.textContent = "🍄 위로"; top.setAttribute("aria-label", "맨 위로");
+  top.type = "button"; top.className = "totop"; top.textContent = "↑ 위로"; top.setAttribute("aria-label", "맨 위로");
   top.onclick = () => { top.blur(); window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); };
   document.body.append(top);
   const onScroll = () => top.classList.toggle("show", window.scrollY > 700 && !root.classList.contains("chat-open"));

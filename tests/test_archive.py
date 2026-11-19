@@ -40,7 +40,7 @@ class ArchiveTest(unittest.TestCase):
                     page = views.render_archive("lck", sec, 2026)
                     self.assertIn("</html>", page)
             self.assertIn("Old Team", views.render_archive("lck", "schedule", 2026))   # LCK 밖 팀 이름도 표시
-            self.assertIn("👑", views.render_archive("lck", "", 2026))
+            self.assertIn('class="card champ"', views.render_archive("lck", "", 2026))   # 우승 카드
 
     def test_roster_by_tournament(self):
         with mock.patch.object(archive, "get", lambda y: REC):

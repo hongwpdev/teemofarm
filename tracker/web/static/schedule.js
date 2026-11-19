@@ -71,8 +71,8 @@
       "</button><small>" + esc(p.champ.ko) + "</small></span>" +
       '<span class="kda"><b>' + p.k + "/" + p.d + "/" + p.a + "</b><small>CS " + num(p.cs) + " · " + k1(p.gold) + "</small></span>" +
       '<span class="dmg" title="챔피언에게 준 피해량">' + num(p.dmg) + "</span></li>").join("");
-    const obj = [t.kills != null ? "⚔️ " + t.kills : "", t.towers != null ? "🏰 " + t.towers : "", t.dragons != null ? "🐉 " + t.dragons : "",
-      t.barons != null ? "👾 " + t.barons : "", t.gold != null ? "💰 " + k1(t.gold) : ""].filter(Boolean).join(" ");
+    const obj = [t.kills != null ? "킬 " + t.kills : "", t.towers != null ? "타워 " + t.towers : "", t.dragons != null ? "드래곤 " + t.dragons : "",
+      t.barons != null ? "바론 " + t.barons : "", t.gold != null ? "골드 " + k1(t.gold) : ""].filter(Boolean).join(" · ");
     return '<section class="gside ' + s + (win ? " won" : "") + '"><header>' + logo(t.team) + "<b>" + esc(team(t.team).short) + "</b>" +
       '<span class="sd">' + (s === "blue" ? "블루" : "레드") + "</span>" + (win ? '<span class="wb">승리</span>' : "") + "</header>" +
       '<p class="obj">' + obj + "</p>" +
@@ -89,7 +89,7 @@
     else {
       const g = gs[Math.min(cur, gs.length - 1)];
       const tabs = gs.length > 1 ? '<nav class="gtabs" aria-label="세트">' + gs.map((x, i) => '<button type="button" data-g="' + i + '" class="' + (i === cur ? "on" : "") + '">' + x.n + "세트</button>").join("") + "</nav>" : "";
-      const meta = [g.len ? "⏱ " + g.len : "", g.patch ? "패치 " + g.patch : ""].filter(Boolean).join(" · ");
+      const meta = [g.len ? "경기 시간 " + g.len : "", g.patch ? "패치 " + g.patch : ""].filter(Boolean).join(" · ");
       body = tabs + '<p class="gmeta">' + esc(meta) + (g.vod ? ' <a class="lp" href="' + esc(g.vod) + '" target="_blank" rel="noopener">다시보기</a>' : "") + "</p>" +
         '<div class="gsides">' + side(g, "blue") + side(g, "red") + "</div>";
     }

@@ -18,7 +18,7 @@
   if (!name) { name = CHAMPS[rand(CHAMPS.length)] + String(rand(10000)).padStart(4, "0"); S.set("chatName", name); }
 
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const ICON = '<span class="ico" aria-hidden="true">💬</span>';
+  const ICON = '<svg class="ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>';
   document.body.insertAdjacentHTML("beforeend",
     '<button class="chat-fab" type="button" id="cfab" aria-label="수다방 열기">' + ICON + '수다방<span class="n" hidden></span></button>' +
     '<div class="chat-dim" id="cdim" hidden></div>' +

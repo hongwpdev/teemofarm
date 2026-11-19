@@ -961,3 +961,20 @@ body{padding-bottom:7rem}
 .sch-wait{margin-bottom:1.6rem}
 .sch-wait .go{margin-top:1.4rem}
 .sch-wait .btn{display:inline-flex;align-items:center;height:4rem;padding:0 1.8rem;border-radius:2rem;font-size:1.45rem}
+/* ── 차분하게(2026.11): 깜빡이는 빛 번짐·흔들림·안개 효과를 걷어내고 배지는 하나만 ── */
+.item.lv-2 .row{animation:none;box-shadow:none}
+.item.new .row,.item.new .sib{background:transparent;box-shadow:none}
+.item.unread:not(.lv-1) .row{background-image:none}
+.item.unread .tit::before{width:.6rem;height:.6rem;background:var(--primary-text);box-shadow:none}
+.item.lv-1:not(.lit) .row{background:none}
+.item.lv-1:not(.lit) .row::after{content:"루머 · 눌러서 보기"}
+.item.new .rel{color:var(--t5);font-weight:500}
+.meta{gap:.2rem .6rem}
+.meta>.ol::before,.meta>.rel::before{content:"·";margin-right:.6rem;color:var(--t8)}
+.meta>.tm+.tm::before{content:none}
+.tbtn .i{vertical-align:-.3rem;margin-right:.4rem}
+.tbtn.ico{padding:0 .9rem}
+.tbtn.ico .i{margin:0}
+.live-dot{display:inline-block;width:.8rem;height:.8rem;border-radius:50%;background:var(--red);margin-right:.6rem;vertical-align:.15rem}
+.champ>div{padding-left:.4rem}
+.spore{display:none}

@@ -94,7 +94,7 @@
       const box = document.createElement("section");
       box.className = "card favbox";
       const canNotify = "Notification" in window;
-      box.innerHTML = '<h3>🍄 찜한 소식' + (canNotify && Notification.permission !== "granted" ? '<button type="button" class="fav-btn" id="fnoti">알림 켜기</button>' : "") + "</h3>"
+      box.innerHTML = '<h3>찜한 소식' + (canNotify && Notification.permission !== "granted" ? '<button type="button" class="fav-btn" id="fnoti">알림 켜기</button>' : "") + "</h3>"
         + '<div class="chipz">' + favs.map(f => "<span>" + escH(f.nick) + "</span>").join("") + "</div>"
         + (mine.length ? "<ul>" + mine.slice(0, 6).map(li => '<li><a href="' + escH(li.querySelector("a.row").href) + '" target="_blank" rel="noopener">'
           + escH(li.querySelector(".tit").firstChild.textContent) + "<small>" + escH((li.querySelector(".rel") || {}).textContent || "") + "</small></a></li>").join("") + "</ul>"
