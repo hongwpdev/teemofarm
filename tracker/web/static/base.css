@@ -1044,3 +1044,6 @@ a.tbtn .lb{margin-left:.3rem}
 .tcard .tgo{display:flex;gap:1.2rem;justify-content:flex-end;padding:.6rem .4rem 0;font-size:1.3rem}
 .tcard .tgo a{color:var(--primary-text);font-weight:600}
 .squad+.stove-sch,.squad+.tgrid,.squad+.bld-head{margin-top:1.2rem}
+/* 조회 중: 숲길 지도(캔버스) */
+.track.farm{height:auto;overflow:visible;border:0;margin-bottom:1.4rem;padding:.8rem;border-radius:1.2rem;background:radial-gradient(ellipse at 50% 60%,color-mix(in srgb,var(--primary) 14%,transparent),transparent 70%)}
+.track.farm canvas{display:block;width:100%;max-width:36rem;aspect-ratio:240/84;margin:0 auto}
