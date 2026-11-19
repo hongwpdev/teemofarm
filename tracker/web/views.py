@@ -1330,7 +1330,7 @@ def render_schedule(league: str) -> str:
 </div><aside>{stand}</aside></div>
 {POPUP}
 <p class="note">일정·결과·순위·경기 기록 출처 리그피디아 · 챔피언 이미지 Riot Games Data Dragon{upd} · 경기 날엔 5분마다, 평소엔 30분마다 새로 받아요 · 시간은 한국 시간</p>"""
-    return shell(league, "schedule", f"{lg_name} 일정·결과", main, ("schedule.js",), today)
+    return shell(league, "schedule", f"{lg_name} 일정·결과", main, ("player.js", "schedule.js"), today)
 
 
 def render_soon(league: str) -> str:

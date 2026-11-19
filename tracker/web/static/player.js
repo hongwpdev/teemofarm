@@ -1,20 +1,24 @@
-// 선수 프로필 팝업(이적·FA 목록, 로스터 카드에서 이름을 누르면)
+// 선수 프로필 팝업(이적·FA 목록, 로스터 카드, 경기 상세 팝업에서 이름을 누르면)
 // 목록에 있는 정보로 먼저 열고, 커리어·관련 소식은 /api/player 로 채움. 휴대폰 뒤로 가기는 팝업만 닫음
 (function () {
   const dim = document.getElementById("dim"), pbody = document.getElementById("pbody");
   if (!dim) return;
   const esc = t => String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const wikiUrl = page => "https://lol.fandom.com/wiki/" + encodeURIComponent(page.replace(/ /g, "_"));
-  let lastFocus = null, seq = 0, pushed = false;
+  let lastFocus = null, seq = 0, pushed = false, mine = false;   // mine: 이 파일이 연 팝업인지(경기 상세 팝업 안에서 그릴 때는 아님)
 
-  function open(p) {
+  // 팝업 안에 선수 프로필을 그림. opts.onClose: [닫기] 버튼, opts.onBack: 맨 위 '← 돌아가기' 버튼(있을 때만)
+  function render(p, opts) {
+    opts = opts || {};
     const my = ++seq;
-    pbody.innerHTML = '<div class="pop_head">' + p.av + '<div><h2 id="pn">' + esc(p.nick) + (p.real ? "<small>" + esc(p.real) + "</small>" : "")
+    pbody.innerHTML = (opts.onBack ? '<button type="button" class="pback" id="pback">← ' + esc(opts.backLabel || "돌아가기") + "</button>" : "")
+      + '<div class="pop_head">' + p.av + '<div><h2 id="pn">' + esc(p.nick) + (p.real ? "<small>" + esc(p.real) + "</small>" : "")
       + '</h2><p class="meta2" id="pmeta">' + esc(p.pos) + '</p><a class="lp" id="plink" href="' + wikiUrl(p.page) + '" target="_blank" rel="noopener">리그피디아에서 사진·프로필 보기</a></div></div>'
       + '<div class="pop_now">' + p.now + "</div>"
       + '<div id="pmore"><section class="pop_sec"><p class="wait">커리어·관련 소식 불러오는 중…</p></section></div>'
       + '<div class="pop_foot"><button class="fav-btn" type="button" id="pfav" aria-pressed="false"></button><button class="btn primary" type="button" id="pclose">닫기</button></div>';
-    document.getElementById("pclose").onclick = () => close();
+    document.getElementById("pclose").onclick = () => (opts.onClose ? opts.onClose() : close());
+    if (opts.onBack) document.getElementById("pback").onclick = () => opts.onBack();
     // 찜하기: 이 브라우저에 저장. 소식 화면 맨 위 '찜한 소식'에 모아 보여 주고, 알림을 켜면 새 오피셜을 알려 줌
     const favs = () => { try { return JSON.parse(localStorage.getItem("favs") || "[]"); } catch (e) { return []; } };
     const fb = document.getElementById("pfav");
@@ -26,10 +30,6 @@
       sync();
     };
     sync();
-    lastFocus = document.activeElement;
-    dim.classList.add("show"); dim.setAttribute("aria-hidden", "false"); document.body.style.overflow = "hidden";
-    dim.querySelector(".x").focus();
-    if (!pushed) { try { history.pushState({ pop: 1 }, ""); pushed = true; } catch (e) {} }
     fetch("/api/player?page=" + encodeURIComponent(p.page)).then(r => r.json()).then(d => {
       if (my !== seq) return;
       const more = document.getElementById("pmore");
@@ -61,13 +61,22 @@
       if (my === seq) document.getElementById("pmore").innerHTML = '<section class="pop_sec"><p class="wait">정보를 불러오지 못했어요. 잠시 뒤 다시 눌러 보세요</p></section>';
     });
   }
+  function open(p) {
+    mine = true;
+    render(p);
+    lastFocus = document.activeElement;
+    dim.classList.add("show"); dim.setAttribute("aria-hidden", "false"); document.body.style.overflow = "hidden";
+    dim.querySelector(".x").focus();
+    if (!pushed) { try { history.pushState({ pop: 1 }, ""); pushed = true; } catch (e) {} }
+  }
   function hide() {
-    seq++;
+    seq++; mine = false;
     dim.classList.remove("show"); dim.setAttribute("aria-hidden", "true"); document.body.style.overflow = "";
     if (lastFocus) lastFocus.focus();
   }
   function close() { if (pushed) { pushed = false; history.back(); } else hide(); }   // 뒤로 가기 기록을 하나 되돌림 → popstate에서 닫힘
-  window.addEventListener("popstate", () => { if (dim.classList.contains("show")) { pushed = false; hide(); } });
+  window.addEventListener("popstate", () => { if (mine && dim.classList.contains("show")) { pushed = false; hide(); } });
+  if (window.SPS) window.SPS.renderPlayer = render;      // 경기 상세 팝업(schedule.js)에서 선수 이름을 누를 때
 
   // 이적·FA 목록의 한 줄 → 팝업 정보
   function fromFaRow(row) {
@@ -91,9 +100,9 @@
   }
   document.addEventListener("click", e => { const p = pick(e); if (p) { e.preventDefault(); open(p); } });
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape" && dim.classList.contains("show")) { close(); return; }
+    if (e.key === "Escape" && mine && dim.classList.contains("show")) { close(); return; }
     if (e.key === "Enter" || e.key === " ") { const p = pick(e); if (p) { e.preventDefault(); open(p); } }
   });
-  dim.addEventListener("click", e => { if (e.target === dim) close(); });
-  dim.querySelector(".x").addEventListener("click", () => close());
+  dim.addEventListener("click", e => { if (mine && e.target === dim) close(); });
+  dim.querySelector(".x").addEventListener("click", () => { if (mine) close(); });
 })();

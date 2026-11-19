@@ -40,16 +40,23 @@
   const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const num = v => v == null ? "–" : v.toLocaleString("ko-KR");
   const k1 = v => v == null ? "–" : (v / 1000).toFixed(1) + "k";
-  let pushed = false, data = null, cur = 0;
+  // depth: 이 팝업이 쌓은 뒤로 가기 기록 수(경기 1, 그 안에서 선수 프로필을 열면 2). 휴대폰 뒤로 가기: 선수 → 경기 → 닫힘
+  let depth = 0, ignorePop = false, mine = false, view = "match", data = null, cur = 0;
 
-  function show() { dim.classList.add("show"); dim.setAttribute("aria-hidden", "false"); document.body.style.overflow = "hidden"; dim.querySelector(".x").focus();
-    if (!pushed) { try { history.pushState({ pop: 1 }, ""); pushed = true; } catch (e) {} } }
-  function hide() { dim.classList.remove("show"); dim.setAttribute("aria-hidden", "true"); document.body.style.overflow = ""; }
-  function close() { if (pushed) { pushed = false; history.back(); } else hide(); }
-  window.addEventListener("popstate", () => { if (dim.classList.contains("show")) { pushed = false; hide(); } });
-  dim.addEventListener("click", e => { if (e.target === dim) close(); });
-  dim.querySelector(".x").addEventListener("click", close);
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && dim.classList.contains("show")) close(); });
+  function push() { try { history.pushState({ pop: 1 }, ""); depth++; } catch (e) {} }
+  function show() { mine = true; dim.classList.add("show"); dim.setAttribute("aria-hidden", "false"); document.body.style.overflow = "hidden"; dim.querySelector(".x").focus(); }
+  function hide() { mine = false; view = "match"; dim.classList.remove("show"); dim.setAttribute("aria-hidden", "true"); document.body.style.overflow = ""; }
+  function close() { const n = depth; depth = 0; hide(); if (n) { ignorePop = true; history.go(-n); } }
+  function backToMatch() { if (depth > 1) history.back(); else { view = "match"; draw(); } }
+  window.addEventListener("popstate", () => {
+    if (ignorePop) { ignorePop = false; return; }
+    if (!mine || !dim.classList.contains("show")) return;
+    if (view === "player" && depth > 1) { depth--; view = "match"; draw(); return; }
+    depth = 0; hide();
+  });
+  dim.addEventListener("click", e => { if (mine && e.target === dim) close(); });
+  dim.querySelector(".x").addEventListener("click", () => { if (mine) close(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && mine && dim.classList.contains("show")) close(); });
 
   const team = n => (data.teams && data.teams[n]) || { short: n, logo: "" };
   const logo = n => { const t = team(n); return t.logo ? '<img class="logo" src="' + esc(t.logo) + '" alt="" width="20" height="20">' : '<span class="logo txt" aria-hidden="true">' + esc((t.short || "?")[0]) + "</span>"; };
@@ -58,8 +65,9 @@
 
   function side(g, s) {
     const t = g[s], win = g.win === s;
-    const rows = t.players.map(p => '<li><span class="ps">' + esc(POS[p.role] || p.role) + "</span>" + champ(p.champ) +
-      '<span class="pn2"><b>' + esc(p.name) + "</b><small>" + esc(p.champ.ko) + "</small></span>" +
+    const rows = t.players.map((p, i) => '<li><span class="ps">' + esc(POS[p.role] || p.role) + "</span>" + champ(p.champ) +
+      '<span class="pn2"><button type="button" class="mpl" data-s="' + s + '" data-i="' + i + '" title="선수 프로필 보기">' + esc(p.name) +
+      "</button><small>" + esc(p.champ.ko) + "</small></span>" +
       '<span class="kda"><b>' + p.k + "/" + p.d + "/" + p.a + "</b><small>CS " + num(p.cs) + " · " + k1(p.gold) + "</small></span>" +
       '<span class="dmg" title="챔피언에게 준 피해량">' + num(p.dmg) + "</span></li>").join("");
     const obj = [t.kills != null ? "⚔️ " + t.kills : "", t.towers != null ? "🏰 " + t.towers : "", t.dragons != null ? "🐉 " + t.dragons : "",
@@ -88,13 +96,33 @@
       '<p class="src">기록 출처 리그피디아 · 챔피언 이미지 Riot Games</p></div>';
   }
 
-  pbody.addEventListener("click", e => { const b = e.target.closest("button[data-g]"); if (b) { cur = +b.dataset.g; draw(); } });
+  pbody.addEventListener("click", e => {
+    const b = e.target.closest("button[data-g]"); if (b) { cur = +b.dataset.g; draw(); return; }
+    const pl = e.target.closest("button.mpl"); if (pl) openPlayer(pl.dataset.s, +pl.dataset.i);
+  });
+
+  // 선수 이름 → 기존 선수 프로필(커리어·관련 소식)을 같은 팝업 안에. 맨 위 '← 경기 기록으로'
+  function openPlayer(s, i) {
+    if (!window.SPS || !window.SPS.renderPlayer || !data) return;
+    const g = data.games[Math.min(cur, data.games.length - 1)], t = g[s], p = t.players[i];
+    const tm = team(t.team), pos = POS[p.role] || p.role || "";
+    const bdg = tm.logo ? '<img class="bdg" src="' + esc(tm.logo) + '" alt="">' : "";
+    const kda = p.k + "/" + p.d + "/" + p.a;
+    view = "player"; push();
+    window.SPS.renderPlayer({
+      page: p.page || p.name, nick: p.name, real: "", pos: pos + " · " + tm.short,
+      av: '<span class="av tc" style="--tc:var(--primary)">' + esc(pos) + bdg + "</span>",
+      now: '<span class="st2 s-stay">' + g.n + '세트 기록</span><div class="mv">' + champ(p.champ) + " <b>" + esc(p.champ.ko) + "</b> · " +
+        esc(kda) + " · CS " + num(p.cs) + "</div>" + '<span class="sub">' + (g.win === s ? "승리" : "패배") + "</span>",
+    }, { onClose: close, onBack: backToMatch, backLabel: "경기 기록으로" });
+    pbody.parentElement.scrollTop = 0;
+  }
 
   function open(row) {
     row.classList.add("lit");
-    data = null; cur = 0;
+    data = null; cur = 0; view = "match";
     pbody.innerHTML = '<div class="mpop"><p class="nodata">경기 기록을 불러오는 중… 🍄</p></div>';
-    show();
+    show(); if (!depth) push();
     fetch("/api/match?league=" + encodeURIComponent(LG) + "&id=" + encodeURIComponent(row.dataset.id))
       .then(r => r.json().then(j => ({ ok: r.ok, j })))
       .then(({ ok, j }) => { if (!ok) throw new Error(j.msg || "error"); data = j; draw(); })
