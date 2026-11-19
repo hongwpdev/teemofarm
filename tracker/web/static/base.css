@@ -1207,3 +1207,6 @@ a.tbtn .lb{margin-left:.3rem}
 .pwait summary{padding:1rem 0;font-size:1.3rem;color:var(--t5);cursor:pointer}
 .pwait .plist{padding:0 0 .6rem}
 @media (max-width:719px){.sgrid{grid-template-columns:1fr}.phead h2{font-size:1.8rem}.pstat{gap:1.2rem}}
+/* 하위 메뉴 글자가 두 줄로 꺾이지 않게: 긴 이름은 더 넓게, 좁은 폰에선 살짝 작게 */
+.view_tab.squad a{white-space:nowrap;flex:1 1 auto;padding:0 .6rem}
+@media (max-width:419px){.view_tab.squad a{font-size:1.3rem;padding:0 .35rem}}

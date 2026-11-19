@@ -37,7 +37,7 @@ FA_POS = {"Top": "탑", "Jungle": "정글", "Mid": "미드", "Bot": "원딜", "S
 FA_ST = {"move": ("이적 확정", "s-move"), "stay": ("잔류", "s-stay"), "fa": ("미정", "s-fa")}
 KIND = {"official": ("오피셜", "k-official"), "rumor": ("단독·유력", "k-rumor"),
         "view": ("전망·분석", "k-view"), "edit": ("편집", "k-edit")}
-SECTIONS = [("news", "", "소식"), ("roster", "/roster", "로스터"), ("fa", "/fa", "이적·FA"), ("builder", "/builder", "단장 놀이"),
+SECTIONS = [("news", "", "소식"), ("roster", "/roster", "로스터"), ("fa", "/fa", "이적·FA"), ("builder", "/builder", "내맘대로 로스터"),
             ("schedule", "/schedule", "일정·결과"), ("game", "/game", "🍄 미니게임")]
 esc = html.escape
 
@@ -717,12 +717,12 @@ def _toggle(league, on, season, label, items):
 
 
 def stove_toggle(league: str, on: str, season=None) -> str:
-    """'스토브리그' 탭 안: 이적 시장 | 구단별 | 행선지 맞히기 | 단장 놀이."""
+    """'스토브리그' 탭 안: 이적 시장 | 구단별 | 행선지 맞히기 | 내맘대로 로스터."""
     if season:
         return _toggle(league, on, season, "스토브리그 보기", [("fa", "/fa", f"{season - 1} 스토브리그 이동")])
     return _toggle(league, on, None, "스토브리그 보기",
                    [("fa", "/fa", "이적 시장"), ("summary", "/summary", "구단별"), ("predict", "/predict", "행선지 맞히기"),
-                    ("builder", "/builder", "단장 놀이")])
+                    ("builder", "/builder", "내맘대로 로스터")])
 
 
 def team_toggle(league: str, on: str, season=None) -> str:
@@ -821,8 +821,8 @@ def shared_roster_og(r: str, by: str):
         return None
     by = " ".join((by or "").split())[:12]
     year = current_season()
-    return {"title": f"{by + ' 단장의 ' if by else '내가 단장이라면: '}{year} LCK 로스터 🍄",
-            "desc": " | ".join(lines[:3]) + (" … 10개 팀 전부 보고 나도 단장 해 보기" if len(lines) > 3 else "")}
+    return {"title": f"{by + '의 ' if by else '내맘대로 '}{year} LCK 로스터 🍄",
+            "desc": " | ".join(lines[:3]) + (" … 10개 팀 전부 보고 나도 짜 보기" if len(lines) > 3 else "")}
 
 
 def render_builder(league: str, season=None, shared: str = "", by: str = "", code: str = "") -> str:
@@ -833,7 +833,7 @@ def render_builder(league: str, season=None, shared: str = "", by: str = "", cod
                        "shared": {"r": shared, "n": by} if code and shared else None},
                       ensure_ascii=False).replace("<", "\\u003c")
     main = f"""{stove_toggle(league, "builder") if not season else ""}<section class="card panel bld-head">
-<h2>내가 단장이라면 <small>{current_season()} 시즌 10개 팀 주전을 내 마음대로</small></h2>
+<h2>내맘대로 로스터 <small>{current_season()} 시즌 10개 팀 주전을 직접 골라 보세요</small></h2>
 <p class="src">선수를 고른 뒤 빈칸을 누르세요. PC에서는 끌어다 놓아도 돼요. 짠 로스터는 이 브라우저에 저장되고, 이미지나 링크로 자랑할 수 있어요.</p>
 <div class="bld-act"><button class="btn primary" type="button" id="bsave">이미지로 저장</button><button class="btn" type="button" id="bshare">링크로 공유</button>
 <button class="btn" type="button" id="breset">지금 로스터로 되돌리기</button>{"".join(f'<button class="btn" type="button" data-arch="{y}">{y} 로스터 불러오기</button>' for y in archive_years())}<button class="btn" type="button" id="bclear">모두 비우기</button></div>
@@ -850,7 +850,7 @@ def render_builder(league: str, season=None, shared: str = "", by: str = "", cod
 {popular_rosters() if not season and not code else ""}
 <script type="application/json" id="bdata">{data}</script>"""
     og = shared_roster_og(shared, by) if shared else None
-    return shell(league, "builder", "단장 놀이", main, ("builder.js",), today, season=season, og=og)
+    return shell(league, "builder", "내맘대로 로스터", main, ("builder.js",), today, season=season, og=og)
 
 
 # ── 미니게임: 협곡 버섯 지뢰찾기 ────────────────────────────────────────
@@ -944,7 +944,7 @@ def about_body() -> str:
 <ul>
 <li><b>소식</b>: 구글 뉴스와 리그피디아 편집 기록을 모아, 같은 내용의 기사는 하나로 묶고 오피셜·루머를 구분해 보여 줘요.</li>
 <li><b>로스터·이적</b>: 구단별 현재 로스터와 계약이 끝난 선수(FA)의 이적·잔류 현황을 정리해요.</li>
-<li><b>단장 놀이</b>: 다음 시즌 10개 팀 로스터를 내 마음대로 짜서 이미지로 저장하거나 링크로 공유할 수 있어요.</li>
+<li><b>내맘대로 로스터</b>: 다음 시즌 10개 팀 로스터를 내 마음대로 짜서 이미지로 저장하거나 링크로 공유할 수 있어요.</li>
 <li><b>리그·구단 안내와 시즌 기록</b>: 리그 구조, 구단 이력, 지난 시즌 우승팀·로스터·이적을 볼 수 있어요.</li>
 <li><b>수다방·미니게임</b>: 로그인 없이 쓰는 대화방과 협곡 버섯 지뢰찾기가 있어요.</li>
 </ul>

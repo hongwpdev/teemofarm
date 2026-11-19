@@ -139,8 +139,8 @@
     const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
     const font = (w, s) => w + " " + s + "px 'Pretendard GOV Variable','Pretendard GOV','Apple SD Gothic Neo','Malgun Gothic',sans-serif";
     g.fillStyle = "#0f1419"; g.fillRect(0, 0, W, H);
-    g.fillStyle = "#7cff01"; g.font = font(800, 44); g.fillText("🍄 내가 단장이라면: " + (D.year || "") + " LCK", PAD, 80);
-    g.fillStyle = "#94a3b8"; g.font = font(500, 22); g.fillText("티모의 버섯농장 · 단장 놀이", PAD, 120);
+    g.fillStyle = "#7cff01"; g.font = font(800, 44); g.fillText("🍄 내맘대로 " + (D.year || "") + " LCK 로스터", PAD, 80);
+    g.fillStyle = "#94a3b8"; g.font = font(500, 22); g.fillText("티모의 버섯농장", PAD, 120);
     const logos = {};
     await Promise.all(D.teams.filter(t => t.logo).map(t => new Promise(res => { const i = new Image(); i.onload = () => { logos[t.k] = i; res(); }; i.onerror = res; i.src = t.logo; })));
     D.teams.forEach((t, i) => {
@@ -163,7 +163,7 @@
       });
     });
     // 아래 워터마크: 사이트 이름 + 주소(무슨 사이트인지 한눈에)
-    const mark = "🍄 티모의 버섯농장 · 단장 놀이 · " + (D.year || "") + " LCK";
+    const mark = "🍄 티모의 버섯농장 · 내맘대로 로스터 · " + (D.year || "") + " LCK";
     g.fillStyle = "#c39cf0"; g.font = font(700, 20); g.fillText(mark, PAD, H - 30);
     const mw = g.measureText(mark).width;
     g.fillStyle = "#7b8798"; g.font = font(500, 18); g.fillText(D.domain || (location.host + "/lck/builder"), PAD + mw + 16, H - 30);   // 사이트 주소(site.json의 domain)
