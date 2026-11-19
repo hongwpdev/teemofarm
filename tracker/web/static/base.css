@@ -947,3 +947,7 @@ body{padding-bottom:7rem}
 .ptop .src{flex:1 1 30rem;min-width:0;margin:0}
 .fbar .view_tab a{white-space:nowrap}
 @media (max-width:379px){.rbtn .next{display:none}.fbar .view_tab a{padding-left:.4rem;padding-right:.4rem}}
+/* 로스터 카드: 계약이 남은 선수의 이적 유력(원래 팀 칸에 작게) */
+.rc .rmo{display:inline-flex;align-items:center;gap:.3rem;margin-top:.2rem;font-size:1.05rem;font-weight:700;color:#f59e0b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.rc .rmo .logo{width:1.4rem;height:1.4rem}
+:root:not([data-theme="dark"]) .rc .rmo{color:#b45309}

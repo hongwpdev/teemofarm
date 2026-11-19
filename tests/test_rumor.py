@@ -6,7 +6,7 @@ import unittest
 os.environ.setdefault("DB_PATH", os.path.join(tempfile.mkdtemp(), "test.db"))
 
 from tracker.core import init_db  # noqa: E402
-from tracker.rumor import read_title  # noqa: E402
+from tracker.rumor import MOVE_MARK, _guess, read_title  # noqa: E402
 
 
 class RumorTest(unittest.TestCase):
@@ -40,6 +40,14 @@ class RumorTest(unittest.TestCase):
                   "'기인·제우스·캐니언' FA 시장으로…LCK 스토브리그 개막"):
             for nick, frm in (("Kiin", "geng"), ("Canyon", "geng"), ("Zeus", "hle")):
                 self.assertIsNone(read_title(t, nick, frm), (t, nick))
+
+    def test_contracted_player_needs_rumor_or_official(self):
+        news = [{"title": "T1 '페이커', 젠지전 승리…합류 후 100승", "url": "u1", "outlet": "a", "published": "2026-11-19T01:00:00+00:00"},
+                {"title": "[소식통] '시우' 전시우, 2027 LCK 시즌 젠지 합류 예정", "url": "u2", "outlet": "b", "published": "2026-11-19T02:00:00+00:00"}]
+        people = [{"page": "Faker", "nick": "Faker", "team_from": "t1"}, {"page": "Siwoo", "nick": "Siwoo", "team_from": "dk"}]
+        got = _guess(people, news, marks=MOVE_MARK, allow_stay=False)
+        self.assertNotIn("Faker", got)                 # 평범한 경기 기사는 이적으로 보지 않음
+        self.assertEqual(got["Siwoo"]["team"], "geng")
 
     def test_other_player(self):
         self.assertIsNone(read_title("[단독] 한화생명, '기인' 김기인 영입", "Canyon", "geng"))
