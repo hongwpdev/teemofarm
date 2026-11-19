@@ -869,3 +869,34 @@ body{padding-bottom:7rem}
 .nodata{padding:2rem 1rem;text-align:center;font-size:1.4rem;color:var(--t5);line-height:1.7}
 .mpop .src{margin-top:1.2rem;text-align:center}
 @media (max-width:480px){.mh{padding:.8rem 3.6rem 1.2rem;gap:.6rem}.mh-t{font-size:1.5rem}.mh-s{font-size:2.2rem}.plist li{grid-template-columns:2.8rem 3rem minmax(0,1fr) auto;gap:.6rem}.plist .dmg{display:none}}
+/* 사이트 소개·개인정보처리방침: 아래쪽 링크 + 팝업(dialog) + 단독 페이지 */
+.policy-links{display:flex;justify-content:center;flex-wrap:wrap;gap:.4rem 1.6rem;margin:1.2rem 0;font-size:1.25rem}
+.policy-links a{color:var(--t5);font-weight:600;text-decoration:underline;text-underline-offset:.3rem}
+.policy-links a:hover{color:var(--primary-text)}
+.pol-dlg{width:min(60rem,calc(100vw - 3.2rem));max-height:82vh;overflow:auto;overscroll-behavior:contain;margin:auto;padding:0;border:1px solid var(--border);border-top:.4rem solid var(--primary);border-radius:1.2rem;background:var(--card);color:var(--t3);box-shadow:0 2rem 4rem rgba(0,0,0,.45)}
+.pol-dlg::backdrop{background:rgba(0,0,0,.6);backdrop-filter:blur(3px)}
+.pol-dlg form{position:sticky;top:0;display:flex;justify-content:flex-end;height:0}
+.pol-x{margin:1rem 1rem 0 0;width:3.6rem;height:3.6rem;border:0;border-radius:50%;background:var(--card);color:var(--t5);font-size:1.8rem;cursor:pointer}
+.pol-x:hover{color:var(--primary-text);background:var(--bg-gray)}
+.pol-body,.pol-page{padding:2.4rem;font-size:1.4rem;line-height:1.7;text-align:left}
+.pol-page{max-width:76rem;margin:1.6rem auto}
+.pol-body h2,.pol-page h2{margin:0 4rem 1.4rem 0;padding-bottom:1rem;border-bottom:1px solid var(--line);font-size:1.9rem;font-weight:800;color:var(--t1)}
+.pol-body h3,.pol-page h3{margin:1.8rem 0 .6rem;font-size:1.5rem;font-weight:700;color:var(--primary-text)}
+.pol-body p,.pol-page p,.pol-body ul,.pol-page ul{margin:0 0 1rem;color:var(--t3)}
+.pol-body ul,.pol-page ul{padding-left:2rem;list-style:disc}
+.pol-body li+li,.pol-page li+li{margin-top:.5rem}
+.pol-body a,.pol-page a{color:var(--primary-text);text-decoration:underline;text-underline-offset:.2rem}
+@media (max-width:719px){.pol-body,.pol-page{padding:2rem 1.6rem}.pol-page{margin:1.2rem}}
+/* 이적·FA '유력'(뉴스 기준, 공식 확정 전) · '발표'(공식 기사, 리그피디아 반영 전) */
+.s-rm{background:rgba(245,158,11,.16);color:#f59e0b;border:1px dashed rgba(245,158,11,.7)}
+.s-ann{background:rgba(59,130,246,.14);color:#60a5fa;border:1px dashed rgba(96,165,250,.7)}
+:root:not([data-theme="dark"]) .s-rm{background:#fef3c7;color:#b45309;border-color:#f59e0b}
+:root:not([data-theme="dark"]) .s-ann{background:#dbeafe;color:#1d4ed8;border-color:#60a5fa}
+.rm-dest{display:inline-flex;align-items:center;gap:.4rem;padding:0 .6rem;border:1px dashed rgba(245,158,11,.75);border-radius:.5rem}
+.rm-src{color:var(--t5);text-decoration:underline;text-underline-offset:.2rem;white-space:nowrap}
+.rm-src:hover{color:var(--primary-text)}
+.src .st2{height:1.9rem;padding:0 .5rem;font-size:1.1rem;vertical-align:middle}
+.moves li.rm{background:repeating-linear-gradient(135deg,transparent 0 .8rem,rgba(245,158,11,.06) .8rem 1.6rem)}
+.moves li.rm .tm:last-of-type{outline:1px dashed rgba(245,158,11,.75);outline-offset:.2rem;border-radius:.4rem}
+.moves li.rm em{margin-left:.4rem;padding:0 .5rem;border-radius:.4rem;font-style:normal;font-size:1.1rem;font-weight:700;background:rgba(245,158,11,.16);color:#f59e0b}
+:root:not([data-theme="dark"]) .moves li.rm em{background:#fef3c7;color:#b45309}

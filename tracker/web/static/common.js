@@ -191,3 +191,22 @@
     center();
   }
 })();
+
+// 사이트 소개·개인정보처리방침: 아래쪽 링크를 누르면 팝업으로(지원 안 되는 브라우저는 /about·/privacy 페이지로 이동)
+(() => {
+  document.addEventListener("click", e => {
+    const a = e.target.closest && e.target.closest("a[data-pol]");
+    if (!a) return;
+    const d = document.getElementById("pol-" + a.dataset.pol);
+    if (!d || typeof d.showModal !== "function") return;
+    e.preventDefault();
+    d.showModal();
+    d.scrollTop = 0;
+  });
+  // 바깥(어두운 부분)을 누르면 닫기
+  document.querySelectorAll(".pol-dlg").forEach(d => d.addEventListener("click", e => {
+    if (e.target !== d) return;
+    const r = d.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) d.close();
+  }));
+})();

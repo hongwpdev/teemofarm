@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from ..cargo import RATE_MSG, is_rate_limit
 from ..classify import article_kind, is_minor_wiki, news_teams, wiki_ko
 from ..cluster import group as cluster_group
+from ..rumor import rumors
 from ..config import (AUTO_MINUTES, DEFAULT_LEAGUE, KST, LEAGUES, NEW_HOURS, SITE_DESC, SITE_NAME, TEAM_COLORS,
                       TEAMS)
 from ..core import STATUS, STATUS_LOCK, WEEKDAYS, db, kst_day_start_utc, norm_title, parse_day, rel_time
@@ -196,7 +197,7 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
 <link rel="preload" as="style" href="{FONT_CSS}" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="{FONT_CSS}"></noscript>
 <link rel="stylesheet" href="/static/base.css?v={STATIC_VER}">
-</head><body data-league="{league}" data-sec="{active}" data-auto="{AUTO_MINUTES}" data-scope="{scope}"{extra_attr}>
+{adsense_head()}</head><body data-league="{league}" data-sec="{active}" data-auto="{AUTO_MINUTES}" data-scope="{scope}"{extra_attr}>
 <header class="header"><div class="in">
 <h1 class="brand">{SHROOM_SVG}<a class="home" href="/{DEFAULT_LEAGUE}" title="메인 화면으로">{esc(SITE_NAME)}<small>협곡의 시야를 장악하듯, LoL 이스포츠 소식·로스터·이적을 한눈에</small></a></h1>
 <div class="stat">{head}<span class="tools"><button type="button" class="tbtn" id="spo" aria-pressed="false" title="경기 결과·루머 핵심을 흐리게 가려요">🎯 스포 방지</button><button type="button" class="tbtn" id="thm" title="화면 밝기 바꾸기">🌙</button><a class="tbtn{" on" if active == "game" else ""}" href="/{league}/game">🍄 미니게임</a></span></div>
@@ -206,8 +207,9 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
 {bar}
 <main class="wide">
 {main}
-<div class="foot">{foot_fail}<p>시간은 모두 한국 시간(KST) · 팀 로고·로스터·FA 출처 Leaguepedia</p>{support_button()}{aff_note()}<p class="riot">{esc(RIOT_NOTE)}</p></div>
+<div class="foot">{foot_fail}<p>시간은 모두 한국 시간(KST) · 팀 로고·로스터·FA 출처 Leaguepedia</p>{support_button()}{aff_note()}{policy_links()}<p class="riot">{esc(RIOT_NOTE)}</p></div>
 </main>
+{policy_dialogs() if active != "policy" else ""}
 {js}
 </body></html>"""
 
@@ -513,7 +515,8 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
 
 
 # ── 이적·FA ─────────────────────────────────────────────────────────────
-def fa_row_html(r) -> str:
+def fa_row_html(r, rm=None) -> str:
+    """rm: 미정인 선수의 뉴스 기반 '유력'·'발표' 정보(rumor.py). 공식 상태는 그대로 두고 덧붙여 보여 줌."""
     def tm(k):
         return f'<span class="tm" title="{esc(team_name(k))}">{team_logo(k)}{esc(team_short(k))}</span>'
     pos = FA_POS.get(r["role"], r["role"])
@@ -524,7 +527,13 @@ def fa_row_html(r) -> str:
         dest = (tm(r["team_to"]) if r["team_to"] else
                 f'<span class="ext">{esc(r["team_to_name"])}</span>' if r["team_to_name"] else
                 '<span class="und">미정</span>')
-        mv = f'{tm(r["team_from"])}<i class="arr" aria-hidden="true"></i>{dest}'
+        if rm and r["status"] == "fa":
+            dest = (f'<span class="rm-dest">{tm(rm["team"])}<span class="und">잔류?</span></span>' if rm["stay"] else
+                    f'<span class="rm-dest">{tm(rm["team"])}</span>')
+            if rm["stay"]:
+                mv = dest
+        if not (rm and r["status"] == "fa" and rm["stay"]):
+            mv = f'{tm(r["team_from"])}<i class="arr" aria-hidden="true"></i>{dest}'
     sub = []
     if r["until"]:
         sub.append("~" + r["until"][:7].replace("-", "."))
@@ -534,6 +543,11 @@ def fa_row_html(r) -> str:
         d = parse_day(r["date"])
         sub.append((f"{d.month}/{d.day}" if d else r["date"]) + (" 합류 발표" if r["status"] == "move" else " 결별"))
     lbl, cls = FA_ST.get(r["status"], ("?", "s-fa"))
+    if rm and r["status"] == "fa":
+        lbl, cls = ("발표" if rm["official"] else ("잔류 유력" if rm["stay"] else "유력")), ("s-ann" if rm["official"] else "s-rm")
+        d = rel_day(rm["published"])
+        src = f'{rm["outlet"]}{" " + d if d else ""}'
+        sub = [f'<a class="rm-src" href="{esc(rm["url"])}" target="_blank" rel="noopener" title="{esc(rm["title"])}">{esc(src)} 기사 ↗</a>']
     real = f'<small>{esc(r["real"])}</small>' if r["real"] else ""
     ak = r["team_to"] if r["status"] == "move" and r["team_to"] else r["team_from"]   # 아바타: 새 팀(이적)·원래 팀
     badge = team_logo(ak, "bdg") if logo_src(ak) else ""
@@ -542,7 +556,17 @@ def fa_row_html(r) -> str:
             f'<span class="av tc{" off" if r["status"] == "fa" else ""}" style="--tc:{team_color(ak)}">{esc(pos)}{badge}</span>'
             f'<div class="who"><p class="nm" role="button" tabindex="0" title="선수 프로필 보기"><span class="nk">{esc(r["nick"])}</span>{real}</p>'
             f'<div class="mv">{mv}</div></div>'
-            f'<div class="rt"><span class="st2 {cls}">{lbl}</span><span class="sub">{esc(" · ".join(sub))}</span></div></li>')
+            f'<div class="rt"><span class="st2 {cls}">{lbl}</span><span class="sub">{sub[0] if rm and r["status"] == "fa" else esc(" · ".join(sub))}</span></div></li>')
+
+
+def rel_day(iso: str) -> str:
+    """기사 시각 → '오늘'·'어제'·'11/17'(한국 시간)."""
+    try:
+        d = datetime.fromisoformat(iso).astimezone(KST).date()
+    except (TypeError, ValueError):
+        return ""
+    today = datetime.now(KST).date()
+    return "오늘" if d == today else "어제" if d == today - timedelta(days=1) else f"{d.month}/{d.day}"
 
 
 def render_fa(league: str) -> str:
@@ -571,19 +595,20 @@ def render_fa(league: str) -> str:
     else:
         faupd = "아직 수집 전"
     since = parse_day(fa_since())
-    board = moves_board(rows)
+    rms = rumors(rows)
+    board = moves_board(rows, rms)
     main = f"""{squad_toggle(league, "fa")}{board}<section class="card panel fa" aria-label="조회와 필터">
 {ACT}<nav class="view_tab" id="grp" aria-label="묶어 보기"><a href="#" data-g="p">포지션별</a><a href="#" data-g="t">팀별</a><a href="#" data-g="s">상태별</a></nav>
 <div class="sum">{summ}</div>
 <div class="chips" id="pos">
 <button data-p="all">전체 포지션</button><button data-p="탑">탑</button><button data-p="정글">정글</button><button data-p="미드">미드</button><button data-p="원딜">원딜</button><button data-p="서폿">서폿</button><button data-p="감독">감독</button><button data-p="코치">코치</button>
 </div>
-<p class="src">원소속 팀 기준 · 리그피디아 계약·로스터 변동 기록({f"{since.month}/{since.day}" if since else fa_since()} 이후) · {faupd} · 공식 발표가 리그피디아에 반영돼야 상태가 바뀌어요</p>
+<p class="src">원소속 팀 기준 · 리그피디아 계약·로스터 변동 기록({f"{since.month}/{since.day}" if since else fa_since()} 이후) · {faupd} · 공식 발표가 리그피디아에 반영돼야 상태가 바뀌어요 · <b class="st2 s-rm">유력</b>은 최근 기사 제목 기준 참고 표시</p>
 </section>
 <section class="card">
 <div class="tabs-wrap"><nav class="tabs" id="tabs" aria-label="원소속 팀">{nav}</nav></div>
 <script type="application/json" id="th">{th}</script>
-<ul class="list" id="falist">{"".join(fa_row_html(r) for r in rows)}</ul>
+<ul class="list" id="falist">{"".join(fa_row_html(r, rms.get(r["page"])) for r in rows)}</ul>
 </section>
 {POPUP}"""
     return shell(league, "fa", "이적·FA", main, ("fa.js", "player.js"), today, scope="?what=fa")
@@ -619,7 +644,7 @@ def squad_toggle(league: str, on: str, season=None) -> str:
 
 
 # ── 이동 보드(이적·FA 위) ───────────────────────────────────────────────
-def moves_board(fa_rows) -> str:
+def moves_board(fa_rows, rms=None) -> str:
     """누가 어디서 어디로: LCK 팀끼리 이적 + LCK 밖에서 들어온 영입 + 팀을 떠난 뒤 해외·다른 곳으로 간 경우."""
     def tm(k, name=""):
         if k:
@@ -640,6 +665,14 @@ def moves_board(fa_rows) -> str:
         seen.add(r["page"])
         items.append((r["date"] or "", f'<li>{tm(r["team_from"])}<span class="ar" aria-label="에서">➔</span>{tm(r["team_to"], r["team_to_name"])}'
                                        f'<span class="mv-who"><small>{pos}</small>{who(r, pos, r["team_to"] or "")}</span></li>'))
+    for r in fa_rows:                       # 유력(뉴스 기준, 공식 확정 전): 점선으로 구분
+        rm = (rms or {}).get(r["page"])
+        if r["status"] != "fa" or not rm or rm["stay"]:
+            continue
+        pos = FA_POS.get(r["role"], r["role"])
+        tag = "발표" if rm["official"] else "유력"
+        items.append((rm["published"][:10], f'<li class="rm">{tm(r["team_from"])}<span class="ar" aria-label="에서">➔</span>{tm(rm["team"])}'
+                                            f'<span class="mv-who"><small>{pos}</small>{who(r, pos, rm["team"])}<em>{tag}</em></span></li>'))
     for r in roster_rows():
         if r["joined"] and r["page"] not in seen:
             outside += 1
@@ -784,6 +817,108 @@ def aff_note() -> str:
             '사이트 운영자에게 일정액의 수수료가 지급될 수 있습니다.</p>')
 
 
+
+# ── 사이트 소개 · 개인정보처리방침 (구글 애드센스 심사용) ─────────────────
+# 아래쪽 링크를 누르면 팝업으로 열리고, /about · /privacy 주소로 바로 열어도 같은 내용이 나와요.
+POLICY_DATE = "2026년 11월 18일"
+
+
+def _contact() -> str:
+    c = SITE.get("contact")
+    return c if isinstance(c, str) and "@" in c else ""
+
+
+def _mail() -> str:
+    c = _contact()
+    return f'<a href="mailto:{esc(c)}">{esc(c)}</a>' if c else "사이트 아래쪽 문의하기"
+
+
+def about_body() -> str:
+    return f"""<h2>🍄 티모의 버섯농장 소개</h2>
+<h3>어떤 사이트인가요</h3>
+<p><b>티모의 버섯농장</b>({esc(SITE.get("domain") or "teemofarm.com")})은 리그 오브 레전드(LoL) 이스포츠 팬이 스토브리그 이적 소식, 구단별 로스터, 리그 정보를 한곳에서 편하게 볼 수 있도록 개인이 취미로 만들어 운영하는 팬 사이트예요. 서버비는 후원과 광고·제휴 수익으로 충당해요.</p>
+<h3>주요 기능</h3>
+<ul>
+<li><b>소식</b> — 구글 뉴스와 리그피디아 편집 기록을 모아, 같은 내용의 기사는 하나로 묶고 오피셜·루머를 구분해 보여 줘요.</li>
+<li><b>로스터·이적</b> — 구단별 현재 로스터와 계약이 끝난 선수(FA)의 이적·잔류 현황을 정리해요.</li>
+<li><b>로스터 짜기</b> — 다음 시즌 로스터를 직접 조합해 이미지로 저장하거나 링크로 공유할 수 있어요.</li>
+<li><b>리그·구단 안내와 시즌 기록</b> — 리그 구조, 구단 이력, 지난 시즌 우승팀·로스터·이적을 볼 수 있어요.</li>
+<li><b>수다방·미니게임</b> — 로그인 없이 쓰는 대화방과 협곡 버섯 지뢰찾기가 있어요.</li>
+</ul>
+<h3>데이터 출처와 저작권</h3>
+<p>로스터·계약·경기 정보는 <a href="https://lol.fandom.com" target="_blank" rel="noopener">Leaguepedia</a>(CC BY-SA 3.0)를 바탕으로 자동으로 모아요. 뉴스는 구글 뉴스 RSS에서 제목과 링크만 보여 주며, 기사 본문의 저작권은 각 언론사에 있어요. 리그 오브 레전드 관련 명칭과 자산은 Riot Games, Inc.의 상표예요.</p>
+<h3>문의</h3>
+<p>오류 제보, 데이터 수정 요청, 제휴 문의: {_mail()}</p>"""
+
+
+def privacy_body() -> str:
+    return f"""<h2>🔒 개인정보처리방침</h2>
+<p>티모의 버섯농장(이하 '사이트')은 이용자의 개인정보를 소중히 여기며 「개인정보 보호법」 등 관련 법령을 지켜요. 사이트는 회원가입이 없고, 이름·전화번호·이메일 같은 정보를 묻거나 모으지 않아요.</p>
+<h3>1. 서버에 저장되는 정보</h3>
+<ul>
+<li><b>수다방</b>: 이용자가 쓴 메시지, 닉네임, 작성 시각, 도배를 막기 위해 브라우저가 임의로 만든 번호. 최근 메시지 200개만 보관하고 그보다 오래된 것은 자동으로 지워져요.</li>
+<li><b>로스터 공유</b>: '링크 공유하기'를 누른 경우 그 로스터 구성과 입력한 닉네임(선택). 공유 링크가 계속 열리도록 보관해요.</li>
+<li><b>접속 기록</b>: 사이트 서버는 IP 주소 등 접속 기록을 따로 남기지 않아요.</li>
+</ul>
+<h3>2. 이용자 브라우저에만 저장되는 정보</h3>
+<p>화면 테마, 스포 방지 설정, 읽은 기사, 찜한 선수, 작업 중인 로스터, 미니게임 기록, 수다방 닉네임은 이용자 브라우저의 저장 공간(localStorage)에만 남고 서버로 보내지 않아요. 브라우저의 사이트 데이터를 지우면 함께 지워져요.</p>
+<h3>3. 쿠키와 광고</h3>
+<ul>
+<li>사이트는 운영비 마련을 위해 Google 애드센스 등 제3자 광고를 게재할 수 있어요.</li>
+<li>Google을 비롯한 제3자 광고 업체는 쿠키를 사용해 이용자가 이 사이트나 다른 사이트를 방문한 기록을 바탕으로 광고를 보여 줄 수 있어요. Google은 광고 쿠키를 사용해 이용자에게 맞춤 광고를 게재해요.</li>
+<li>맞춤 광고는 <a href="https://adssettings.google.com" target="_blank" rel="noopener">Google 광고 설정</a>에서 끌 수 있어요. 제3자 업체의 쿠키는 <a href="https://www.aboutads.info/choices" target="_blank" rel="noopener">aboutads.info</a>에서도 거부할 수 있어요.</li>
+<li>Google의 정보 처리 방식은 <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener">Google 파트너 사이트 정책</a>에서 볼 수 있어요.</li>
+</ul>
+<h3>4. 외부 서비스</h3>
+<ul>
+<li>사이트 전송과 보안에 Cloudflare를, 글꼴 제공에 jsDelivr를 써요. 이 과정에서 각 서비스가 접속 IP 등을 자체 정책에 따라 처리할 수 있어요.</li>
+<li>후원(Buy Me a Coffee), 제휴(쿠팡 파트너스), 뉴스·리그피디아 링크를 누르면 해당 사이트로 이동하며, 그곳의 개인정보 정책이 적용돼요. 제휴 링크로 구매하면 운영자가 일정액의 수수료를 받을 수 있어요.</li>
+<li>사이트는 이용자 정보를 제3자에게 팔거나 제공하지 않아요.</li>
+</ul>
+<h3>5. 이용자의 권리</h3>
+<p>본인이 쓴 수다방 메시지나 공유한 로스터를 지우고 싶으면 아래 이메일로 알려 주세요. 확인 후 지체 없이 지워 드려요.</p>
+<h3>6. 개인정보 보호책임자 · 문의</h3>
+<p>운영자 이메일: {_mail()}</p>
+<h3>7. 시행일</h3>
+<p>이 방침은 {POLICY_DATE}부터 적용돼요. 내용이 바뀌면 이 페이지에 먼저 알려 드려요.</p>"""
+
+
+def policy_links() -> str:
+    c = _contact()
+    mail = f'<a href="mailto:{esc(c)}">문의하기</a>' if c else ""
+    return (f'<nav class="policy-links" aria-label="사이트 정보"><a href="/about" data-pol="about">사이트 소개</a>'
+            f'<a href="/privacy" data-pol="privacy">개인정보처리방침</a>{mail}</nav>')
+
+
+def policy_dialogs() -> str:
+    def d(k, body):
+        return (f'<dialog class="pol-dlg" id="pol-{k}" aria-label="{"사이트 소개" if k == "about" else "개인정보처리방침"}">'
+                f'<form method="dialog"><button class="pol-x" aria-label="닫기">✕</button></form>'
+                f'<div class="pol-body">{body}</div></dialog>')
+    return d("about", about_body()) + d("privacy", privacy_body())
+
+
+def render_policy(kind: str) -> str:
+    today = datetime.now(KST).date()
+    body, title = (about_body(), "사이트 소개") if kind == "about" else (privacy_body(), "개인정보처리방침")
+    return shell(DEFAULT_LEAGUE, "policy", title, f'<article class="card pol-page">{body}</article>', (), today)
+
+
+def adsense_head() -> str:
+    """site.json의 adsense.client(ca-pub-…)를 채우면 애드센스 스크립트를 <head>에 넣어요."""
+    cid = (SITE.get("adsense") or {}).get("client") or ""
+    if not re.fullmatch(r"ca-pub-\d{10,20}", cid):
+        return ""
+    return (f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={cid}" '
+            f'crossorigin="anonymous"></script>\n')
+
+
+def ads_txt() -> str:
+    cid = (SITE.get("adsense") or {}).get("client") or ""
+    if not re.fullmatch(r"ca-pub-\d{10,20}", cid):
+        return ""
+    return f"google.com, {cid[3:]}, DIRECT, f08c47fec0942fa0\n"
+
 def affiliate_card(cls: str = "") -> str:
     a = SITE.get("affiliate") or {}
     if not _ok_url(a.get("url")):
@@ -840,10 +975,11 @@ def league_guide(league: str, opened: bool = False) -> str:
             f'<a href="/{league}?team={k}" title="{esc(team_name(k))}">{team_logo(k)}<span>{esc(team_short(k))}</span></a>'
             for k in team_keys()) + "</div>"
         teams = '<p class="lsec">🛡️ 참가 구단 · 누르면 그 팀 소식</p>' + teams
+    road = ('<p class="lsec">📅 연간 시즌 로드맵</p>' + flow) if flow else ""   # 파이썬 3.10·3.11에서도 되게 f-string 밖에서
     return (f'<details class="card lguide" style="--la:{esc(g.get("accent", "var(--primary)"))}"{" open" if opened else ""}>'
             f'<summary>ℹ️ {esc(g["code"])} 리그 안내 <small>{esc(meta)}</small><i aria-hidden="true">▾</i></summary>'
             f'<div class="lg-body"><header>{head}<div><b>{esc(g.get("flag", ""))} {esc(g["name"])} ({esc(g["code"])})</b>'
-            f'<small>{esc(g.get("region", ""))} · {esc(meta)}</small></div></header>{('<p class="lsec">📅 연간 시즌 로드맵</p>' + flow) if flow else ""}<div class="litems">{items}</div>{teams}</div></details>')
+            f'<small>{esc(g.get("region", ""))} · {esc(meta)}</small></div></header>{road}<div class="litems">{items}</div>{teams}</div></details>')
 
 
 # ── 지난 시즌 기록(아카이브) ───────────────────────────────────────────
