@@ -245,7 +245,11 @@ def rumor_slots() -> dict:
                 continue
             coach_news = any(w in rm["title"] for w in ("코치", "감독", "코칭"))    # 선수 출신이 코치로 가는 기사
             slot = r["role"] if r["role"] in ROSTER_SLOTS and not coach_news else "Head Coach"
-            out.setdefault(rm["team"], {}).setdefault(slot, []).append({**dict(r), "until": "", "rm": rm})
+            # 팝업에 보일 직책: 리그피디아 직책(코치·감독), 선수 출신이 코치로 가는 기사면 기사 제목 기준
+            pos = FA_POS.get(r["role"], r["role"])
+            if coach_news and r["role"] in FA_ROLES:
+                pos = "감독" if "감독" in rm["title"] and "코치" not in rm["title"] else "코치"
+            out.setdefault(rm["team"], {}).setdefault(slot, []).append({**dict(r), "until": "", "rm": rm, "pos": pos})
     except Exception:  # noqa: BLE001  참고 표시라 실패해도 로스터는 그대로
         out = {}
     _RM_SLOTS.update(at=_t.time(), val=out)
@@ -266,7 +270,8 @@ def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True) -> str:
         def pn(r, cls="pn"):
             until = f'~{r["until"][:7].replace("-", ".")}' if r["until"] else ""
             return (f'<span class="{cls}" role="button" tabindex="0" title="선수 프로필 보기" data-page="{esc(r["page"])}" data-nick="{esc(r["nick"])}"'
-                    f' data-real="{esc(r["real"] or "")}" data-pos="{FA_POS[p]}" data-team="{k}" data-until="{esc(until)}">{esc(r["nick"])}</span>')
+                    f' data-real="{esc(r["real"] or "")}" data-pos="{(r.get("pos") if isinstance(r, dict) else "") or FA_POS[p]}"'
+                    f' data-team="{k}" data-until="{esc(until)}">{esc(r["nick"])}</span>')
         def rtag(x, small=False):
             t = "발표" if x["rm"]["official"] else ("잔류 유력" if x["rm"]["stay"] else "유력")
             return f'<i class="in{" s" if small else ""} rm" title="{esc(x["rm"]["outlet"] + " · " + x["rm"]["title"])}">{t}</i>'
