@@ -226,28 +226,62 @@ def roster_rows():
 
 
 ROSTER_SLOTS = ("Top", "Jungle", "Mid", "Bot", "Support", "Head Coach")
+_RM_SLOTS = {"at": 0.0, "val": {}}
 
 
-def roster_card(k: str, rows, extra_cls: str = "") -> str:
+def rumor_slots() -> dict:
+    """로스터 카드용 '유력'(뉴스 기준, 공식 확정 전): {팀: {자리: [FA 행 + 유력 정보]}}. 30초 캐시."""
+    import time as _t
+    if _t.time() - _RM_SLOTS["at"] < 30:
+        return _RM_SLOTS["val"]
+    out = {}
+    try:
+        with db() as c:
+            fa_rows = c.execute("SELECT * FROM fa WHERE league='lck'").fetchall()
+        rms = rumors(fa_rows)
+        for r in fa_rows:
+            rm = rms.get(r["page"])
+            if not rm or not rm["team"]:
+                continue
+            coach_news = any(w in rm["title"] for w in ("코치", "감독", "코칭"))    # 선수 출신이 코치로 가는 기사
+            slot = r["role"] if r["role"] in ROSTER_SLOTS and not coach_news else "Head Coach"
+            out.setdefault(rm["team"], {}).setdefault(slot, []).append({**dict(r), "until": "", "rm": rm})
+    except Exception:  # noqa: BLE001  참고 표시라 실패해도 로스터는 그대로
+        out = {}
+    _RM_SLOTS.update(at=_t.time(), val=out)
+    return out
+
+
+def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True) -> str:
     by = {}
     for r in rows:
         if r["team"] == k:
             by.setdefault(r["role"], []).append(r)
+    rmk = rumor_slots().get(k, {}) if rm else {}
     filled = sum(1 for p in FA_ROLES if by.get(p))
     cells = []
     for p in ROSTER_SLOTS:
         rs = by.get(p, [])
-        if not rs:
-            cells.append(f'<li class="vac"><span class="pk">{FA_POS[p]}</span><span class="pn">미정</span></li>')
-            continue
+        rmp = rmk.get(p, [])
         def pn(r, cls="pn"):
             until = f'~{r["until"][:7].replace("-", ".")}' if r["until"] else ""
             return (f'<span class="{cls}" role="button" tabindex="0" title="선수 프로필 보기" data-page="{esc(r["page"])}" data-nick="{esc(r["nick"])}"'
                     f' data-real="{esc(r["real"] or "")}" data-pos="{FA_POS[p]}" data-team="{k}" data-until="{esc(until)}">{esc(r["nick"])}</span>')
+        def rtag(x, small=False):
+            t = "발표" if x["rm"]["official"] else ("잔류 유력" if x["rm"]["stay"] else "유력")
+            return f'<i class="in{" s" if small else ""} rm" title="{esc(x["rm"]["outlet"] + " · " + x["rm"]["title"])}">{t}</i>'
+        if not rs:
+            if rmp:      # 빈자리에 들어올 것 같은 선수(유력)
+                more = "".join(f'<span class="subl">{pn(x, "pn sub")}{rtag(x, True)}</span>' for x in rmp[1:])
+                cells.append(f'<li class="vac rmv"><span class="pk">{FA_POS[p]}</span>{pn(rmp[0])}{more}{rtag(rmp[0])}</li>')
+            else:
+                cells.append(f'<li class="vac"><span class="pk">{FA_POS[p]}</span><span class="pn">미정</span></li>')
+            continue
         r = rs[0]
         IN_S = '<i class="in s">영입</i>'
         subs = "".join(f'<span class="subl">{pn(x, "pn sub")}{IN_S if x["joined"] else ""}</span>'
                        for x in rs[1:])      # 같은 포지션 선수가 더 있으면(후보 등) 이름을 모두 보여 줌
+        subs += "".join(f'<span class="subl rml">{pn(x, "pn sub")}{rtag(x, True)}</span>' for x in rmp)
         cells.append(f'<li><span class="pk">{FA_POS[p]}</span>{pn(r)}{subs}'
                      f'{"<i class=in>영입</i>" if r["joined"] else ""}</li>')
     return (f'<article class="rc{extra_cls}" data-team="{k}" style="--tc:{team_color(k)}"><header>{team_logo(k, "logo big")}'
@@ -627,7 +661,7 @@ def render_roster(league: str) -> str:
         when = f" · {u.month}/{u.day} {u:%H:%M} 갱신"
     empty = '' if rows else '<p class="note">아직 로스터 정보를 모으는 중이에요. [조회]를 눌러 보세요.</p>'
     main = f"""{squad_toggle(league, "roster")}<section class="card panel fa" aria-label="조회">{ACT}
-<p class="src">리그피디아 계약 기준 현재 로스터{when} · 빗금 칸은 아직 미정인 자리, '영입'은 이번 스토브리그에 새로 온 사람 · 이름을 누르면 프로필</p>
+<p class="src">리그피디아 계약 기준 현재 로스터{when} · 빗금 칸은 아직 미정인 자리, '영입'은 이번 스토브리그에 새로 온 사람 · <i class="in rm">유력</i>은 최근 기사 제목 기준 참고 표시(공식 확정 전) · 이름을 누르면 프로필</p>
 </section>
 <div class="rgrid" id="rgrid">{cards}</div>{empty}
 {POPUP}"""
@@ -1032,7 +1066,7 @@ def render_archive(league: str, sec: str, year: int) -> str:
     if active == "roster":
         rows = [{"team": r["team"], "role": r["role"], "page": r["page"], "nick": r["nick"], "real": "", "until": "", "joined": 0}
                 for r in roster if r["team"]]
-        cards = "".join(roster_card(k, rows) for k in team_keys() if any(r["team"] == k for r in rows))
+        cards = "".join(roster_card(k, rows, rm=False) for k in team_keys() if any(r["team"] == k for r in rows))
         main = (f'{squad_toggle(league, "roster", year)}<section class="card panel"><p class="src">{year} 시즌 마지막 정규 대회에 등록된 로스터(리그피디아) · 지금 팀 이름·로고로 표시</p>{note}</section>'
                 f'<div class="rgrid">{cards or "<p class=note>로스터 기록이 없어요.</p>"}</div>{POPUP}')
         scripts = ("player.js",)
