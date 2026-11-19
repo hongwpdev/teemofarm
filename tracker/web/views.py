@@ -404,7 +404,7 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
     def seg(label, h):
         on = h == hot
         return f'<a class="{"on" if on else ""}" href="{esc(url(h=h))}"{" aria-current=page" if on else ""}>{label}</a>'
-    view = seg("오피셜", 1) + seg("+루머", 2) + seg("전체", 0)
+    view = seg("전체", 0) + seg("오피셜", 1) + seg("+루머", 2)      # 기본(전체)을 맨 앞에
 
     def team_tab(k, label=None):
         on = team == k

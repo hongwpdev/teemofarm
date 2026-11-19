@@ -22,7 +22,8 @@ _LOCK = threading.Lock()
 _RUN = threading.Lock()                  # 수집이 겹치지 않게
 DATA = {}                                # 리그 -> 마지막으로 받은 내용(아래 refresh 참고)
 LIVE_HOURS = 5                           # 시작하고 이 시간 안에 결과가 없으면 '진행 중'으로 봄
-FAST_SEC, SLOW_SEC, RETRY_SEC = 300, 1800, 600
+FAST_SEC, SLOW_SEC, IDLE_SEC, RETRY_SEC = 300, 1800, 3 * 3600, 900
+KEEP_SEC = 6 * 3600                      # 대회 목록·순위표는 이 시간 동안 저장본을 다시 씀(경기 중이면 순위표는 새로)
 _NOT_LEAGUE = re.compile(r"Promotion|Qualifier|Regional Finals|Play-In|Showmatch|Tiebreak", re.I)   # 순위표로 안 쓰는 단계
 
 
@@ -147,7 +148,10 @@ def refresh(league: str = "lck", gap=None) -> bool:
     with _RUN:
         try:
             cs = current_season()
-            tours = _tours(prefix, cs - 1) + _tours(prefix, cs)   # 지난 시즌 + 지금 시즌(새 시즌 초반에도 지난 결과가 보이게)
+            prev = get(league)
+            fresh = time.time() - prev.get("kept_at", 0) < KEEP_SEC and prev.get("cs") == cs
+            # 지난 시즌 + 지금 시즌(새 시즌 초반에도 지난 결과가 보이게). 대회 목록은 자주 안 바뀌어서 6시간 동안 저장본
+            tours = prev["tours_raw"] if fresh and prev.get("tours_raw") else _tours(prefix, cs - 1) + _tours(prefix, cs)
             by_page = {t["OverviewPage"]: t for t in tours}
             matches = []
             pages = list(by_page)
@@ -169,7 +173,10 @@ def refresh(league: str = "lck", gap=None) -> bool:
             regular = [t for t in tours if t.get("IsPlayoffs") != "1" and (t.get("DateStart") or "9") <= today
                        and not _NOT_LEAGUE.search(t["OverviewPage"])]
             stand = {}
-            for t in reversed(regular[-3:]):
+            old = prev.get("standings") or {}
+            if fresh and old and not busy(league) and any(t["OverviewPage"] == old.get("page") for t in regular[-3:]):
+                stand = old                                # 경기가 없는 동안은 순위가 안 바뀜
+            for t in ([] if stand else reversed(regular[-3:])):
                 rows = cargo(gap, tables="Standings", fields="Team,Place,WinSeries,LossSeries,WinGames,LossGames",
                              where=f'OverviewPage={_cq(t["OverviewPage"])}', order_by="Place")
                 seen, table = set(), []
@@ -186,14 +193,19 @@ def refresh(league: str = "lck", gap=None) -> bool:
             # 팀 목록(키 → 이름·약칭). LCK는 기존 팀 정보를 쓰므로 약칭을 따로 받지 않음
             names = {m[s] for m in matches for s in ("t1", "t2")}
             names |= {r["team"] for g in stand.get("groups") or [] for r in g["table"]}
-            rows = {} if league == "lck" else _team_rows(names, gap)
-            teams = {team_id(league, n): {"name": n, "short": (rows.get(n) or {}).get("Short") or n,
-                                          "image": (rows.get(n) or {}).get("Image") or ""}
-                     for n in names if team_id(league, n)}
+            known = {t["name"]: t for t in (prev.get("teams") or {}).values() if t.get("image") or league == "lck"}
+            rows = {} if league == "lck" else _team_rows(names - set(known), gap)   # 처음 보는 팀만 물어봄
+            teams = {}
+            for n in names:
+                k = team_id(league, n)
+                if k:
+                    teams[k] = known.get(n) or {"name": n, "short": (rows.get(n) or {}).get("Short") or n,
+                                                "image": (rows.get(n) or {}).get("Image") or ""}
             d = {"league": league, "season": season, "current": season == cs, "at": datetime.now(timezone.utc).isoformat(),
                  "tours": [{"page": t["OverviewPage"], "name": t["Name"], "start": t.get("DateStart") or "",
                             "end": t.get("Date") or "", "playoff": t.get("IsPlayoffs") == "1"} for t in tours],
-                 "matches": matches, "standings": stand, "teams": teams}
+                 "matches": matches, "standings": stand, "teams": teams,
+                 "cs": cs, "tours_raw": tours, "kept_at": prev.get("kept_at") if fresh else time.time()}
         except Exception as e:  # noqa: BLE001
             log.warning("schedule %s refresh failed: %s", league, e)
             with _LOCK:
@@ -216,28 +228,45 @@ def refresh(league: str = "lck", gap=None) -> bool:
     return True
 
 
-def busy(league: str) -> bool:
-    """경기 시작 3시간 전 ~ 시작 후 LIVE_HOURS 시간 사이면 자주 새로 받음."""
+def _near(league: str, before_h: float, after_h: float) -> bool:
     now = datetime.now(timezone.utc)
     for m in get(league).get("matches") or []:
         at = _dt(m["at"])
-        if at and at - timedelta(hours=3) <= now <= at + timedelta(hours=LIVE_HOURS):
+        if at and at - timedelta(hours=before_h) <= now <= at + timedelta(hours=after_h):
             return True
     return False
 
 
+def busy(league: str) -> bool:
+    """경기 시작 3시간 전 ~ 시작 후 LIVE_HOURS 시간 사이면 자주 새로 받음."""
+    return _near(league, 3, LIVE_HOURS)
+
+
+def interval(league: str) -> int:
+    """다음 갱신까지: 경기 앞뒤 5분, 앞뒤 일주일 안에 경기가 있으면 30분, 비시즌(스토브리그)엔 3시간."""
+    return FAST_SEC if busy(league) else SLOW_SEC if _near(league, 7 * 24, 7 * 24) else IDLE_SEC
+
+
 def start():
-    """켜자마자 저장해 둔 내용을 읽고, 1분 뒤부터 리그마다 정해진 간격으로 새로 받음(LCK 먼저)."""
+    """저장해 둔 내용을 읽고, 저장본이 아직 새것이면 그대로 쓰다가 때가 되면 새로 받음.
+    (서버를 다시 켤 때마다 6개 리그를 한꺼번에 받지 않게 — 리그피디아 요청 한도)"""
     _load()
     teamlogos.load()
 
     def loop():
-        time.sleep(60)
-        due = {lg: 0.0 for lg in leagues()}
+        time.sleep(90)                          # 켜자마자 몰리는 다른 수집(위키·FA·아카이브)과 겹치지 않게
+        due = {}
+        for lg in leagues():
+            d = get(lg)
+            try:
+                last = datetime.fromisoformat(d["at"]).timestamp()
+            except (KeyError, ValueError):
+                last = 0
+            due[lg] = 0 if d.get("error") else last + interval(lg)
         while True:
             for lg in leagues():
                 if time.time() >= due[lg]:
                     ok = refresh(lg)
-                    due[lg] = time.time() + (FAST_SEC if (ok and busy(lg)) else SLOW_SEC if ok else RETRY_SEC)
+                    due[lg] = time.time() + (interval(lg) if ok else RETRY_SEC)
             time.sleep(30)
     threading.Thread(target=loop, daemon=True).start()
