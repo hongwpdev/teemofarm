@@ -25,8 +25,8 @@ SHROOM_SVG = ('<button type="button" class="teemo" id="teemo" title="유독성 �
               """onerror="this.parentNode.classList.add('noimg')">"""
               '<span class="mk emo" aria-hidden="true">🍄</span></button>')
 # 메신저·SNS 링크 미리보기(카톡·디코·X 등). 그림은 tracker/og.jpg(1200×630)
-OG_TITLE = "🍄 티모의 버섯농장 — LCK 스토브리그·로스터·이적 현황"
-OG_DESC = "LoL 리그별 오피셜·루머·로스터·이동 보드·로스터 짜기를 한눈에 확인하세요!"
+OG_TITLE = "🍄 티모의 버섯농장 · LCK 스토브리그·로스터·이적"
+OG_DESC = "LCK 오피셜·루머·로스터·이적과 리그별 일정·결과를 모아 봐요. 내 로스터도 짜 볼 수 있어요."
 RIOT_NOTE = ("'티모의 버섯농장'은 Riot Games가 보증하지 않으며, Riot Games 또는 리그 오브 레전드 제작·관리에 공식적으로 관여하는 "
              "당사자의 견해나 의견을 반영하지 않습니다. 리그 오브 레전드 및 Riot Games는 Riot Games, Inc.의 상표 또는 등록 상표입니다.")
 FONT_CSS = "https://cdn.jsdelivr.net/npm/pretendard-gov@1.3.9/dist/web/variable/pretendardvariable-gov-dynamic-subset.css"
@@ -104,8 +104,8 @@ def status_parts(today):
         return head, ""
     lis = "".join(
         f'<li><b>{"FA 현황" if k == "fa" else "구글 뉴스" if k == "google" else esc(team_name(k))} · {"뉴스" if s_ == "news" else "팀 이름" if s_ == "team" else "리그피디아"}</b>'
-        f' — {esc(friendly(st["msg"]))}<br><small>{esc(st["msg"])}</small></li>' for k, s_, st in fails)
-    foot = (f'<details class="fail"><summary>일부 출처 시야가 잠시 가려졌어요 ({len(fails)}) · 잠시 후 다시 탐지합니다</summary>'
+        f': {esc(friendly(st["msg"]))}<br><small>{esc(st["msg"])}</small></li>' for k, s_, st in fails)
+    foot = (f'<details class="fail"><summary>일부 출처 시야가 잠시 가려졌어요 ({len(fails)}) · 잠시 뒤 다시 가져올게요</summary>'
             f'<ul>{lis}</ul></details>')
     return head, foot
 
@@ -349,7 +349,7 @@ def rail(league: str, team: str) -> str:
                 f'<a href="/{league}/roster">전체 로스터 →</a></h3>{card}</section>')
     else:
         box += ('<section class="card"><h3>팀 로스터</h3>'
-                '<p class="hint">위에서 팀 로고를 선택하면 최신 확정 로스터가 펼쳐집니다.</p></section>')
+                '<p class="hint">위에서 팀 로고를 누르면 그 팀 로스터가 보여요.</p></section>')
     box += affiliate_card()
     return f'<aside class="rail" aria-label="요약">{box}</aside>'
 
@@ -752,7 +752,7 @@ def moves_board(fa_rows, rms=None) -> str:
     if not items:
         return ""
     items.sort(key=lambda x: x[0], reverse=True)
-    return (f'<details class="card moves" open><summary>이동 보드 <small>누가 어디서 어디로 · {len(items)}건{f" (해외·2군 등 LCK 밖에서 온 영입 {outside}건 포함 — 아래 FA 목록엔 없어요)" if outside else ""}</small></summary>'
+    return (f'<details class="card moves" open><summary>이동 보드 <small>누가 어디서 어디로 · {len(items)}건{f" (해외·2군 등 LCK 밖에서 온 영입 {outside}건 포함, 아래 FA 목록엔 없어요)" if outside else ""}</small></summary>'
             f'<ul>{"".join(h for _, h in items)}</ul></details>')
 
 
@@ -909,11 +909,11 @@ def about_body() -> str:
 <p><b>티모의 버섯농장</b>({esc(SITE.get("domain") or "teemofarm.com")})은 리그 오브 레전드(LoL) 이스포츠 팬이 스토브리그 이적 소식, 구단별 로스터, 리그 정보를 한곳에서 편하게 볼 수 있도록 개인이 취미로 만들어 운영하는 팬 사이트예요. 서버비는 후원과 광고·제휴 수익으로 충당해요.</p>
 <h3>주요 기능</h3>
 <ul>
-<li><b>소식</b> — 구글 뉴스와 리그피디아 편집 기록을 모아, 같은 내용의 기사는 하나로 묶고 오피셜·루머를 구분해 보여 줘요.</li>
-<li><b>로스터·이적</b> — 구단별 현재 로스터와 계약이 끝난 선수(FA)의 이적·잔류 현황을 정리해요.</li>
-<li><b>로스터 짜기</b> — 다음 시즌 로스터를 직접 조합해 이미지로 저장하거나 링크로 공유할 수 있어요.</li>
-<li><b>리그·구단 안내와 시즌 기록</b> — 리그 구조, 구단 이력, 지난 시즌 우승팀·로스터·이적을 볼 수 있어요.</li>
-<li><b>수다방·미니게임</b> — 로그인 없이 쓰는 대화방과 협곡 버섯 지뢰찾기가 있어요.</li>
+<li><b>소식</b>: 구글 뉴스와 리그피디아 편집 기록을 모아, 같은 내용의 기사는 하나로 묶고 오피셜·루머를 구분해 보여 줘요.</li>
+<li><b>로스터·이적</b>: 구단별 현재 로스터와 계약이 끝난 선수(FA)의 이적·잔류 현황을 정리해요.</li>
+<li><b>로스터 짜기</b>: 다음 시즌 로스터를 직접 조합해 이미지로 저장하거나 링크로 공유할 수 있어요.</li>
+<li><b>리그·구단 안내와 시즌 기록</b>: 리그 구조, 구단 이력, 지난 시즌 우승팀·로스터·이적을 볼 수 있어요.</li>
+<li><b>수다방·미니게임</b>: 로그인 없이 쓰는 대화방과 협곡 버섯 지뢰찾기가 있어요.</li>
 </ul>
 <h3>데이터 출처와 저작권</h3>
 <p>로스터·계약·경기 정보는 <a href="https://lol.fandom.com" target="_blank" rel="noopener">Leaguepedia</a>(CC BY-SA 3.0)를 바탕으로 자동으로 모아요. 뉴스는 구글 뉴스 RSS에서 제목과 링크만 보여 주며, 기사 본문의 저작권은 각 언론사에 있어요. 리그 오브 레전드 관련 명칭과 자산은 Riot Games, Inc.의 상표예요.</p>
@@ -1380,14 +1380,14 @@ def render_schedule(league: str) -> str:
 {blocks}{empty}
 </div><aside>{stand}</aside></div>
 {POPUP}
-<p class="note">일정·결과·순위·경기 기록 출처 리그피디아 · 챔피언 이미지 Riot Games Data Dragon{upd} · 경기 날엔 5분마다, 평소엔 30분마다 새로 받아요 · 시간은 한국 시간</p>"""
+<p class="note">일정·결과·순위·경기 기록 출처 리그피디아 · 챔피언 이미지 Riot Games Data Dragon{upd} · 경기 앞뒤엔 5분마다, 경기가 없는 기간엔 몇 시간마다 새로 받아요 · 시간은 한국 시간</p>"""
     return shell(league, "schedule", f"{lg_name} 일정·결과", main, ("player.js", "schedule.js"), today, shown=season)
 
 
 def render_soon(league: str) -> str:
     today = datetime.now(KST).date()
     lg = LEAGUES[league]
-    main = (f'<div class="soon-bar">🚧 지금은 {esc(lg["name"])} 소식·로스터 탐지를 준비 중이에요. 아래 카드에서 리그 정보를 먼저 확인해 보세요! '
+    main = (f'<div class="soon-bar">🚧 지금은 {esc(lg["name"])} 소식·로스터는 준비 중이에요. 아래에서 리그 정보를 먼저 볼 수 있어요. '
             f'<a href="/lck">LCK 보러 가기 →</a></div>'
             + (f'<a class="card sch-go" href="/{league}/schedule">📅 <b>{esc(lg["name"])} 일정·결과·순위</b>는 지금 볼 수 있어요 →</a>'
                if lg.get("wiki") else "")
