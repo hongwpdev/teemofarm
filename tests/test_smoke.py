@@ -67,6 +67,14 @@ class SmokeTest(unittest.TestCase):
         self.assertEqual(self.get("/api/match?league=lck&id=nope")[0], 404)
         self.assertEqual(self.get("/api/match?league=zzz&id=x")[0], 404)
 
+    def test_news_default_view_is_all(self):
+        import re
+        body = self.get("/lck")[1]
+        on = re.search(r'<nav class="view_tab"[^>]*>(.*?)</nav>', body, re.S).group(1)
+        self.assertRegex(on, r'class="on" href="/lck"[^>]*>전체<')               # 기본: 전체, 주소에 hot 없음
+        self.assertIn('href="/lck?hot=1"', on)                                   # 오피셜은 hot=1
+        self.assertRegex(self.get("/lck?hot=1")[1], r'class="on" href="/lck\?hot=1"[^>]*>오피셜<')
+
     def test_root_redirects_and_404(self):
         self.assertEqual(self.get("/")[0], 200)          # /lck 로 넘어감
         self.assertEqual(self.get("/nope/nope/nope")[0], 404)

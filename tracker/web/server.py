@@ -44,7 +44,8 @@ def load_static():
 
 
 def parse_hot(v: str) -> int:
-    return 0 if v == "0" else 2 if v == "2" else 1
+    """소식 보기: 1=오피셜, 2=오피셜+루머, 그 밖(지정 없음 포함)=0 전체(기본)."""
+    return 1 if v == "1" else 2 if v == "2" else 0
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -164,7 +165,7 @@ class Handler(BaseHTTPRequestHandler):
             elif season and sec in ("", "roster", "fa", "schedule"):
                 page = views.render_archive(league, sec, season)
             elif sec == "":
-                page = views.render_news(league, one("team"), one("src", "all"), parse_hot(one("hot", "0" if one("q").strip() else "1")),
+                page = views.render_news(league, one("team"), one("src", "all"), parse_hot(one("hot")),
                                          one("from"), one("to"), one("q"))
             elif sec == "roster":
                 page = views.render_roster(league)

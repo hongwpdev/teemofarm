@@ -16,8 +16,8 @@ from .core import http_get
 _DIR = os.path.join(os.path.dirname(DB_PATH) or ".", "logos")
 _INDEX = os.path.join(_DIR, "index.json")
 _LOCK = threading.Lock()
-INDEX = {}                     # 팀 키 -> {"file", "type", "v"(내용 해시), "image"} 또는 {"image", "failed"(시각)}
-RETRY_SEC = 86400
+INDEX = {}                     # 팀 키 -> {"file", "type", "v"(내용 해시), "image"} 또는 {"image", "failed_at"(시각)}
+RETRY_SEC = 6 * 3600           # 리그피디아에 로고가 정말 없을 때 다시 볼 때까지
 TYPES = {b"\x89PNG": ("png", "image/png"), b"RIFF": ("webp", "image/webp"), b"GIF8": ("gif", "image/gif"),
          b"\xff\xd8\xff": ("jpg", "image/jpeg")}
 _KEY = re.compile(r"^[a-z0-9-]{1,60}$")
@@ -74,6 +74,8 @@ def _thumbs(images):
                                     "iiurlwidth": 64, "titles": "|".join("File:" + x for x in chunk)})
         time.sleep(CARGO_GAP)
         d = json.loads(http_get(f"{WIKI_API}?{q}"))
+        if d.get("error"):                     # 요청 한도 등: '로고 없음'으로 적지 않고 다음에 다시
+            raise RuntimeError((d["error"] or {}).get("info", "api error"))
         names = {n["to"]: n["from"] for n in (d.get("query") or {}).get("normalized") or []}
         for p in ((d.get("query") or {}).get("pages") or {}).values():
             ii = (p.get("imageinfo") or [{}])[0]
@@ -95,7 +97,7 @@ def ensure(images: dict):
     now = time.time()
     need = {k: img for k, img in images.items() if img and _KEY.match(k)
             and ((INDEX.get(k) or {}).get("image") != img or
-                 (not (INDEX.get(k) or {}).get("file") and now - (INDEX.get(k) or {}).get("failed", 0) > RETRY_SEC))}
+                 (not (INDEX.get(k) or {}).get("file") and now - (INDEX.get(k) or {}).get("failed_at", 0) > RETRY_SEC))}
     if not need:
         return 0
     try:
@@ -113,7 +115,8 @@ def ensure(images: dict):
                 data = http_get(src)
                 t = _sniff(data)
             except Exception as e:  # noqa: BLE001
-                log.warning("team logo %s failed: %s", k, e)
+                log.warning("team logo %s failed: %s", k, e)   # 받기 실패(일시적): 적지 않고 다음 갱신 때 다시
+                continue
         with _LOCK:
             if t and len(data) < 200_000:
                 os.makedirs(_DIR, exist_ok=True)
@@ -123,7 +126,7 @@ def ensure(images: dict):
                 INDEX[k] = {"file": fn, "type": t[1], "v": hashlib.sha1(data).hexdigest()[:8], "image": img}
                 got += 1
             elif not (INDEX.get(k) or {}).get("file"):           # 받아 둔 예전 로고가 있으면 그대로 둠
-                INDEX[k] = {"image": img, "failed": now}
+                INDEX[k] = {"image": img, "failed_at": now}   # (예전 "failed" 표시는 무시 → 한 번 다시 받음)
             _save()
     log.info("team logos: %d new of %d", got, len(need))
     return got
