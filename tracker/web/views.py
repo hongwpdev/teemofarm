@@ -1053,7 +1053,7 @@ def render_archive(league: str, sec: str, year: int) -> str:
         for st in reversed(stages):          # 최근 대회부터
             rows = st["table"][:limit] if limit else st["table"]
             trs = "".join(
-                f'<tr><td class="pl">{esc(str(r["place"]))}</td><td>{T.tname(r["key"], r["team"])}</td>'
+                f'<tr><td class="pl">{esc(str(r["place"]))}</td><td>{_tname(r["key"], r["team"])}</td>'
                 f'<td>{esc(r["w"])}승 {esc(r["l"])}패</td><td class="gd">{esc(r["gw"])}–{esc(r["gl"])}</td></tr>' for r in rows)
             out += (f'<section class="card stand"><h3>{esc(st["name"])}</h3><table><thead><tr><th>순위</th><th>팀</th><th>매치</th><th>세트</th></tr></thead>'
                     f'<tbody>{trs}</tbody></table></section>')
