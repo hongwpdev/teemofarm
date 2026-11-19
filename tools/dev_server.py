@@ -47,6 +47,7 @@ samples = [
     ("hle", "news", "[오피셜] '옴므' 떠난 한화생명, '모글리' 이재하 감독 승격", "OSEN", 1),
     ("hle", "news", "[단독] 한화생명, '기인' 김기인 영입", "국민일보", 3),
     ("t1", "news", "[소식통] '제우스' 최우제, T1과 3년 계약 합의", "인벤", 2),
+    ("dns", "news", "[단독] DN 수퍼스, '쇼메이커' 허수 영입 근접", "포모스", 4),
 ]
 for i, (team, src, title, outlet, hrs) in enumerate(samples):
     pub = now - timedelta(hours=hrs)
