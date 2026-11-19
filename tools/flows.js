@@ -53,6 +53,7 @@ async function click(p, sel, what) {
 async function walkMenus(p, start, season) {
   await p.goto(B + start);
   const want = season ? String(season) : await year(p);
+  const wantLabel = season ? `${season} 시즌` : want;
   const tops = await p.$$eval('.top_tab a', xs => xs.map(a => ({ sec: a.dataset.sec, label: a.textContent.trim() })));
   for (const t of tops) {
     await p.goto(B + start);
@@ -62,7 +63,7 @@ async function walkMenus(p, start, season) {
     if (season && seasonOf(url) !== want) bad(`${want} 기록을 보다가 '${t.label}'을 누르니 시즌이 '${seasonOf(url) || '지금'}'으로 바뀜 (${pathOf(url)})`);
     if (!season && seasonOf(url)) bad(`'${t.label}'을 누르니 고르지도 않은 ${seasonOf(url)} 시즌으로 감 (${pathOf(url)})`);
     const y = await year(p);
-    if (y && y !== want) bad(`'${t.label}' 화면의 시즌 표시가 ${y} (다른 화면은 ${want})`);
+    if (y && y !== wantLabel) bad(`'${t.label}' 화면의 시즌 표시가 ${y} (다른 화면은 ${want})`);
     const on = await p.$eval('.top_tab a.on', e => e.textContent.trim()).catch(() => '');
     if (!on.startsWith(t.label.replace('HOT', ''))) bad(`'${t.label}'을 눌렀는데 선택된 메뉴가 '${on}'`);
     const subs = await p.$$eval('.view_tab.squad a', xs => xs.map(a => ({ href: a.getAttribute('href'), label: a.textContent.trim() })));
@@ -76,7 +77,7 @@ async function walkMenus(p, start, season) {
       if (season && seasonOf(su) !== want) bad(`${want} 기록에서 '${t.label}' > '${s.label}'을 누르니 시즌이 '${seasonOf(su) || '지금'}'`);
       if (!season && seasonOf(su)) bad(`'${t.label}' > '${s.label}'을 누르니 고르지도 않은 ${seasonOf(su)} 시즌으로 감`);
       const sy = await year(p);
-      if (sy && sy !== want) bad(`'${t.label}' > '${s.label}' 화면의 시즌 표시가 ${sy} (다른 화면은 ${want})`);
+      if (sy && sy !== wantLabel) bad(`'${t.label}' > '${s.label}' 화면의 시즌 표시가 ${sy} (다른 화면은 ${want})`);
     }
   }
 }
@@ -173,9 +174,10 @@ async function vote(p) {
       p.on('pageerror', e => bad(`자바스크립트 오류: ${e.message} (${pathOf(p.url())})`));
       p.on('dialog', d => { bad(`알림창이 뜸: ${d.message()}`); d.dismiss().catch(() => {}); });
       await p.goto(B + '/lck');
-      const archive = (await p.$$eval('.ssel li a', xs => xs.map(a => new URL(a.href).searchParams.get('season')).filter(Boolean)))[0];
+      // 시즌 고르기의 모든 시즌(예정·지난 기록)마다 메뉴를 다 눌러 봄
+      const picks = await p.$$eval('.ssel li a', xs => xs.map(a => new URL(a.href).searchParams.get('season')).filter(Boolean));
       await walkMenus(p, '/lck', null);
-      if (archive) await walkMenus(p, `/lck/roster?season=${archive}`, archive);
+      for (const y of [...new Set(picks)]) await walkMenus(p, `/lck/roster?season=${y}`, y);
       await teamTabs(p, '/lck');
       await teamTabs(p, '/lck/results');
       await popups(p);

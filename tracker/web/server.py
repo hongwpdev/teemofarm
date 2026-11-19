@@ -7,11 +7,12 @@ import json
 import os
 import threading
 import urllib.parse
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .. import archive, champs, chat, diag, feed, jobs, maint, matchinfo, player_extra, riot, schedule, share, teamlogos, vote
 from ..cargo import RATE_MSG, is_rate_limit
-from ..config import DEFAULT_LEAGUE, FA_INTERVAL, LEAGUES, NEWS_INTERVAL, PORT, WIKI_INTERVAL, log
+from ..config import DEFAULT_LEAGUE, FA_INTERVAL, KST, LEAGUES, NEWS_INTERVAL, PORT, WIKI_INTERVAL, log
 from ..core import db, init_db
 from ..fa import player_info
 from ..logos import TEAM_LOGOS
@@ -181,8 +182,19 @@ class Handler(BaseHTTPRequestHandler):
                 season = int(one("season") or 0)
             except ValueError:
                 season = 0
-            season = season if season in archive.archive_years() else None
-            if not LEAGUES[league]["enabled"]:          # 아직 켜지지 않은 리그: 일정·결과만, 나머지는 '곧 추가'
+            # 스토브리그 기간엔 개막 전 다음 시즌(지금 데이터 시즌)도 고를 수 있음: '2027 시즌 · 예정'
+            pre = archive.current_season() if views.stove_phase(datetime.now(KST).date()) else None
+            season = season if season in archive.archive_years() or (pre and season == pre) else None
+            if season and season == pre and LEAGUES[league]["enabled"]:
+                if sec in ("schedule", "results"):
+                    page = views.render_schedule(league, season, "results" if sec == "results" else "plan")
+                elif sec == "roster":
+                    page = views.render_roster(league, season)
+                elif sec == "":
+                    page = views.render_preview(league)
+                else:                                     # 스토브리그 메뉴 등은 지금 시즌 화면으로
+                    return self._redirect(f"/{league}/{sec}")
+            elif not LEAGUES[league]["enabled"]:          # 아직 켜지지 않은 리그: 일정·결과만, 나머지는 '곧 추가'
                 page = (views.render_schedule(league, None, "results" if sec == "results" else "plan")
                         if sec in ("schedule", "results") and LEAGUES[league].get("wiki") else views.render_soon(league))
             elif season and sec in ("schedule", "results") and any(

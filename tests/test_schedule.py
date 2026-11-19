@@ -70,7 +70,7 @@ class ScheduleTest(unittest.TestCase):
                                  "tours": [{"page": "LCK/2026 Season/Rounds 3-4", "name": "LCK 2026 Rounds 3-4",
                                             "start": "2026-07-29", "end": "2026-08-23", "playoff": False}]}}
         cs = views.current_season(datetime.now(views.KST).date())
-        # 시즌 고르기 표시: 스토브리그 기간엔 시작한 해('2026 스토브리그'), 시즌 중엔 그 시즌('2027')
+        # 시즌 고르기 표시: 스토브리그 기간엔 방금 끝난 시즌('2026 시즌', 안에 스토브리그 메뉴), 시즌 중엔 그 시즌('2027 시즌')
         shown = str(cs - 1) if views.stove_phase(datetime.now(views.KST).date()) else str(cs)
         pick = lambda page: re.search(r'aria-label="시즌 고르기"><b>(\d+)', page).group(1)   # noqa: E731
         plan = views.render_schedule("lck")                           # 일정(2027): 대회 일정 안내, 결과로 가는 링크

@@ -170,22 +170,33 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
     stove_t = ("fa", "/fa", "스토브리그", ("fa", "summary", "predict", "builder", "stove"))
     season_t = ("schedule", "/schedule", "시즌", ("schedule", "results"))
     team_t = ("roster", "/roster", "팀", ("roster", "contracts", "teams"))
+    now_y = current_season(today)
+    pre = bool(season) and stove and season == now_y          # 개막 전 다음 시즌 미리 보기(스토브리그 기간의 '2027 시즌 예정')
     tab_defs = [news_t, stove_t, season_t, team_t] if stove else [news_t, season_t, team_t, stove_t]
+    if pre:                                                    # 미리 보기엔 아직 경기·스토브리그가 없음: 한눈에 · 시즌(일정) · 팀(로스터)
+        tab_defs = [("news", "", "개막 준비", ("news",)), season_t, team_t]
     # 'HOT'은 지금 시기에 앞으로 온 메뉴 하나에만: 스토브리그 기간엔 '스토브리그', 시즌 중엔 '시즌'. 지난 시즌 기록을 볼 땐 안 붙임
     hot = {} if season else {(stove_t if stove else season_t)[0]: True}
     sq = f"?season={season}" if season else ""
-    # 시즌 고르기: 지금 시즌 + 지난 시즌 기록
-    now_y = current_season(today)
-    # 스토브리그는 시작한 해로 부름(2026년 11월에 시작 → '2026 스토브리그'). 데이터상 시즌(now_y)은 그다음 해
-    now_label = f"{now_y - 1} 스토브리그" if stove else f"{now_y} 시즌"
+    # 시즌 고르기: (스토브리그 기간엔) 다음 시즌 예정 + 지금 시즌 + 지난 시즌 기록
+    # 해마다 한 묶음: 2026년 11월 스토브리그는 '2026 시즌' 안의 스토브리그 메뉴로 봄. 데이터상 시즌(now_y)은 그다음 해
+    now_label = f"{now_y - 1 if stove else now_y} 시즌"
     here = SEC_PATH.get(active, "")
-    s_items = (f'<li><a class="{"" if season else "on"}" href="/{league}{here}">{now_label}<small>지금</small></a></li>'
+    # 스토브리그 기간엔 방금 끝난 시즌(now_y-1)이 곧 '지금' 화면(경기·결과는 시즌 메뉴에 그대로)이라 기록 목록엔 안 둠.
+    # 같은 해가 '지금'과 '기록'으로 두 번 보이면 헷갈림. 주소로 직접 들어온 경우만 표시
+    past_ys = [y for y in archive_years() if not (stove and y == now_y - 1 and season != y)]
+    pre_here = here if active in ("news", "schedule", "results", "roster") else ""
+    s_items = ((f'<li><a class="{"on" if pre else ""}" href="/{league}{pre_here}?season={now_y}">{now_y} 시즌<small>예정</small></a></li>' if stove else "")
+               + f'<li><a class="{"" if season else "on"}" href="/{league}{here}">{now_label}<small>지금</small></a></li>'
                + "".join(f'<li><a class="{"on" if season == y else ""}" href="/{league}{here}?season={y}">{y} 시즌<small>기록</small></a></li>'
-                         for y in archive_years()))
-    ssel = "" if not cur["enabled"] else (f'<details class="lgsel ssel"><summary aria-label="시즌 고르기"><b>{season or (now_label if stove else now_y)}</b><i aria-hidden="true">▾</i></summary>'
+                         for y in past_ys))
+    ssel = "" if not cur["enabled"] else (f'<details class="lgsel ssel"><summary aria-label="시즌 고르기"><b>{f"{season} 시즌" if season else now_label}</b><i aria-hidden="true">▾</i></summary>'
             f'<ul>{s_items}</ul></details>')
     bar = (f'<div class="archive-bar">지금 <b>{season} 시즌</b> 기록을 보고 있어요. '
-           f'<a href="/{league}{here}">{now_label}(최신)으로 돌아가기 →</a></div>' if season else "")
+           f'<a href="/{league}{here}">최신 화면으로 돌아가기 →</a></div>' if season and not pre else "")
+    if pre:
+        bar = (f'<div class="archive-bar pre-bar"><b>{season} 시즌</b>은 아직 개막 전이에요. 지금 진행 중인 스토브리그는 '
+               f'<a href="/{league}/fa">{now_label} &gt; 스토브리그</a>에서 볼 수 있어요.</div>')
     tabs = "".join(
         f'<a class="{"on" if active in keys else ""}" href="/{league}{path}{sq}" data-sec="{key}"'
         f'{" aria-current=page" if active in keys else ""}>{label}'
@@ -690,7 +701,8 @@ def render_fa(league: str) -> str:
 
 
 # ── 로스터 ──────────────────────────────────────────────────────────────
-def render_roster(league: str) -> str:
+def render_roster(league: str, season=None) -> str:
+    """season: 스토브리그 기간 '{다음 시즌} 시즌(예정)'에서 열 때(지금 계약 기준 로스터 그대로, 표시만 그 시즌)."""
     today = datetime.now(KST).date()
     rows = roster_rows()
     cards = "".join(roster_card(k, rows) for k in team_keys())
@@ -702,11 +714,14 @@ def render_roster(league: str) -> str:
         when = f" · {u.month}/{u.day} {u:%H:%M} 갱신"
     empty = '' if rows else '<p class="note">아직 로스터 정보를 모으는 중이에요. [조회]를 눌러 보세요.</p>'
     past = " · ".join(f'<a href="/{league}/roster?season={y}">{y} 시즌</a>' for y in archive_years())
-    main = f"""{squad_toggle(league, "roster")}<p class="past-link">지난 시즌 로스터 보기: {past}</p><section class="card panel fa" aria-label="조회"><div class="ptop"><p class="src">리그피디아 계약 기준 현재 로스터{when} · 빗금 칸은 아직 미정인 자리, '영입'은 이번 스토브리그에 새로 온 사람 · <i class="in rm">유력</i>은 최근 기사 제목 기준 참고 표시(공식 확정 전) · 이름을 누르면 프로필</p>{ACT}</div>{MSG}
+    head = (f'{team_toggle(league, "roster", season)}{page_head(f"{season} 시즌 로스터", "지금까지 계약으로 정해진 팀별 선수예요. 스토브리그가 끝날 때까지 계속 바뀌어요.")}'
+            if season else f'{squad_toggle(league, "roster")}<p class="past-link">지난 시즌 로스터 보기: {past}</p>')
+    main = f"""{head}<section class="card panel fa" aria-label="조회"><div class="ptop"><p class="src">리그피디아 계약 기준 현재 로스터{when} · 빗금 칸은 아직 미정인 자리, '영입'은 이번 스토브리그에 새로 온 사람 · <i class="in rm">유력</i>은 최근 기사 제목 기준 참고 표시(공식 확정 전) · 이름을 누르면 프로필</p>{ACT}</div>{MSG}
 </section>
 <div class="rgrid" id="rgrid">{cards}</div>{empty}
 {POPUP}"""
-    return shell(league, "roster", "로스터", main, ("roster.js", "player.js"), today, scope="?what=fa")
+    return shell(league, "roster", f"{season} 시즌 로스터" if season else "로스터", main, ("roster.js", "player.js"), today,
+                 scope="?what=fa", season=season)
 
 
 def _toggle(league, on, season, label, items):
@@ -1439,7 +1454,7 @@ def render_schedule(league: str, pick=None, mode: str = "plan") -> str:
             tours = (f'<section class="card tours"><h3>{year} {esc(lg_name)} 대회 일정</h3>'
                      f'<p class="hint">아직 리그피디아에 올라오지 않았어요. 올라오면 여기에 바로 보여요.</p></section>')
         blocks = ""
-        if not pick:
+        if not pick or pick == cs:                    # 지금 시즌이거나 개막 전 다음 시즌(미리 보기)
             if live:
                 blocks += f'<section class="card sblock live-b"><h3><i class="live-dot" aria-hidden="true"></i>지금 경기 중</h3>{match_days(live, now, T, lg_name)}</section>'
             if up:
@@ -1454,7 +1469,7 @@ def render_schedule(league: str, pick=None, mode: str = "plan") -> str:
         if blocks:
             main = f'{stove}{tours}<div class="sch-grid one"><div>{tabs_html}{blocks}{empty}</div></div>{go}{POPUP}{foot}'
             return page(main, ("player.js", "schedule.js"))
-        none = ("" if pick else '<section class="card sblock"><h3>다가오는 경기</h3><p class="hint">예정된 경기가 아직 없어요.</p></section>')
+        none = ("" if pick and pick != cs else '<section class="card sblock"><h3>다가오는 경기</h3><p class="hint">예정된 경기가 아직 없어요.</p></section>')
         return page(f'{stove}{tours}{none}{go}{foot}')
 
     # ── 결과 ──
@@ -1583,6 +1598,49 @@ def render_summary(league: str) -> str:
             + f'<div class="sgrid">{"".join(c[3] for c in cards)}</div>'
             + f'<p class="plinks"><a href="/{league}/feed.xml">이적 소식 RSS</a></p></div>')
     return shell(league, "summary", "구단별 이적", main, (), today)
+
+
+# ── 다음 시즌 미리 보기(스토브리그 기간 '2027 시즌 · 예정') ─────────────────
+def render_preview(league: str) -> str:
+    """개막 전 다음 시즌 한눈에: 개막까지 남은 날, 대회 일정, 팀별 주전 확정 현황."""
+    today = datetime.now(KST).date()
+    cs = current_season(today)
+    d = schedule.get(league)
+    first = min((_sch_at(m) for m in d.get("matches") or [] if _m_year(m) == str(cs) and _sch_at(m)), default=None)
+    if first:
+        f = first.astimezone(KST)
+        left = (f.date() - today).days
+        stats = (f'<span><b>D-{left}</b>{f.month}.{f.day} 개막</span>' if left > 0 else '<span><b>오늘</b>개막</span>')
+    else:
+        stats = '<span><b>미정</b>개막일</span>'
+    tours = tours_card(d, str(cs), LEAGUES[league]["name"], today) or (
+        f'<section class="card tours"><h3>{cs} {esc(LEAGUES[league]["name"])} 대회 일정</h3>'
+        f'<p class="hint">아직 리그피디아에 올라오지 않았어요. 올라오면 여기에 바로 보여요.</p></section>')
+    rows = roster_rows()
+    cards, total = [], 0
+    for k in team_keys():
+        by = {}
+        for r in rows:
+            if r["team"] == k:
+                by.setdefault(r["role"], r)
+        n = sum(1 for p in FA_ROLES if p in by)
+        total += n
+        lis = "".join(f'<li class="{"" if p in by else "vac"}"><span class="pk">{FA_POS[p]}</span>'
+                      f'<b>{esc(by[p]["nick"]) if p in by else "미정"}</b></li>' for p in FA_ROLES)
+        cards.append((-n, team_keys().index(k),
+                      f'<article class="scard pv" style="--tc:{team_color(k)}"><header>{team_logo(k, "logo big")}'
+                      f'<b>{esc(team_name(k))}</b><small class="{"full" if n == 5 else ""}">주전 {n}/5</small></header>'
+                      f'<ul class="pv5">{lis}</ul></article>'))
+    cards.sort()
+    full = sum(1 for c in cards if c[0] == -5)
+    stats += f'<span><b>{full}</b>팀 주전 완성</span>'
+    main = (f'<div class="stack">'
+            + page_head(f"{cs} 시즌 개막 준비", "대회 일정과 지금까지 계약으로 정해진 팀별 주전이에요. 스토브리그 동안 계속 바뀌어요.", stats)
+            + tours
+            + f'<div class="sgrid">{"".join(c[2] for c in cards)}</div>'
+            + f'<p class="plinks"><a href="/{league}/roster?season={cs}">팀별 로스터 자세히 →</a> · '
+              f'<a href="/{league}/schedule?season={cs}">경기 일정 →</a></p></div>')
+    return shell(league, "news", f"{cs} 시즌 개막 준비", main, (), today, season=cs)
 
 
 # ── 스토브리그 > 행선지 맞히기 ──────────────────────────────────────────

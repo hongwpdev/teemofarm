@@ -50,6 +50,26 @@ class SmokeTest(unittest.TestCase):
                 self.assertIn("</html>", body)
                 self.assertNotIn("{{ORIGIN}}", body)
 
+    def test_next_season_preview(self):
+        # 스토브리그 기간: '다음 시즌 · 예정' 세 화면(개막 준비·시즌·팀)이 열리고, 스토브리그 메뉴는 지금 시즌으로 넘김
+        from datetime import datetime
+        from tracker.archive import current_season
+        from tracker.config import KST
+        from tracker.web import views
+        if not views.stove_phase(datetime.now(KST).date()):
+            self.skipTest("스토브리그 기간에만 있는 화면")
+        y = current_season()
+        for p in ("/lck", "/lck/schedule", "/lck/results", "/lck/roster"):
+            with self.subTest(p):
+                code, body = self.get(f"{p}?season={y}")
+                self.assertEqual(code, 200)
+                self.assertIn(f"<b>{y} 시즌</b>", body)
+                self.assertIn("아직 개막 전", body)
+        code, body = self.get(f"/lck?season={y}")
+        self.assertIn('class="pv5"', body)
+        code, _ = self.get(f"/lck/predict?season={y}")
+        self.assertIn(code, (200, 301, 302, 303))
+
     def test_apis(self):
         for p in APIS:
             with self.subTest(p):

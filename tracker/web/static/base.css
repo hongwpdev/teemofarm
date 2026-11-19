@@ -1210,3 +1210,13 @@ a.tbtn .lb{margin-left:.3rem}
 /* 하위 메뉴 글자가 두 줄로 꺾이지 않게: 긴 이름은 더 넓게, 좁은 폰에선 살짝 작게 */
 .view_tab.squad a{white-space:nowrap;flex:1 1 auto;padding:0 .6rem}
 @media (max-width:419px){.view_tab.squad a{font-size:1.3rem;padding:0 .35rem}}
+/* 다음 시즌 미리 보기: 팀별 주전 5칸 */
+.pv5{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem}
+.pv5 li{display:flex;flex-direction:column;align-items:center;gap:.2rem;padding:.6rem .2rem;border-radius:.6rem;background:var(--bg-gray);min-width:0}
+.pv5 .pk{font-size:1.1rem;color:var(--t8)}
+.pv5 b{font-size:1.3rem;color:var(--t1);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pv5 li.vac{background:repeating-linear-gradient(135deg,transparent 0 .5rem,rgba(148,163,184,.08) .5rem 1rem);border:1px dashed var(--line)}
+.pv5 li.vac b{color:var(--t8);font-weight:500}
+.scard.pv header small.full{color:var(--green);font-weight:700}
+.pre-bar a{white-space:nowrap}
+@media (max-width:419px){.pv5{gap:.3rem}.pv5 li{padding:.5rem .1rem}.pv5 b{font-size:1.15rem}.pv5 .pk{font-size:1rem}}
