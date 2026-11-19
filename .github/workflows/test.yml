@@ -18,3 +18,35 @@ jobs:
         run: python -m compileall -q app.py tracker
       - name: 테스트
         run: python -m unittest discover -s tests -v
+
+  # 브라우저로 실제 화면을 열고 눌러 보는 점검(가짜 데이터 서버): 페이지 열기(smoke) + 사용 흐름(flows, 처음 온 사람·써 본 사람)
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Playwright 설치
+        run: |
+          npm install --no-save --no-package-lock playwright@1
+          npx playwright install --with-deps chromium
+      - name: 가짜 데이터 서버 켜기
+        run: |
+          python tools/dev_server.py > dev.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8099/healthz && break; sleep 1; done
+      - name: 화면 점검(모든 페이지 × 휴대폰·태블릿·PC × 라이트·다크)
+        run: node tools/smoke.js http://127.0.0.1:8099 "$RUNNER_TEMP/shots"
+      - name: 사용 흐름 점검(눌러 보기 · 처음 온 사람·써 본 사람)
+        run: node tools/flows.js http://127.0.0.1:8099
+      - name: 실패하면 서버 기록과 캡처 남기기
+        if: failure()
+        run: tail -60 dev.log
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: screenshots
+          path: ${{ runner.temp }}/shots

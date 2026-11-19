@@ -8,3 +8,5 @@ __pycache__/
 .env
 # 반영 실패한 커밋 기록(update.sh)
 .deploy_bad
+# 브라우저 점검용 playwright(설치만 하고 저장소엔 안 넣음)
+node_modules/

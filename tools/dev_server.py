@@ -132,6 +132,18 @@ def fake_collect2():
     fam.poll_fa(0)
     _orig()
 jobs.manual_collect = fake_collect2  # request_manual가 부르는 함수만 가짜로 바꿈
+# 일정·결과 가짜 데이터(시즌 메뉴·경기 상세·팀 탭 흐름 테스트용): 지난 시즌 끝난 경기 + 다가오는 경기
+from tracker import schedule as _sch  # noqa: E402
+def _sm(t1, k1, t2, k2, hrs, win="", s1="", s2="", page="LCK/2026 Season/Rounds 3-4"):
+    at = (now + timedelta(hours=hrs)).strftime("%Y-%m-%d %H:%M:%S")
+    return {"id": "", "page": page, "tour": "LCK 2026", "playoff": False, "tab": "Week 1", "at": at, "bo": "3",
+            "t1": t1, "k1": k1, "t2": t2, "k2": k2, "s1": s1, "s2": s2, "win": win, "ff": ""}
+_sch.DATA = {"lck": {"season": 2026, "current": False, "at": now.isoformat(), "standings": {}, "matches": [
+    _sm("Gen.G", "geng", "Hanwha Life Esports", "hle", -24 * 70, "1", "3", "1", "LCK/2026 Season/Season Playoffs"),
+    _sm("T1", "t1", "Dplus KIA", "dk", -24 * 72, "1", "2", "0"),
+    _sm("HANJIN BRION", "bro", "Nongshim RedForce", "ns", -24 * 74, "2", "1", "2"),
+    _sm("KT Rolster", "kt", "BNK FEARX", "bfx", -24 * 75, "1", "2", "1")],
+    "tours": [{"page": "LCK/2026 Season/Rounds 3-4", "name": "LCK 2026 Rounds 3-4", "start": "2026-07-29", "end": "2026-08-23", "playoff": False}]}}
 server.chat.init()
 server.player_extra.init()
 server.maint.init()
