@@ -63,6 +63,13 @@ class SmokeTest(unittest.TestCase):
             with self.subTest(name):
                 self.assertEqual(self.get(f"/static/{name}")[0], 200)
 
+    def test_diag(self):
+        code, body = self.get("/api/diag")
+        self.assertEqual(code, 200)
+        d = json.loads(body)
+        for k in ("uptime_min", "leaguepedia_last_hour", "recent_warnings", "schedule", "logos", "collectors"):
+            self.assertIn(k, d)
+
     def test_match_api_only_known_matches(self):
         self.assertEqual(self.get("/api/match?league=lck&id=nope")[0], 404)
         self.assertEqual(self.get("/api/match?league=zzz&id=x")[0], 404)

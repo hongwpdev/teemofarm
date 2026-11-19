@@ -132,6 +132,8 @@ def ensure(images: dict):
         return 0
     try:
         thumbs = _thumbs(sorted({c for v in need.values() for c in v.split("|")}))
+        if not thumbs:
+            log.warning("team logos: no thumbnail urls for %d teams (e.g. %s)", len(need), next(iter(need.values())))
     except Exception as e:  # noqa: BLE001
         log.warning("team logos: thumb urls failed: %s", e)
         return 0

@@ -9,7 +9,7 @@ import threading
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from .. import archive, champs, chat, jobs, maint, matchinfo, player_extra, riot, schedule, share, teamlogos
+from .. import archive, champs, chat, diag, jobs, maint, matchinfo, player_extra, riot, schedule, share, teamlogos
 from ..cargo import RATE_MSG, is_rate_limit
 from ..config import DEFAULT_LEAGUE, FA_INTERVAL, LEAGUES, NEWS_INTERVAL, PORT, WIKI_INTERVAL, log
 from ..core import db, init_db
@@ -151,6 +151,9 @@ class Handler(BaseHTTPRequestHandler):
                 msg = RATE_MSG if is_rate_limit(e) else "경기 기록을 불러오지 못했어요. 잠시 뒤 다시 눌러 보세요"
                 body, code = json.dumps({"msg": msg}, ensure_ascii=False), 502
             return self._send(code, body.encode(), "application/json; charset=utf-8", cache="no-cache")
+        if u.path == "/api/diag":                         # 운영 점검: 최근 경고, 리그피디아 요청 수, 수집 상태
+            return self._send(200, json.dumps(diag.snapshot(), ensure_ascii=False, indent=1).encode(),
+                              "application/json; charset=utf-8", cache="no-store")
         if u.path == "/healthz":
             return self._send(200, b"ok", "text/plain")
         if u.path in ("/about", "/privacy"):               # 사이트 소개·개인정보처리방침(애드센스 심사용)
@@ -258,6 +261,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    diag.install()                       # 로그 파일(data/app.log)과 /api/diag 용 최근 경고 모음
     init_db()
     chat.init()
     player_extra.init()

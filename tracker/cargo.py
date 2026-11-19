@@ -5,6 +5,7 @@ import time
 import urllib.parse
 
 from .config import CARGO_GAP, REQUEST_GAP, WIKI_API, log
+from . import diag
 from .core import http_get
 
 _CARGO_LOCK = threading.Lock()
@@ -28,12 +29,16 @@ def _pace():
         if wait > 0:
             time.sleep(wait)
         _CARGO_LAST[0] = time.time()
+    diag.note_request()
 
 
 def api_get(params: dict) -> dict:
     """리그피디아 MediaWiki API(편집 기록·파일 정보) 한 번. 간격은 Cargo와 함께 맞춤."""
     _pace()
-    return json.loads(http_get(f"{WIKI_API}?{urllib.parse.urlencode({'format': 'json', **params})}"))
+    data = json.loads(http_get(f"{WIKI_API}?{urllib.parse.urlencode({'format': 'json', **params})}"))
+    if is_rate_limit((data.get("error") or {}).get("info", "")):
+        diag.note_limit()
+    return data
 
 
 def cargo(gap, retry=True, **params):
@@ -44,6 +49,8 @@ def cargo(gap, retry=True, **params):
         _pace()
         data = json.loads(http_get(f"{WIKI_API}?{q}"))
         err = data.get("error")
+        if err and is_rate_limit(err.get("info", "")):
+            diag.note_limit()
         if err and is_rate_limit(err.get("info", "")) and retry and attempt == 1:
             log.warning("cargo rate limited, retry in 20s")
             time.sleep(20)
