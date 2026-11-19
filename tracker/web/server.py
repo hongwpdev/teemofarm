@@ -171,7 +171,7 @@ class Handler(BaseHTTPRequestHandler):
             if not LEAGUES[league]["enabled"]:          # 아직 켜지지 않은 리그: 일정·결과만, 나머지는 '곧 추가'
                 page = views.render_schedule(league) if sec == "schedule" and LEAGUES[league].get("wiki") else views.render_soon(league)
             elif season and sec == "schedule" and not schedule.get(league).get("current") and schedule.get(league).get("season") == season:
-                return self._redirect(f"/{league}/schedule")   # 일정·결과가 이미 그 시즌 결과를 보여 주는 중: 같은 화면으로
+                page = views.render_schedule(league, season)   # 지난 시즌 경기 결과가 아직 일정 데이터에 있음: 결과·순위·경기 상세 그대로
             elif season and sec in ("", "roster", "fa", "schedule"):
                 page = views.render_archive(league, sec, season, one("t"))
             elif sec == "":

@@ -130,8 +130,7 @@ SEC_PATH = {"news": "", "roster": "/roster", "fa": "/fa", "schedule": "/schedule
 
 
 def shell(league: str, active: str, title: str, main: str, scripts, today, scope: str = "", extra_attr: str = "",
-          season=None, og=None, shown=None) -> str:
-    """shown: 일정·결과 화면이 지금 보여 주는 시즌(새 시즌 일정이 아직 없어 지난 시즌 결과를 보여 줄 때). 시즌 선택에 그 해를 표시"""
+          season=None, og=None) -> str:
     """공통 껍데기: 머리줄(사이트 이름·업데이트), 리그 선택, 메뉴, 본문, 아래쪽 안내, 스크립트."""
     head, foot_fail = status_parts(today)
     # 1층: 리그 고르기(드롭다운) · 2층: 그 리그의 4개 탭. 미니게임은 오른쪽 위 도구 칸
@@ -158,12 +157,9 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
     now_y = current_season(today)
     now_label = f"{now_y} 스토브리그" if stove else f"{now_y} 시즌"
     here = SEC_PATH.get(active, "")
-    recent = bool(shown and shown != now_y and not season)   # 일정·결과: 새 시즌 일정이 아직 없어 지난 시즌 결과를 보여 주는 중
-    if recent:                                               # → 시즌 선택에도 그 해를 표시('2027'을 고른 채 2026 결과가 보이지 않게)
-        now_y, now_label = shown, f"{shown} 시즌"
-    s_items = (f'<li><a class="{"" if season else "on"}" href="/{league}{here}">{now_label}<small>{"최근 결과" if recent else "지금"}</small></a></li>'
+    s_items = (f'<li><a class="{"" if season else "on"}" href="/{league}{here}">{now_label}<small>지금</small></a></li>'
                + "".join(f'<li><a class="{"on" if season == y else ""}" href="/{league}{here}?season={y}">{y} 시즌<small>기록</small></a></li>'
-                         for y in archive_years() if not (recent and y == shown)))   # 같은 해 '기록'은 겹치니 뺌
+                         for y in archive_years()))
     ssel = "" if not cur["enabled"] else (f'<details class="lgsel ssel"><summary aria-label="시즌 고르기"><b>{season or now_y}</b><i aria-hidden="true">▾</i></summary>'
             f'<ul>{s_items}</ul></details>')
     bar = (f'<div class="archive-bar">📜 지금 <b>{season} 시즌</b> 기록을 보고 있어요. '
@@ -1278,7 +1274,9 @@ def match_days(ms, now, T, lg_name, newest_first=False) -> str:
     return out
 
 
-def render_schedule(league: str) -> str:
+def render_schedule(league: str, pick=None) -> str:
+    """pick: 시즌 선택에서 고른 지난 시즌(LCK). 시즌 선택이 있는 리그는 그 선택을 그대로 따름:
+    '지금(2027)'인데 새 시즌 일정이 아직 없으면 안내와 지난 시즌 결과로 가는 버튼, '2026'을 고르면 2026 경기 결과·순위."""
     today = datetime.now(KST).date()
     now = datetime.now(timezone.utc)
     d = schedule.get(league)
@@ -1291,7 +1289,7 @@ def render_schedule(league: str) -> str:
         f = first.astimezone(KST)
         opening = (f'<li class="{"done" if f.date() <= today else ""}"><time>{f.month}.{f.day:02d}</time><b>{cs} LCK 개막</b>'
                    f'<small>{f:%H:%M} 첫 경기 · 리그피디아 일정 기준</small></li>')
-    stove = STOVE_SCH.format(opening=opening) if in_season(today) and league == "lck" else ""
+    stove = STOVE_SCH.format(opening=opening) if in_season(today) and league == "lck" and not pick else ""
     if not d.get("season"):
         msg = ("리그피디아에서 일정을 받아 오지 못했어요. 잠시 뒤 다시 들어와 주세요." if d.get("error")
                else "리그피디아에서 일정·결과를 받아 오는 중이에요(서버를 켠 뒤 1~2분).<br>잠시 뒤 새로고침해 주세요.")
@@ -1318,6 +1316,15 @@ def render_schedule(league: str) -> str:
         champ = (f'<section class="card champ sch-champ"><span class="crown">👑</span><div><small>{esc(lg_name)} {esc(tour_ko(m["page"], lg_name))} 우승 · {_page_year(m["page"])}</small>'
                  f'<b>{T.tname(win[0], win[1])}</b><p class="sc-hide">결승 {esc(win[2])}:{esc(lose[2])} · 상대 {T.tname(lose[0], lose[1])} · '
                  f'{_sch_at(m).astimezone(KST):%Y.%m.%d}</p></div></section>')
+
+    has_pick = bool(LEAGUES[league]["enabled"])           # 시즌 선택이 있는 리그(지금은 LCK)
+    if has_pick and not d.get("current") and not pick:     # '2027'을 골랐는데 새 시즌 일정이 아직 없음
+        main = (f'{stove}<section class="card soon sch-wait"><h2>📅 {cs} {esc(lg_name)} 일정은 아직 안 나왔어요</h2>'
+                f'<p>리그피디아에 일정이 올라오면 여기에 바로 보여요.</p>'
+                f'<p class="go"><a class="btn primary" href="/{league}/schedule?season={season}">{season} 시즌 결과·순위 보기 →</a></p></section>{champ}')
+        return shell(league, "schedule", f"{lg_name} 일정·결과", main, (), today)
+    if has_pick and pick:                                  # '2026'을 고름: 위쪽 띠가 '2026 시즌 기록을 보고 있어요'로 알려 줌
+        notice = ""
 
     # 팀 탭(화면 안에서 거름. '내 팀'은 별 표시)
     st = d.get("standings") or {}
@@ -1381,7 +1388,8 @@ def render_schedule(league: str) -> str:
 </div><aside>{stand}</aside></div>
 {POPUP}
 <p class="note">일정·결과·순위·경기 기록 출처 리그피디아 · 챔피언 이미지 Riot Games Data Dragon{upd} · 경기 앞뒤엔 5분마다, 경기가 없는 기간엔 몇 시간마다 새로 받아요 · 시간은 한국 시간</p>"""
-    return shell(league, "schedule", f"{lg_name} 일정·결과", main, ("player.js", "schedule.js"), today, shown=season)
+    return shell(league, "schedule", f"{lg_name} 일정·결과", main, ("player.js", "schedule.js"), today,
+                 season=pick if has_pick and pick else None)
 
 
 def render_soon(league: str) -> str:

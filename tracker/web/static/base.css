@@ -958,3 +958,6 @@ body{padding-bottom:7rem}
 .past-link{margin:0 0 1rem;font-size:1.3rem;color:var(--t5)}
 .past-link a{color:var(--primary-text);font-weight:700;margin:0 .2rem}
 .rc header b[title]{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.sch-wait{margin-bottom:1.6rem}
+.sch-wait .go{margin-top:1.4rem}
+.sch-wait .btn{display:inline-flex;align-items:center;height:4rem;padding:0 1.8rem;border-radius:2rem;font-size:1.45rem}

@@ -62,6 +62,23 @@ class ScheduleTest(unittest.TestCase):
         table = [{"team": t, "key": "", "place": str(i + 1), "w": "1", "l": "0", "gw": "0", "gl": "0"} for i, t in enumerate("ABC")]
         self.assertEqual(schedule._groups(table, [], "P"), [{"name": "", "table": table}])
 
+    def test_lck_follows_season_picker(self):
+        import re
+        now = datetime.now(timezone.utc)
+        old = [_m("A", "B", _f(now - timedelta(days=60)), "1", "2", "0", page="LCK/2026 Season/Rounds 3-4")]
+        schedule.DATA = {"lck": {"season": 2026, "current": False, "at": now.isoformat(), "standings": {}, "matches": old}}
+        cs = views.current_season(datetime.now(views.KST).date())
+        pick = lambda page: re.search(r'aria-label="시즌 고르기"><b>(\d+)', page).group(1)   # noqa: E731
+        now_page = views.render_schedule("lck")                       # 지금(2027): 안내 + 2026 결과로 가는 버튼
+        self.assertEqual(pick(now_page), str(cs))
+        self.assertIn("아직 안 나왔어요", now_page)
+        self.assertIn('href="/lck/schedule?season=2026"', now_page)
+        self.assertNotIn('class="mt ', now_page)
+        past = views.render_schedule("lck", 2026)                     # 2026을 고름: 2026 결과
+        self.assertEqual(pick(past), "2026")
+        self.assertIn('class="mt done"', past)
+        self.assertEqual(pick(views.render_roster("lck")), str(cs))   # 다른 탭과 같은 시즌 표시
+
     def test_render_empty_and_full(self):
         schedule.DATA = {}
         self.assertIn("일정·결과", views.render_schedule("lck"))
