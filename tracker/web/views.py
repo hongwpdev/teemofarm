@@ -132,7 +132,8 @@ SEC_PATH = {"news": "", "roster": "/roster", "fa": "/fa", "schedule": "/schedule
 
 
 def shell(league: str, active: str, title: str, main: str, scripts, today, scope: str = "", extra_attr: str = "",
-          season=None, og=None) -> str:
+          season=None, og=None, shown=None) -> str:
+    """shown: 일정·결과 화면이 지금 보여 주는 시즌(새 시즌 일정이 아직 없어 지난 시즌 결과를 보여 줄 때). 시즌 선택에 그 해를 표시"""
     """공통 껍데기: 머리줄(사이트 이름·업데이트), 리그 선택, 메뉴, 본문, 아래쪽 안내, 스크립트."""
     head, foot_fail = status_parts(today)
     # 1층: 리그 고르기(드롭다운) · 2층: 그 리그의 4개 탭. 미니게임은 오른쪽 위 도구 칸
@@ -159,9 +160,12 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
     now_y = current_season(today)
     now_label = f"{now_y} 스토브리그" if stove else f"{now_y} 시즌"
     here = SEC_PATH.get(active, "")
-    s_items = (f'<li><a class="{"" if season else "on"}" href="/{league}{here}">{now_label}<small>지금</small></a></li>'
+    recent = bool(shown and shown != now_y and not season)   # 일정·결과: 새 시즌 일정이 아직 없어 지난 시즌 결과를 보여 주는 중
+    if recent:                                               # → 시즌 선택에도 그 해를 표시('2027'을 고른 채 2026 결과가 보이지 않게)
+        now_y, now_label = shown, f"{shown} 시즌"
+    s_items = (f'<li><a class="{"" if season else "on"}" href="/{league}{here}">{now_label}<small>{"최근 결과" if recent else "지금"}</small></a></li>'
                + "".join(f'<li><a class="{"on" if season == y else ""}" href="/{league}{here}?season={y}">{y} 시즌<small>기록</small></a></li>'
-                         for y in archive_years()))
+                         for y in archive_years() if not (recent and y == shown)))   # 같은 해 '기록'은 겹치니 뺌
     ssel = "" if not cur["enabled"] else (f'<details class="lgsel ssel"><summary aria-label="시즌 고르기"><b>{season or now_y}</b><i aria-hidden="true">▾</i></summary>'
             f'<ul>{s_items}</ul></details>')
     bar = (f'<div class="archive-bar">📜 지금 <b>{season} 시즌</b> 기록을 보고 있어요. '
@@ -1330,7 +1334,7 @@ def render_schedule(league: str) -> str:
 </div><aside>{stand}</aside></div>
 {POPUP}
 <p class="note">일정·결과·순위·경기 기록 출처 리그피디아 · 챔피언 이미지 Riot Games Data Dragon{upd} · 경기 날엔 5분마다, 평소엔 30분마다 새로 받아요 · 시간은 한국 시간</p>"""
-    return shell(league, "schedule", f"{lg_name} 일정·결과", main, ("player.js", "schedule.js"), today)
+    return shell(league, "schedule", f"{lg_name} 일정·결과", main, ("player.js", "schedule.js"), today, shown=season)
 
 
 def render_soon(league: str) -> str:
