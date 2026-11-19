@@ -139,15 +139,16 @@
       }
       function frame() {
         tick++; ctx.clearRect(0, 0, W, H); drawMap();
-        const p1 = path[seg], p2 = path[(seg + 1) % path.length], dx = p2.x - p1.x, dy = p2.y - p1.y;
-        t += 1.15 / Math.hypot(dx, dy);
-        if (t >= 1) {
+        let p1 = path[seg], p2 = path[(seg + 1) % path.length];
+        t += 1.15 / Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        if (t >= 1) {             // 다음 지점 도착: 구간을 바꾼 뒤 위치를 새 구간에서 계산(예전엔 한 프레임 지난 구간 시작점으로 튀어서 깜빡였음)
           t = 0; seg = (seg + 1) % path.length;
           if (plantAt.includes(seg)) { mush = mush.filter(m => Math.hypot(m.x - p2.x, m.y - p2.y) > 8); mush.push({ x: p2.x, y: p2.y, life: 0, max: 260 }); }
+          p1 = path[seg]; p2 = path[(seg + 1) % path.length];
         }
         mush.forEach(m => { m.life++; drawShroom(m); }); mush = mush.filter(m => m.life < m.max);
         const planting = t < .12 && plantAt.includes(seg);
-        drawTeemo(p1.x + dx * t, p1.y + dy * t, planting ? 0 : Math.abs(Math.sin(tick / 5)) * 3);
+        drawTeemo(p1.x + (p2.x - p1.x) * t, p1.y + (p2.y - p1.y) * t, planting ? 0 : Math.abs(Math.sin(tick / 5)) * 3);
         id = requestAnimationFrame(frame);
       }
       const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
