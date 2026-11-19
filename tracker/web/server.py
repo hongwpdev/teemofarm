@@ -9,7 +9,7 @@ import threading
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from .. import archive, champs, chat, diag, jobs, maint, matchinfo, player_extra, riot, schedule, share, teamlogos
+from .. import archive, champs, chat, diag, feed, jobs, maint, matchinfo, player_extra, riot, schedule, share, teamlogos, vote
 from ..cargo import RATE_MSG, is_rate_limit
 from ..config import DEFAULT_LEAGUE, FA_INTERVAL, LEAGUES, NEWS_INTERVAL, PORT, WIKI_INTERVAL, log
 from ..core import db, init_db
@@ -164,6 +164,9 @@ class Handler(BaseHTTPRequestHandler):
                               "application/json; charset=utf-8", cache="no-store")
         if u.path == "/healthz":
             return self._send(200, b"ok", "text/plain")
+        if u.path == "/api/votes":                         # 행선지 투표 현황 + 내가 고른 것
+            body = json.dumps({"tally": vote.tally(), "mine": vote.mine(one("cid"))}, ensure_ascii=False).encode()
+            return self._send(200, body, "application/json; charset=utf-8", cache="no-store")
         if u.path in ("/about", "/privacy"):               # 사이트 소개·개인정보처리방침(애드센스 심사용)
             page = views.render_policy(u.path[1:]).replace("{{ORIGIN}}", self._origin()).replace("{{PATH}}", u.path)
             return self._send(200, page.encode(), "text/html; charset=utf-8", cache="public, max-age=0, s-maxage=300")
@@ -203,6 +206,16 @@ class Handler(BaseHTTPRequestHandler):
                 page = views.render_stove(league)
             elif sec == "teams":
                 page = views.render_teams(league)
+            elif sec == "summary":
+                page = views.render_summary(league)
+            elif sec == "predict":
+                page = views.render_predict(league)
+            elif sec == "contracts":
+                page = views.render_contracts(league)
+            elif sec == "feed.xml":                    # 팀별 RSS(이적 기사): /lck/feed.xml?team=t1
+                team = one("team") if one("team") in views.team_keys() else ""
+                return self._send(200, feed.rss(self._origin(), league, team).encode(), "application/rss+xml; charset=utf-8",
+                                  cache="public, max-age=0, s-maxage=300")
             elif sec == "builder":
                 page = views.render_builder(league, season, one("r"), one("n"))
             elif sec == "game":
@@ -229,6 +242,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps({"code": code}).encode(), "application/json")
             except Exception as e:  # noqa: BLE001
                 return self._send(400, json.dumps({"msg": str(e)[:80]}, ensure_ascii=False).encode(), "application/json; charset=utf-8")
+        if u.path == "/api/vote":
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+                data = json.loads(self.rfile.read(n).decode("utf-8")) if 0 < n <= 2048 else {}
+                err = vote.cast(str(data.get("page") or ""), str(data.get("choice") or ""), str(data.get("cid") or ""), views.team_keys())
+                body = {"ok": not err, "msg": err, "tally": vote.tally().get(str(data.get("page") or ""), {})}
+                return self._send(200 if not err else 400, json.dumps(body, ensure_ascii=False).encode(), "application/json; charset=utf-8")
+            except Exception as e:  # noqa: BLE001
+                return self._send(400, json.dumps({"ok": False, "msg": str(e)[:80]}, ensure_ascii=False).encode(), "application/json; charset=utf-8")
         if u.path == "/api/chat":
             try:
                 n = int(self.headers.get("Content-Length") or 0)
@@ -285,9 +307,11 @@ def main():
     player_extra.start()
     maint.init()
     share.init()
+    vote.init()
     matchinfo.init()
     champs.start()                       # 챔피언 한국어 이름·아이콘(Data Dragon, 하루 한 번)
     maint.start()
+    feed.start()                         # 디스코드 알림(환경변수 DISCORD_WEBHOOK이 있을 때만)
     riot.start()
     # 지난 시즌 기록이 없으면 한 번 모아 둠(있으면 파일만 읽음). 켜자마자 몰리는 수집과 겹치지 않게 2분 뒤
     archive.start()

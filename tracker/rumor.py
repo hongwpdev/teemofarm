@@ -20,6 +20,7 @@ LEAVE = EVENTS["leave"]                  # '3년 동행 마침표'처럼 재계�
 JOIN = EVENTS["join"] + ("이적", "합의", "손잡", "유니폼", "입성")
 NEG = ("불발", "결렬", "무산", "거절", "실패", "없던 일")   # '재계약 불발' 같은 기사는 행선지로 안 봄
 # 계약이 남은 선수는 이적 기사라는 표시가 제목에 있을 때만 봄('합류 후 100승' 같은 경기 기사 제외)
+GUESS = ("하나", "할까", "?", "복귀설", "이적설", "합류설", "영입설", "유력", "전망", "가능성", "임박", "근접", "예정")
 MOVE_MARK = ("단독", "소식통", "오피셜", "공식", "유력", "임박", "합의", "예정", "근접", "협상", "이적")
 _CACHE = {}          # 이름 -> {"at", "key", "val"}
 _LOCK = threading.Lock()
@@ -52,7 +53,9 @@ def _guess(people, news, marks=None, allow_stay=True):
             hit = read_title(n["title"], r["nick"], r["team_from"])
             if not hit or (hit[1] and not allow_stay):
                 continue
-            cand = {"team": hit[0], "stay": hit[1], "official": kind == "official", "title": n["title"],
+            # '[오피셜] 제우스 계약 종료, T1 리턴하나'처럼 공식 기사 안의 추측(…하나, 설, 유력)은 '발표'가 아니라 '유력'
+            official = kind == "official" and not any(w in n["title"] for w in GUESS)
+            cand = {"team": hit[0], "stay": hit[1], "official": official, "title": n["title"],
                     "url": n["url"], "outlet": n["outlet"] or "", "published": n["published"]}
             if best is None or (cand["official"] and not best["official"]):
                 best = cand

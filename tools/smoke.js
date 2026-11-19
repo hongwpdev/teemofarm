@@ -25,6 +25,10 @@ const PAGES = [
   ['/lck/game', ['.brand']],
   ['/lpl', ['.brand', '.soon-bar']],
   ['/about', ['.brand', '.pol-page']],
+  ['/lck/summary', ['.brand', '.mvtab']],
+  ['/lck/predict', ['.brand', '.acc']],
+  ['/lck/contracts', ['.brand']],
+  ['/lck/teams', ['.brand']],
   ['/privacy', ['.brand', '.pol-page']],
 ];
 

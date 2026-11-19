@@ -1047,3 +1047,89 @@ a.tbtn .lb{margin-left:.3rem}
 /* 조회 중: 숲길 지도(캔버스) */
 .track.farm{height:auto;overflow:visible;border:0;margin-bottom:1.4rem;padding:.8rem;border-radius:1.2rem;background:radial-gradient(ellipse at 50% 60%,color-mix(in srgb,var(--primary) 14%,transparent),transparent 70%)}
 .track.farm canvas{display:block;width:100%;max-width:36rem;aspect-ratio:240/84;margin:0 auto}
+/* ── 스토브리그 > 팀별 요약 ── */
+.mvtab{padding:0;overflow:hidden}
+.mvrow{display:grid;grid-template-columns:11rem repeat(4,minmax(0,1fr));gap:.8rem 1.2rem;align-items:start;padding:1.2rem 1.6rem;border-bottom:1px solid var(--line);border-left:.4rem solid var(--tc)}
+.mvrow:last-child{border-bottom:0}
+.mvt{display:flex;flex-direction:column;gap:.2rem}
+.mvt .logo{width:2.8rem;height:2.8rem}
+.mvt b{font-size:1.6rem;color:var(--t1)}
+.mvt small{font-size:1.15rem;color:var(--t8)}
+.mvc{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;min-width:0}
+.mvc em{flex-basis:100%;font-style:normal;font-size:1.15rem;font-weight:700}
+.mvc>i{color:var(--t8);font-style:normal}
+.g-in{color:var(--green)}.g-out{color:#ef4444}.g-stay{color:var(--primary-text)}.g-open{color:var(--t8)}
+.pc{display:inline-flex;align-items:baseline;gap:.3rem;padding:.2rem .7rem;border-radius:2rem;background:var(--bg-gray);font-size:1.3rem;font-weight:600;color:var(--t1);cursor:default}
+.pc small{font-size:1rem;color:var(--t8);font-weight:500}
+.pc.in{background:var(--bg-green);color:var(--green)}
+.pc.out{background:rgba(239,68,68,.12);color:#ef4444}
+.pc.stay{background:var(--bg-accent);color:var(--primary-text)}
+.pc.rm{background:rgba(245,158,11,.14);color:#f59e0b;outline:1px dashed rgba(245,158,11,.7);outline-offset:-1px}
+:root:not([data-theme="dark"]) .pc.rm{background:#fef3c7;color:#b45309}
+@media (max-width:719px){.mvrow{grid-template-columns:1fr 1fr;padding:1.2rem}.mvt{grid-column:1/-1;flex-direction:row;align-items:center;gap:.6rem}}
+/* ── 스토브리그 > 예측 ── */
+.vote h3,.acc h3,.poprs h3,.lmap h3,.ctr h3{display:flex;align-items:baseline;gap:.6rem;padding:1.4rem 1.6rem .6rem;font-size:1.6rem;color:var(--t1)}
+.vote h3 small,.acc h3 small,.poprs h3 small,.lmap h3 small,.ctr h3 small{font-size:1.2rem;color:var(--t8);font-weight:500}
+.vlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(30rem,1fr));gap:1rem;padding:.6rem 1.6rem 1.6rem}
+.vcard{border:1px solid var(--line);border-radius:1rem;padding:1.2rem;background:var(--card)}
+.vcard.busy{opacity:.6}
+.vh{display:flex;align-items:center;gap:1rem}
+.vh .av{flex:none}
+.vh b{display:block;font-size:1.6rem;color:var(--t1)}
+.vh small{display:inline-flex;align-items:center;gap:.3rem;font-size:1.2rem;color:var(--t8)}
+.vh small .logo{width:1.4rem;height:1.4rem}
+.vhint{margin-top:.6rem;font-size:1.2rem;color:#f59e0b}
+:root:not([data-theme="dark"]) .vhint{color:#b45309}
+.vopts{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.9rem}
+.vopts button{display:inline-flex;align-items:center;gap:.3rem;height:3rem;padding:0 .8rem;border:1px solid var(--btn-border);border-radius:.6rem;background:var(--card);font-size:1.2rem;font-weight:600;color:var(--t3);cursor:pointer}
+.vopts button .logo{width:1.6rem;height:1.6rem}
+.vopts button.on{border-color:var(--primary);background:var(--primary);color:#fff}
+.vres{margin-top:.9rem;display:grid;gap:.4rem}
+.vres p{display:grid;grid-template-columns:7rem 1fr 4rem;align-items:center;gap:.6rem;font-size:1.25rem;color:var(--t3)}
+.vres p i{height:.8rem;border-radius:.4rem;background:linear-gradient(90deg,var(--primary) var(--w),var(--bg-gray) var(--w))}
+.vres p.me span{font-weight:800;color:var(--primary-text)}
+.vres p b{text-align:right}
+.vres small{font-size:1.1rem;color:var(--t8)}
+.vans{margin-top:.8rem;font-size:1.35rem;color:var(--t3)}
+.vans b{color:var(--t1)}
+.acct{width:calc(100% - 3.2rem);margin:0 1.6rem;border-collapse:collapse;font-size:1.35rem}
+.acct th,.acct td{padding:.7rem .4rem;border-bottom:1px solid var(--line);text-align:center}
+.acct th{text-align:left;color:var(--t1)}
+.acct thead td{font-size:1.15rem;color:var(--t8)}
+.acct td.h{color:var(--green);font-weight:700}.acct td.m{color:#ef4444;font-weight:700}
+.plist{padding:1rem 1.6rem 1.6rem;display:grid;gap:.5rem}
+.plist li{display:flex;align-items:center;gap:.6rem;font-size:1.3rem;color:var(--t3);flex-wrap:wrap}
+.plist a{margin-left:auto;color:var(--t5);font-size:1.2rem;text-decoration:underline}
+.pr{padding:.1rem .6rem;border-radius:.4rem;font-size:1.1rem;font-weight:700}
+.pr.h{background:var(--bg-green);color:var(--green)}.pr.m{background:rgba(239,68,68,.12);color:#ef4444}.pr.w{background:var(--bg-gray);color:var(--t8)}
+@media (max-width:719px){.vlist{grid-template-columns:1fr;padding:.6rem 1.2rem 1.2rem}.acct{width:calc(100% - 2.4rem);margin:0 1.2rem}}
+/* ── 팀 > 계약 만료 ── */
+.yjump{margin-top:.8rem}
+.yjump a{display:inline-flex;align-items:center;height:3rem;padding:0 1.2rem;border:1px solid var(--btn-border);border-radius:2rem;font-size:1.3rem;font-weight:600;color:var(--t3)}
+.ctr ul{display:grid;grid-template-columns:repeat(auto-fill,minmax(26rem,1fr));gap:.2rem 1.6rem;padding:.4rem 1.6rem 1.4rem}
+.ctr li{display:flex;align-items:center;gap:.6rem;padding:.7rem 0;border-bottom:1px solid var(--line);font-size:1.35rem;min-width:0}
+.ctr .tm{display:inline-flex;align-items:center;gap:.3rem;width:6.2rem;flex:none;font-weight:700;color:var(--t3)}
+.ctr .tm .logo{width:1.6rem;height:1.6rem}
+.ctr .ps{width:4rem;flex:none;font-size:1.15rem;color:var(--t8)}
+.ctr b{color:var(--t1)}
+.ctr small{font-size:1.15rem;color:var(--t8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctr em{margin-left:auto;flex:none;font-style:normal;font-size:1.2rem;font-weight:700;color:var(--primary-text)}
+/* ── 로스터 짜기 > 인기 로스터 ── */
+.poprs{margin-top:1.6rem}
+.prgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(17rem,1fr));gap:1rem;padding:.6rem 1.6rem 1.6rem}
+.prc{border:1px solid var(--line);border-top:.3rem solid var(--tc);border-radius:.8rem;padding:.9rem 1rem}
+.prc p{display:flex;align-items:center;gap:.4rem;margin-bottom:.5rem;color:var(--t1)}
+.prc li{display:grid;grid-template-columns:3.6rem 1fr auto;gap:.4rem;font-size:1.25rem;padding:.2rem 0}
+.prc li span{color:var(--t8)}.prc li b{color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.prc li em{font-style:normal;color:var(--primary-text);font-weight:700}
+/* ── 팀 > 구단 안내: 계보 ── */
+.lmap ul{display:grid;gap:.2rem;padding:.4rem 1.6rem 1.4rem}
+.lmap li{display:flex;align-items:center;gap:1rem;padding:.7rem 0;border-bottom:1px solid var(--line)}
+.lmap li:last-child{border-bottom:0}
+.lmap .lt{display:inline-flex;align-items:center;gap:.4rem;width:7rem;flex:none;color:var(--t1)}
+.lchain{display:flex;align-items:center;flex-wrap:wrap;gap:.4rem;min-width:0}
+.lgp{padding:.3rem .8rem;border-radius:2rem;background:var(--bg-gray);font-size:1.2rem;color:var(--t5)}
+.lgp.cur{background:color-mix(in srgb,var(--tc) 22%,transparent);color:var(--t1);font-weight:700;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tc) 60%,transparent)}
+.ln{width:1.4rem;height:.2rem;background:var(--btn-border);position:relative}
+.ln::after{content:'';position:absolute;right:-.1rem;top:-.3rem;border:.4rem solid transparent;border-left-color:var(--btn-border);border-right:0}
+@media (max-width:719px){.lmap li{align-items:flex-start}.lmap .lt{width:5.6rem}}
+.vlist,.plist,.ctr ul,.lmap ul,.prc ul{list-style:none}
