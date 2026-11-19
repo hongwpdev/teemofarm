@@ -113,7 +113,7 @@
         return "<span>" + label + "</span>";
       }).join("");
     }
-    const busy = on => { go.disabled = on; go.classList.toggle("busy", on); go.querySelector(".lbl").textContent = on ? "조회 중…" : "조회"; overlay(on); };
+    const busy = on => { go.disabled = on; go.classList.toggle("busy", on); go.querySelector(".lbl").textContent = on ? "조회 중…" : "조회"; if (on && next) next.textContent = ""; overlay(on); };
     async function waitDone() {
       for (let i = 0; i < 90; i++) {            // 최대 3분 기다림
         await new Promise(r => setTimeout(r, 2000));
@@ -143,11 +143,11 @@
     }
     const left = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
     function schedule() {
-      clearTimeout(timer); clearInterval(tick); if (next) next.textContent = "";
+      clearTimeout(timer); clearInterval(tick); if (next) next.textContent = ""; go.title = "지금 새로 가져오기";
       if (!auto.checked) return;
       const due = Date.now() + AUTO_MS;
       timer = setTimeout(collect, AUTO_MS);
-      const show = () => { if (next) next.textContent = "다음 자동 조회 " + left(due - Date.now()); };
+      const show = () => { if (next) next.textContent = left(due - Date.now()); go.title = "지금 새로 가져오기 · 다음 자동 조회 " + left(due - Date.now()) + " 뒤"; };
       show(); tick = setInterval(show, 1000);
     }
     go.addEventListener("click", collect);

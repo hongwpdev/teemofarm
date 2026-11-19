@@ -110,13 +110,11 @@ def status_parts(today):
     return head, foot
 
 
-ACT = f"""<div class="act">
-<button id="go" class="btn primary" type="button"><span class="spin" aria-hidden="true"></span><span class="lbl">조회</span></button>
-<label class="chk auto"><input type="checkbox" id="auto"><span><i class="live" aria-hidden="true"></i>{AUTO_MINUTES}분마다 자동 갱신</span></label>
-<span id="next" class="next" aria-live="off"></span>
-</div>
-<p id="msg" class="msg" role="status" aria-live="polite"></p>
-"""
+ACT = f"""<div class="rfr">
+<button id="go" class="rbtn" type="button" title="지금 새로 가져오기"><span class="ico" aria-hidden="true">↻</span><span class="lbl">조회</span><span id="next" class="next" aria-live="off"></span></button>
+<label class="sw" title="{AUTO_MINUTES}분마다 자동으로 새로 가져오기"><input type="checkbox" id="auto" role="switch"><span class="knob" aria-hidden="true"></span><span class="swl">자동</span></label>
+</div>"""
+MSG = '<p id="msg" class="msg" role="status" aria-live="polite"></p>'
 
 POPUP = """<div class="dim" id="dim" aria-hidden="true">
 <div class="pop" role="dialog" aria-modal="true" aria-labelledby="pn">
@@ -534,8 +532,8 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
 <button class="btn" type="submit">검색</button>{f'<a class="x" href="{esc(url(k=""))}" aria-label="검색 지우기">×</a>' if q else ""}</form>
 {f'<p class="srch-head">‘{esc(q)}’ 검색 결과 {len(items)}건' + (f' · {esc(", ".join(t for t in terms if t != q))}도 함께 찾았어요' if len(terms) > 1 else "") + '</p>' if q else ""}
 <div class="top"><nav class="view_tab" aria-label="보기">{view}</nav>
-<button class="fbtn" type="button" id="fbtn" aria-expanded="{"true" if custom else "false"}" aria-controls="fbody">필터{f"<i>{nfilter}</i>" if nfilter else ""}</button></div>
-<div class="fbody" id="fbody">{ACT}<div class="filter_bar">
+<button class="fbtn" type="button" id="fbtn" aria-expanded="{"true" if custom else "false"}" aria-controls="fbody">필터{f"<i>{nfilter}</i>" if nfilter else ""}</button>{ACT}</div>{MSG}
+<div class="fbody" id="fbody"><div class="filter_bar">
 <label class="fld"><span>기간</span><select id="period">{period}</select></label>
 <label class="fld"><span>출처</span><select id="src">{srcs}</select></label>
 {period_form}
@@ -637,7 +635,7 @@ def render_fa(league: str) -> str:
     rms = rumors(rows)
     board = moves_board(rows, rms)
     main = f"""{squad_toggle(league, "fa")}{board}<section class="card panel fa" aria-label="조회와 필터">
-{ACT}<nav class="view_tab" id="grp" aria-label="묶어 보기"><a href="#" data-g="p">포지션별</a><a href="#" data-g="t">팀별</a><a href="#" data-g="s">상태별</a></nav>
+<div class="ptop"><nav class="view_tab" id="grp" aria-label="묶어 보기"><a href="#" data-g="p">포지션별</a><a href="#" data-g="t">팀별</a><a href="#" data-g="s">상태별</a></nav>{ACT}</div>{MSG}
 <div class="sum">{summ}</div>
 <div class="chips" id="pos">
 <button data-p="all">전체 포지션</button><button data-p="탑">탑</button><button data-p="정글">정글</button><button data-p="미드">미드</button><button data-p="원딜">원딜</button><button data-p="서폿">서폿</button><button data-p="감독">감독</button><button data-p="코치">코치</button>
@@ -665,8 +663,7 @@ def render_roster(league: str) -> str:
         u = datetime.fromisoformat(upd["v"]).astimezone(KST)
         when = f" · {u.month}/{u.day} {u:%H:%M} 갱신"
     empty = '' if rows else '<p class="note">아직 로스터 정보를 모으는 중이에요. [조회]를 눌러 보세요.</p>'
-    main = f"""{squad_toggle(league, "roster")}<section class="card panel fa" aria-label="조회">{ACT}
-<p class="src">리그피디아 계약 기준 현재 로스터{when} · 빗금 칸은 아직 미정인 자리, '영입'은 이번 스토브리그에 새로 온 사람 · <i class="in rm">유력</i>은 최근 기사 제목 기준 참고 표시(공식 확정 전) · 이름을 누르면 프로필</p>
+    main = f"""{squad_toggle(league, "roster")}<section class="card panel fa" aria-label="조회"><div class="ptop"><p class="src">리그피디아 계약 기준 현재 로스터{when} · 빗금 칸은 아직 미정인 자리, '영입'은 이번 스토브리그에 새로 온 사람 · <i class="in rm">유력</i>은 최근 기사 제목 기준 참고 표시(공식 확정 전) · 이름을 누르면 프로필</p>{ACT}</div>{MSG}
 </section>
 <div class="rgrid" id="rgrid">{cards}</div>{empty}
 {POPUP}"""
