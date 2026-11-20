@@ -10,7 +10,7 @@ from ..classify import article_kind, is_minor_wiki, is_stove, news_teams, wiki_k
 from ..cluster import group as cluster_group
 from ..rumor import movers, read_title, rumors
 from .. import stove as stv, vote
-from ..config import (AUTO_MINUTES, DEFAULT_LEAGUE, KST, LEAGUES, NEW_HOURS, SITE_DESC, SITE_NAME, TEAM_COLORS,
+from ..config import (AUTO_MINUTES, DEFAULT_LEAGUE, FEATURES, KST, LEAGUES, NEW_HOURS, SITE_DESC, SITE_NAME, TEAM_COLORS,
                       TEAMS)
 from ..core import STATUS, STATUS_LOCK, WEEKDAYS, db, kst_day_start_utc, norm_title, parse_day, rel_time
 from ..fa import FA_ROLES, fa_since
@@ -912,12 +912,13 @@ def _toggle(league, on, season, label, items):
 
 
 def stove_toggle(league: str, on: str, season=None) -> str:
-    """'스토브리그' 탭 안: 이적 시장 | 팀별 | 행선지 맞히기 | 내맘대로 로스터."""
+    """'스토브리그' 탭 안: 이적 시장 | 팀별 | (켜져 있을 때) 행선지 맞히기 | 내맘대로 로스터."""
     if season:
         return _toggle(league, on, season, "스토브리그 보기", [("fa", "/fa", f"{season - 1} 스토브리그 이동")])
-    return _toggle(league, on, None, "스토브리그 보기",
-                   [("fa", "/fa", "이적 시장"), ("summary", "/summary", "팀별"), ("predict", "/predict", "행선지 맞히기"),
-                    ("builder", "/builder", "내맘대로 로스터")])
+    tabs = [("fa", "/fa", "이적 시장"), ("summary", "/summary", "팀별")]
+    if FEATURES["predict"]:
+        tabs.append(("predict", "/predict", "행선지 맞히기"))
+    return _toggle(league, on, None, "스토브리그 보기", tabs + [("builder", "/builder", "내맘대로 로스터")])
 
 
 def team_toggle(league: str, on: str, season=None) -> str:

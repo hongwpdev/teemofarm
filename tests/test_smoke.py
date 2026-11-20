@@ -17,7 +17,7 @@ from tracker.web import server  # noqa: E402
 
 PAGES = ["/lck", "/lck/roster", "/lck/fa", "/lck/summary", "/lck/predict", "/lck/contracts", "/lck/teams", "/lck/schedule", "/lck/results", "/lck/stove", "/lck/teams", "/lpl/results", "/lck/builder", "/lck/game", "/lpl", "/lpl/schedule", "/lec/schedule", "/cblol/roster",
          "/lck?team=t1", "/lck?q=faker", "/lck?hot=0&src=news"]
-APIS = ["/api/farm", "/api/farm?ids=rm:x:t1:m", "/api/votes", "/api/items", "/api/people", "/api/schedule", "/api/schedule?league=lpl", "/api/status", "/api/chat", "/healthz"]
+APIS = ["/api/farm", "/api/farm?ids=rm:x:t1:m", "/api/items", "/api/people", "/api/schedule", "/api/schedule?league=lpl", "/api/status", "/api/chat", "/healthz"]
 
 
 class SmokeTest(unittest.TestCase):
@@ -69,6 +69,23 @@ class SmokeTest(unittest.TestCase):
         self.assertIn('class="pv5"', body)
         code, _ = self.get(f"/lck/predict?season={y}")
         self.assertIn(code, (200, 301, 302, 303))
+
+    def test_predict_is_off(self):
+        # 행선지 맞히기는 잠시 쉼: 메뉴에 없고, 예전 주소는 팀별로, 투표 API는 404. 켜면 다시 보임
+        from unittest import mock
+        from tracker.config import FEATURES
+        from tracker.web import views
+        self.assertFalse(FEATURES["predict"])
+        code, body = self.get("/lck/summary")
+        self.assertNotIn("행선지 맞히기", body)
+        self.assertNotIn('href="/lck/predict"', body)
+        code, body = self.get("/lck/predict")
+        self.assertEqual(code, 200)
+        self.assertIn('class="sgrid"', body)                                  # 팀별 화면으로 옮겨 감
+        self.assertEqual(self.get("/api/votes")[0], 404)
+        with mock.patch.dict(FEATURES, {"predict": True}):
+            self.assertIn("행선지 맞히기", views.stove_toggle("lck", "summary"))
+            self.assertEqual(self.get("/api/votes")[0], 200)
 
     def test_apis(self):
         for p in APIS:

@@ -147,6 +147,7 @@ async function memory(p) {
 
 async function vote(p) {
   await p.goto(B + '/lck/predict');
+  if (!p.url().includes('/predict')) return;                    // 행선지 맞히기가 꺼져 있으면(config.FEATURES) 팀별로 옮겨 감
   const pick = await p.$('.vrow .vpick >> visible=true');
   if (!pick) return;
   await click(p, pick, '행선지 [고르기]');

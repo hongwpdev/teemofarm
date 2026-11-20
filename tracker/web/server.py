@@ -12,7 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .. import archive, champs, chat, diag, farm, feed, jobs, maint, matchinfo, player_extra, riot, schedule, share, teamlogos, vote
 from ..cargo import RATE_MSG, is_rate_limit
-from ..config import DEFAULT_LEAGUE, FA_INTERVAL, KST, LEAGUES, NEWS_INTERVAL, PORT, WIKI_INTERVAL, log
+from ..config import DEFAULT_LEAGUE, FA_INTERVAL, FEATURES, KST, LEAGUES, NEWS_INTERVAL, PORT, WIKI_INTERVAL, log
 from ..core import db, init_db
 from ..fa import player_info
 from ..logos import TEAM_LOGOS
@@ -173,6 +173,8 @@ class Handler(BaseHTTPRequestHandler):
             ids = [x for x in (one("ids") or "").split(",") if x][:200]
             return self._send(200, json.dumps(farm.board(ids, one("cid")), ensure_ascii=False).encode(), "application/json; charset=utf-8",
                               cache="no-store")
+        if u.path == "/api/votes" and not FEATURES["predict"]:
+            return self._send(404, b'{"ok":false}', "application/json; charset=utf-8")
         if u.path == "/api/votes":                         # 행선지 투표 현황 + 내가 고른 것
             body = json.dumps({"tally": vote.tally(), "mine": vote.mine(one("cid"))}, ensure_ascii=False).encode()
             return self._send(200, body, "application/json; charset=utf-8", cache="no-store")
@@ -237,6 +239,8 @@ class Handler(BaseHTTPRequestHandler):
             elif sec == "summary":
                 page = views.render_summary(league)
             elif sec == "predict":
+                if not FEATURES["predict"]:               # 잠시 쉬는 화면: 예전 주소로 오면 팀별로
+                    return self._redirect(f"/{league}/summary")
                 page = views.render_predict(league)
             elif sec == "contracts":
                 page = views.render_contracts(league)
@@ -279,6 +283,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200 if not err else 400, json.dumps(body, ensure_ascii=False).encode(), "application/json; charset=utf-8")
             except Exception as e:  # noqa: BLE001
                 return self._send(400, json.dumps({"ok": False, "msg": str(e)[:80]}, ensure_ascii=False).encode(), "application/json; charset=utf-8")
+        if u.path == "/api/vote" and not FEATURES["predict"]:
+            return self._send(404, json.dumps({"ok": False, "msg": "지금은 쉬는 기능이에요"}, ensure_ascii=False).encode(), "application/json; charset=utf-8")
         if u.path == "/api/vote":
             try:
                 n = int(self.headers.get("Content-Length") or 0)

@@ -21,6 +21,10 @@ REQUEST_GAP = float(os.getenv("REQUEST_GAP_SEC", "1.5"))     # 요청 사이 쉬
 MANUAL_GAP = float(os.getenv("MANUAL_GAP_SEC", "0.5"))       # [조회] 때는 빨리
 MANUAL_COOLDOWN = int(os.getenv("MANUAL_COOLDOWN_SEC", "120"))  # 소식 [조회] 재실행 최소 간격(전체 사용자 공통)
 FA_COOLDOWN = int(os.getenv("FA_COOLDOWN_SEC", "30"))        # FA·로스터 [조회] 재실행 최소 간격
+# 잠시 쉬는 화면(코드는 그대로 두고 메뉴·주소만 숨김). 다시 켜려면 여기서 True 또는 환경 변수 FEATURE_PREDICT=1
+FEATURES = {
+    "predict": os.getenv("FEATURE_PREDICT", "0") == "1",     # 스토브리그 > 행선지 맞히기(투표 + 소식통 성적표)
+}
 AUTO_MINUTES = int(os.getenv("AUTO_MINUTES", "5"))           # 자동 조회 간격
 CARGO_GAP = float(os.getenv("CARGO_GAP_SEC", "2"))           # 리그피디아 Cargo 요청 사이 최소 간격(모든 스레드 공통)
 PROFILE_MAX_AGE = int(os.getenv("PROFILE_MAX_AGE_SEC", str(24 * 3600)))  # 프로필(커리어)은 하루에 한 번만 새로 받음(이적은 FA 목록으로 바로 보임)
