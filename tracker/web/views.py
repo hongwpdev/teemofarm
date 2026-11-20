@@ -169,7 +169,8 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
     # 스토브리그 기간엔 '스토브리그'가, 시즌 중엔 '시즌'이 소식 바로 다음. 탭의 data-sec은 그 묶음의 첫 화면
     news_t = ("news", "", "소식", ("news",))
     stove_t = ("fa", "/fa", "스토브리그", ("fa", "summary", "predict", "builder", "stove"))
-    season_t = ("schedule", "/schedule", "시즌", ("schedule", "results"))
+    # '시즌' 메뉴: 그 해 앞으로 경기가 있으면 일정, 끝난 경기만 있으면 결과·순위로 바로
+    season_t = ("schedule", season_entry(league, season, today) if cur.get("wiki") else "/schedule", "시즌", ("schedule", "results"))
     team_t = ("roster", "/roster", "팀", ("roster", "contracts", "teams"))
     now_y = current_season(today)
     pre = bool(season) and stove and season == now_y          # 개막 전 다음 시즌 미리 보기(스토브리그 기간의 '2027 시즌 예정')
@@ -748,7 +749,7 @@ def _tf_done_row(it) -> str:
                '<span class="tf-act tf-verdict tf-v-major">민심 적중</span>' if w / n >= .5 else
                '<span class="tf-act tf-verdict tf-v-upset">역배 대이변!</span>' if w / n < .3 else
                '<span class="tf-act tf-verdict tf-v-minor">소수 적중</span>')
-    return (f'<li class="tf-res" data-item="{esc(it["id"])}">{farm_art.plot("shroom", 40)}<div class="tf-q">{_tf_title(it)}'
+    return (f'<li class="tf-res{" tf-m" if it["kind"] == "match" else ""}" data-item="{esc(it["id"])}">{farm_art.plot("shroom", 40)}<div class="tf-q">{_tf_title(it)}'
             f'<span class="tf-src">결과 {out} · {day}</span></div>{_tf_tug(it, True)}{verdict}</li>')
 
 
@@ -1447,6 +1448,60 @@ def _sch_state(m, now) -> str:
     return "up"
 
 
+def view_year(league: str, pick, today) -> str:
+    """시즌 화면이 보여 줄 해 = 위 시즌 고르기에 보이는 해(제목·데이터 모두 이 해만).
+    고른 시즌이 있으면 그 해, 없으면 '지금' 시즌: LCK는 스토브리그 동안 방금 끝난 시즌(2026년 11월 → 2026),
+    그 밖엔 지금 시즌. 시즌 고르기가 없는 리그는 일정 데이터의 시즌.
+    (수집기의 '11월부터 다음 해' 계산 archive.current_season은 화면 제목·거르기에 바로 쓰지 않음)"""
+    if pick:
+        return str(pick)
+    cs = current_season(today)
+    if LEAGUES[league]["enabled"]:
+        return str(cs - 1 if stove_phase(today) else cs)
+    return str(schedule.get(league).get("season") or cs)
+
+
+def season_entry(league: str, pick, today) -> str:
+    """'시즌' 메뉴를 누르면 열 화면: 그 해 앞으로 경기가 있으면 '일정', 없고 끝난 경기만 있으면 '결과·순위', 둘 다 없으면 '일정'."""
+    year, now = view_year(league, pick, today), datetime.now(timezone.utc)
+    states = {_sch_state(m, now) for m in schedule.get(league).get("matches") or [] if _m_year(m) == year and _sch_at(m)}
+    return "/results" if states and not states & {"up", "live"} else "/schedule"
+
+
+def _results_link(league: str, year: int, today) -> str:
+    """그 해 결과·순위 주소(시즌 고르기의 '지금' 시즌이면 season을 안 붙임)."""
+    if not LEAGUES[league]["enabled"] or str(year) == view_year(league, None, today):
+        return f"/{league}/results"
+    return f"/{league}/results?season={year}"
+
+
+def _has_results(league: str, year: int, d) -> bool:
+    now = datetime.now(timezone.utc)
+    return (any(_m_year(m) == str(year) and _sch_state(m, now) == "done" for m in d.get("matches") or [] if _sch_at(m))
+            or (LEAGUES[league]["enabled"] and year in archive_years()))
+
+
+def season_state(league: str, year: str, done: bool, d, today, tours: bool) -> str:
+    """앞으로 경기가 없을 때 하나로 합친 안내 카드: 끝난 시즌이면 '결과·순위 보기', 개막 전이면 지난 시즌 결과·순위."""
+    lg_name, cs = LEAGUES[league]["name"], current_season(today)
+    if done:
+        msg = f"{year} 시즌 경기가 모두 종료됐어요."
+        btn = f'<a class="btn st-go" href="{esc(_results_link(league, int(year), today))}">결과·순위 보기 →</a>'
+    else:
+        msg = (f"{year} {lg_name} {'경기 ' if tours else ''}일정이 아직 리그피디아에 올라오지 않았어요. 올라오면 바로 보여요.")
+        prev = int(year) - 1
+        btn = (f'<a class="btn st-go" href="{esc(_results_link(league, prev, today))}">{prev} 시즌 결과·순위 보기 →</a>'
+               if _has_results(league, prev, d) else "")
+    # 스토브리그 동안 '지금(2026)'을 보는데 다음 시즌(2027) 경기가 벌써 올라와 있으면 그쪽으로 가는 길도
+    nxt = ""
+    if done and LEAGUES[league]["enabled"] and stove_phase(today) and year == str(cs - 1):
+        now = datetime.now(timezone.utc)
+        if any(_m_year(m) == str(cs) and _sch_state(m, now) != "done" for m in d.get("matches") or [] if _sch_at(m)):
+            nxt = f'<a class="st-next" href="/{league}/schedule?season={cs}">{cs} 시즌 일정 보기 →</a>'
+    return (f'<section class="card sblock st-card"><p class="st-msg">{esc(msg)}</p>'
+            f'{f"<div class=st-acts>{btn}{nxt}</div>" if btn or nxt else ""}</section>')
+
+
 def match_row(m, now, T, lg_name) -> str:
     """경기 한 줄: 시간 · 팀1 · 점수(또는 VS) · 팀2 · 대회·라운드. 끝난 경기 점수는 '스포 방지'면 흐리게."""
     at = _sch_at(m).astimezone(KST)
@@ -1539,26 +1594,63 @@ def _m_year(m) -> str:
     return _page_year(m.get("page", ""))
 
 
-def tours_card(d, year: str, lg_name: str, today) -> str:
-    """그 시즌 대회 일정(리그피디아 대회 목록): 'LCK 컵 · 1.14 ~ 3.1 · 진행 중'."""
+def _with_lg(name: str, lg_name: str) -> str:
+    """'플레이오프' → 'LCK 플레이오프', 'LCK 컵'은 그대로('LCK LCK 컵'이 되지 않게)."""
+    return name if name.startswith(lg_name) else f"{lg_name} {name}"
+
+
+def tours_card(d, year: str, lg_name: str, today, league: str = "") -> str:
+    """그 시즌 대회 일정(리그피디아 대회 목록)을 세로 타임라인으로: 점 · 대회 이름(끝난 대회는 결승 우승팀) · 날짜 · 상태 배지.
+    큰 무대(플레이오프·MSI 선발전 같은 단판 승부 대회)는 이름을 한 단계 밝게. 우승팀은 '스포 방지'면 흐리게."""
     tours = [t for t in d.get("tours") or [] if f"/{year} Season/" in t.get("page", "")]
     if not tours:
         return ""
     iso = today.isoformat()
+    T = SchTeams(d)
 
     def md(x):
-        return f"{int(x[5:7])}.{int(x[8:10])}" if len(x or "") >= 10 else "미정"
+        return f"{x[5:7]}.{x[8:10]}" if len(x or "") >= 10 else "미정"
 
+    def champ(page):
+        fin = [m for m in d.get("matches") or [] if m.get("page") == page and m.get("tab") in ("Finals", "Final") and m.get("win") in ("1", "2")]
+        if not fin:
+            return ""
+        m = fin[-1]
+        k, n = (m["k1"], m["t1"]) if m["win"] == "1" else (m["k2"], m["t2"])
+        return f'<small class="twin" title="스포 방지 중이면 눌러서 보기">{T.logo(k, n)}{esc(T.short(k, n))} 우승</small>'
+
+    now = datetime.now(timezone.utc)
+    played = {m.get("page") for m in d.get("matches") or [] if _sch_at(m) and _sch_state(m, now) == "done"}
     lis = ""
     for t in tours:
         a, b = t.get("start") or "", t.get("end") or ""
-        stt = ("done", "끝") if b and b < iso else ("now", "진행 중") if a and a <= iso else ("up", "예정")
-        lis += (f'<li class="{stt[0]}"><b>{esc(tour_ko(t["page"], lg_name))}</b>'
-                f'<time>{md(a)} ~ {md(b)}</time><span class="tst">{stt[1]}</span></li>')
+        if b and b < iso:
+            cls, badge = "done", "종료"
+        elif a and a <= iso:
+            cls, badge = "now", "● 진행 중"
+        else:
+            cls = "up"
+            try:
+                left = (datetime.strptime(a, "%Y-%m-%d").date() - today).days
+                badge = f"D-{left}" if left > 0 else "예정"
+            except ValueError:
+                badge = "예정"
+        major = t.get("playoff") and "Play-In" not in t["page"]
+        inner = (f'<i class="tdot" aria-hidden="true"></i>'
+                 f'<span class="tnm"><b>{esc(tour_ko(t["page"], lg_name))}</b>{champ(t["page"]) if cls == "done" else ""}</span>'
+                 f'<time>{md(a)} ~ {md(b)}</time><span class="tst">{badge}</span>')
+        # 끝난 경기가 있는 대회는 눌러서 '결과·순위'의 그 대회 경기로(목차처럼)
+        if league and t["page"] in played:
+            link = _results_link(league, int(year), today)
+            link += ("&" if "?" in link else "?") + "stage=" + urllib.parse.quote(t["page"].split("Season/", 1)[-1])
+            inner = f'<a class="trow" href="{esc(link)}" title="이 대회 결과·순위 보기">{inner}<i class="tgo" aria-hidden="true">›</i></a>'
+        else:
+            inner = f'<div class="trow">{inner}<i class="tgo" aria-hidden="true"></i></div>'
+        lis += f'<li class="{cls}{" major" if major else ""}">{inner}</li>'
     return f'<section class="card tours"><h3>{esc(year)} {esc(lg_name)} 대회 일정</h3><ul>{lis}</ul></section>'
 
 
-def render_schedule(league: str, pick=None, mode: str = "plan") -> str:
+def render_schedule(league: str, pick=None, mode: str = "plan", stage: str = "") -> str:
     """일정(mode='plan'): 고른 리그의 앞으로 일정 — 스토브리그 주요 일정(LCK), 대회 일정, 지금 경기 중·다가오는 경기.
     결과(mode='results'): 끝난 경기·우승·순위·경기 상세. 고른 시즌에 아직 결과가 없으면(비시즌) 가장 최근 시즌 결과.
     pick: 시즌 선택에서 고른 지난 시즌(LCK)."""
@@ -1582,10 +1674,12 @@ def render_schedule(league: str, pick=None, mode: str = "plan") -> str:
                else "리그피디아에서 일정·결과를 받아 오는 중이에요(서버를 켠 뒤 1~2분).<br>잠시 뒤 새로고침해 주세요.")
         return page(f'<div class="card soon"><h2>일정·결과</h2><p>{msg}</p></div>')
 
+    year = view_year(league, pick, today)            # 위 시즌 고르기 = 제목 = 거르기(이 해 경기만)
     ms = [m for m in d.get("matches") or [] if _sch_at(m)]
-    live = [m for m in ms if _sch_state(m, now) == "live"]
-    up = [m for m in ms if _sch_state(m, now) == "up"]
-    done = [m for m in ms if _sch_state(m, now) == "done"]
+    mine = [m for m in ms if _m_year(m) == year]
+    live = [m for m in mine if _sch_state(m, now) == "live"]
+    up = [m for m in mine if _sch_state(m, now) == "up"]
+    done = [m for m in (mine if has_pick else ms) if _sch_state(m, now) == "done"]
 
     # 팀 탭(화면 안에서 거름. '내 팀'은 별 표시)
     st = d.get("standings") or {}
@@ -1611,49 +1705,53 @@ def render_schedule(league: str, pick=None, mode: str = "plan") -> str:
 
     if mode != "results":
         # ── 일정 ──
-        year = str(pick or cs)
-        stove = ""                                   # 스토브리그 일정은 '스토브리그 > 일정'으로 옮김
-        tours = tours_card(d, year, lg_name, today)
-        if not tours:
-            tours = (f'<section class="card tours"><h3>{year} {esc(lg_name)} 대회 일정</h3>'
-                     f'<p class="hint">아직 리그피디아에 올라오지 않았어요. 올라오면 여기에 바로 보여요.</p></section>')
+        tours = tours_card(d, year, lg_name, today, league)
         blocks = ""
-        if not pick or pick == cs:                    # 지금 시즌이거나 개막 전 다음 시즌(미리 보기)
-            if live:
-                blocks += f'<section class="card sblock live-b"><h3><i class="live-dot" aria-hidden="true"></i>지금 경기 중</h3>{match_days(live, now, T, lg_name)}</section>'
-            if up:
-                first_days = sorted({_sch_at(m).astimezone(KST).date() for m in up})
-                cut = first_days[min(len(first_days), 5) - 1]
-                soon = [m for m in up if _sch_at(m).astimezone(KST).date() <= cut]
-                later = [m for m in up if _sch_at(m).astimezone(KST).date() > cut]
-                more = (f'<details class="smore"><summary>이후 일정 <b class="n">{len(later)}</b>경기 더 보기</summary>{match_days(later, now, T, lg_name)}</details>'
-                        if later else "")
-                blocks += f'<section class="card sblock"><h3>다가오는 경기</h3>{match_days(soon, now, T, lg_name)}{more}</section>'
-        go = f'<p class="note"><a href="/{league}/results{f"?season={pick}" if pick else ""}">지난 경기 결과·순위는 \'결과\'에서 볼 수 있어요 →</a></p>'
+        if live:
+            blocks += f'<section class="card sblock live-b"><h3><i class="live-dot" aria-hidden="true"></i>지금 경기 중</h3>{match_days(live, now, T, lg_name)}</section>'
+        if up:
+            first_days = sorted({_sch_at(m).astimezone(KST).date() for m in up})
+            cut = first_days[min(len(first_days), 5) - 1]
+            soon = [m for m in up if _sch_at(m).astimezone(KST).date() <= cut]
+            later = [m for m in up if _sch_at(m).astimezone(KST).date() > cut]
+            more = (f'<details class="smore"><summary>이후 일정 <b class="n">{len(later)}</b>경기 더 보기</summary>{match_days(later, now, T, lg_name)}</details>'
+                    if later else "")
+            blocks += f'<section class="card sblock"><h3>다가오는 경기</h3>{match_days(soon, now, T, lg_name)}{more}</section>'
         if blocks:
-            main = f'{stove}{tours}<div class="sch-grid one"><div>{tabs_html}{blocks}{empty}</div></div>{go}{POPUP}{foot}'
+            go = f'<p class="note"><a href="{esc(_results_link(league, int(year), today))}">지난 경기는 \'결과·순위\'에서 볼 수 있어요 →</a></p>'
+            main = f'{tours}<div class="sch-grid one"><div>{tabs_html}{blocks}{empty}</div></div>{go}{POPUP}{foot}'
             return page(main, ("player.js", "schedule.js"))
-        none = ("" if pick and pick != cs else '<section class="card sblock"><h3>다가오는 경기</h3><p class="hint">예정된 경기가 아직 없어요.</p></section>')
-        return page(f'{stove}{tours}{none}{go}{foot}')
+        # 앞으로 경기가 없음: 빈 카드 여러 장 대신 안내 카드 하나(그 안의 버튼 하나로 다음 화면)
+        return page(f'{tours}{season_state(league, year, bool(done), d, today, bool(tours))}{foot}')
 
     # ── 결과 ──
     years = sorted({_m_year(m) for m in done if _m_year(m)}, reverse=True)
-    show = str(pick) if pick else (years[0] if years else str(cs))
+    # 시즌 고르기가 있는 리그(LCK)는 고른(또는 '지금') 해 그대로. 없는 리그는 결과가 있는 가장 최근 시즌
+    show = year if has_pick else (years[0] if years else year)
     done_s = [m for m in done if _m_year(m) == show]
     season_over = not any(_m_year(m) == show for m in up + live)
+    # 대회 일정의 한 대회를 눌러 들어온 경우(?stage=Cup): 그 대회 경기만
+    st_page = next((t["page"] for t in d.get("tours") or [] if f"/{show} Season/" in t.get("page", "")
+                    and stage and t["page"].split("Season/", 1)[-1] == stage), "")
+    if st_page:
+        done_s = [m for m in done_s if m["page"] == st_page]
+        season_over = not any(m["page"] == st_page for m in up + live)
     champ = ""
-    fin = [m for m in done_s if m["playoff"] and m["tab"] in ("Finals", "Final") and m["win"] in ("1", "2")]
+    fin = [m for m in done_s if (m["playoff"] or st_page) and m["tab"] in ("Finals", "Final") and m["win"] in ("1", "2")]
     if fin and season_over:
         m = fin[-1]
         a, b = ((m["k1"], m["t1"], m["s1"]), (m["k2"], m["t2"], m["s2"]))
         win, lose = (a, b) if m["win"] == "1" else (b, a)
-        champ = (f'<section class="card champ sch-champ"><div><small>{esc(lg_name)} {esc(tour_ko(m["page"], lg_name))} 우승 · {show}</small>'
+        champ = (f'<section class="card champ sch-champ"><div><small>{esc(_with_lg(tour_ko(m["page"], lg_name), lg_name))} 우승 · {show}</small>'
                  f'<b>{T.tname(win[0], win[1])}</b><p class="sc-hide">결승 {esc(win[2])}:{esc(lose[2])} · 상대 {T.tname(lose[0], lose[1])} · '
                  f'{_sch_at(m).astimezone(KST):%Y.%m.%d}</p></div></section>')
     why = ""
-    if not pick and show != str(cs):
-        why = f'<small>{cs} 시즌은 아직 경기 전이라 가장 최근 시즌 결과를 보여 줘요</small>'
+    if not has_pick and show != year:
+        why = f'<small>{year} 시즌은 아직 경기 전이라 가장 최근 시즌 결과를 보여 줘요</small>'
     head = f'<h2 class="res-title">{show} 시즌 결과{why}</h2>'
+    if st_page:
+        head = (f'<h2 class="res-title">{show} 시즌 결과 · {esc(tour_ko(st_page, lg_name))}'
+                f'<a class="res-all" href="{esc(_results_link(league, int(show), today))}">전체 결과 보기</a></h2>')
     blocks = ""
     if done_s:
         last_days = sorted({_sch_at(m).astimezone(KST).date() for m in done_s}, reverse=True)
@@ -1665,9 +1763,13 @@ def render_schedule(league: str, pick=None, mode: str = "plan") -> str:
         blocks = (f'<section class="card sblock"><h3>{"마지막 결과" if season_over else "최근 결과"}'
                   f'<small>경기를 누르면 밴픽·선수 기록이 보여요</small></h3>{match_days(recent, now, T, lg_name, True)}{more}</section>')
     else:
-        blocks = '<div class="card soon"><h2>아직 끝난 경기가 없어요</h2><p>경기가 끝나면 여기에 결과가 쌓여요.</p></div>'
+        prev = int(show) - 1
+        btn = (f'<div class="st-acts"><a class="btn st-go" href="{esc(_results_link(league, prev, today))}">{prev} 시즌 결과·순위 보기 →</a></div>'
+               if _has_results(league, prev, d) else "")
+        blocks = (f'<section class="card sblock st-card"><p class="st-msg">아직 {esc(show)} 시즌에 끝난 경기가 없어요. '
+                  f'경기가 끝나면 여기에 결과가 쌓여요.</p>{btn}</section>')
     stand = ""
-    if st.get("groups") and _page_year(st.get("page") or "") == show:
+    if st.get("groups") and _page_year(st.get("page") or "") == show and (not st_page or st.get("page") == st_page):
         tables = ""
         for g in st["groups"]:
             trs = "".join(
@@ -1676,7 +1778,7 @@ def render_schedule(league: str, pick=None, mode: str = "plan") -> str:
             gh = f'<h4>{esc(g["name"])}</h4>' if g["name"] else ""
             tables += (f'{gh}'
                        f'<table><thead><tr><th>순위</th><th>팀</th><th>매치</th><th>세트</th></tr></thead><tbody>{trs}</tbody></table>')
-        stand = (f'<section class="card stand sch-stand"><h3>{esc(lg_name)} {esc(tour_ko(st.get("page") or st["name"], lg_name))} 순위 <small>{show}</small></h3>{tables}'
+        stand = (f'<section class="card stand sch-stand"><h3>{esc(_with_lg(tour_ko(st.get("page") or st["name"], lg_name), lg_name))} 순위 <small>{show}</small></h3>{tables}'
                  f'<p class="src">리그피디아 순위표 기준{" · 그룹은 서로 맞붙은 팀끼리 묶어 표시" if len(st["groups"]) > 1 else ""}</p></section>')
     main = f"""{head}{champ}
 <div class="sch-grid"><div>

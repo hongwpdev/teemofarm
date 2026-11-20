@@ -141,7 +141,7 @@
       if (mine.status === "won") { ground = plot("gold", 40); me = `<span class="tf-me-badge tf-me-won">내 선택: ${side} · ${mine.harvested ? `+${mine.isUnderdog ? 2 : 1}점 수확 완료` : "수확 대기(진행 중 탭)"}</span>`; }
       else { ground = plot("burnt", 40); me = `<span class="tf-me-badge tf-me-lost">내 선택: ${side} · 펑! 독버섯</span>`; }
     }
-    return `<li class="tf-res" data-item="${esc(it.id)}">${ground}<div class="tf-q">${title(it)}<span class="tf-src">결과 ${outcome(it)} · ${when(it.resolved_at)}</span>${me}</div>${tug(it, true)}${verdict(it)}</li>`;
+    return `<li class="tf-res${it.kind === "match" ? " tf-m" : ""}" data-item="${esc(it.id)}">${ground}<div class="tf-q">${title(it)}<span class="tf-src">결과 ${outcome(it)} · ${when(it.resolved_at)}</span>${me}</div>${tug(it, true)}${verdict(it)}</li>`;
   }
 
   function card() {
@@ -241,6 +241,8 @@
   }
 
   box.addEventListener("click", e => {
+    const sp = e.target.closest("li.tf-m");                              // '스포 방지'로 가린 경기 결과: 누르면 보임
+    if (sp && document.documentElement.dataset.spoiler === "on" && !sp.classList.contains("lit")) { sp.classList.add("lit"); return; }
     const tb = e.target.closest("[data-tab]");
     if (tb) { tab = tb.dataset.tab; paint(); return; }
     const pb = e.target.closest("[data-plant]");

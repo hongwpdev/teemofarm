@@ -203,7 +203,7 @@ class Handler(BaseHTTPRequestHandler):
                 page = views.render_archive(league, "roster", pre - 1, one("t"), inline=True)
             elif season and season == pre and LEAGUES[league]["enabled"]:
                 if sec in ("schedule", "results"):
-                    page = views.render_schedule(league, season, "results" if sec == "results" else "plan")
+                    page = views.render_schedule(league, season, "results" if sec == "results" else "plan", one("stage"))
                 elif sec == "roster":
                     page = views.render_roster(league, season)
                 elif sec == "":
@@ -211,12 +211,12 @@ class Handler(BaseHTTPRequestHandler):
                 else:                                     # 스토브리그 메뉴 등은 지금 시즌 화면으로
                     return self._redirect(f"/{league}/{sec}")
             elif not LEAGUES[league]["enabled"]:          # 아직 켜지지 않은 리그: 일정·결과만, 나머지는 '곧 추가'
-                page = (views.render_schedule(league, None, "results" if sec == "results" else "plan")
+                page = (views.render_schedule(league, None, "results" if sec == "results" else "plan", one("stage"))
                         if sec in ("schedule", "results") and LEAGUES[league].get("wiki") else views.render_soon(league))
             elif season and sec in ("schedule", "results") and any(
                     f"/{season} Season/" in (m.get("page") or "") for m in schedule.get(league).get("matches") or []):
                 # 그 시즌 경기가 아직 일정 데이터에 있음(지난 시즌 + 지금 시즌): 일정·결과·경기 상세 그대로
-                page = views.render_schedule(league, season, "results" if sec == "results" else "plan")
+                page = views.render_schedule(league, season, "results" if sec == "results" else "plan", one("stage"))
             elif season and sec in ("", "roster", "fa", "schedule", "results", "stove"):
                 page = views.render_archive(league, "fa" if sec == "stove" else sec, season, one("t"))
             elif sec == "":
@@ -229,7 +229,7 @@ class Handler(BaseHTTPRequestHandler):
             elif sec == "schedule":
                 page = views.render_schedule(league, None, "plan")
             elif sec == "results":
-                page = views.render_schedule(league, None, "results")
+                page = views.render_schedule(league, None, "results", one("stage"))
             elif sec == "stove":                         # 스토브리그 일정은 '이적 시장' 맨 위 한 줄로 옮김
                 return self._redirect(f"/{league}/fa")
             elif sec == "teams":

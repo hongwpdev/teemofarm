@@ -283,3 +283,8 @@
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) d.close();
   }));
 })();
+
+// 시즌 대회 일정의 우승팀: '스포 방지'면 흐리게 두었다가 누르면 보여 줌
+(function () {
+  document.addEventListener("click", e => { const w = e.target.closest(".twin"); if (w) w.classList.add("lit"); });
+})();

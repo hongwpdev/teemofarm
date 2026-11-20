@@ -1008,15 +1008,35 @@ a.tbtn .lb{margin-left:.3rem}
 /* 일정·결과 나누기: 대회 일정, 결과 제목 */
 .tours{padding:1.4rem 1.6rem;margin-bottom:1.6rem}
 .tours h3{font-size:1.6rem;color:var(--t1);margin-bottom:.8rem}
-.tours ul{list-style:none;display:grid;gap:0}
-.tours li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:1.2rem;padding:.9rem 0;border-top:1px solid var(--line);font-size:1.4rem}
+.tours ul{list-style:none;display:grid;gap:0;position:relative}
+/* 세로 타임라인: 점을 잇는 선 */
+.tours ul:before{content:"";position:absolute;left:.4rem;top:1.8rem;bottom:1.8rem;width:2px;background:var(--line)}
+.tours li{border-top:1px solid var(--line);font-size:1.4rem}
+.trow{display:grid;grid-template-columns:1rem minmax(0,1fr) auto auto .8rem;align-items:center;gap:1.2rem;padding:1rem 0;color:inherit;text-decoration:none}
+a.trow{border-radius:.6rem}
+a.trow:hover{background:var(--bg-accent,rgba(127,127,127,.08))}
+a.trow:focus-visible{outline:2px solid var(--primary-text);outline-offset:2px}
+.tgo{font-style:normal;font-size:1.6rem;font-weight:700;color:var(--t8);line-height:1}
+a.trow:hover .tgo{color:var(--primary-text)}
 .tours li:first-child{border-top:0}
-.tours li b{color:var(--t1);font-weight:600}
-.tours li time{color:var(--t5);font-variant-numeric:tabular-nums}
-.tours .tst{font-size:1.15rem;font-weight:700;color:var(--t8);min-width:4.4rem;text-align:right}
-.tours li.now .tst{color:var(--red)}
-.tours li.up .tst{color:var(--primary-text)}
-.tours li.done b,.tours li.done time{color:var(--t8)}
+.tdot{position:relative;z-index:1;width:1rem;height:1rem;border-radius:50%;background:var(--t8);box-shadow:0 0 0 3px var(--card)}
+.tnm{display:flex;flex-direction:column;gap:.2rem;min-width:0}
+.tours li b{color:var(--t5);font-weight:600}
+.tours li.major b,.tours li.now b{color:var(--t1);font-weight:800}
+.twin{display:inline-flex;align-items:center;gap:.4rem;font-size:1.2rem;font-weight:700;color:var(--t5)}
+.twin .logo{width:1.6rem;height:1.6rem}
+.tours li time{color:var(--t8);font-size:1.3rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tours li.now time,.tours li.up time{color:var(--t5)}
+/* 상태 배지 */
+.tours .tst{justify-self:end;padding:.2rem .8rem;border-radius:99px;font-size:1.1rem;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;
+ color:var(--t8);background:color-mix(in srgb,var(--t8) 12%,transparent);border:1px solid color-mix(in srgb,var(--t8) 25%,transparent)}
+.tours li.now{background:var(--tf-emerald-bg);margin:0 -1.6rem;padding:0 1.6rem}
+.tours li.now .tdot{background:var(--tf-emerald);box-shadow:0 0 0 3px var(--card),0 0 0 6px color-mix(in srgb,var(--tf-emerald) 30%,transparent)}
+.tours li.now .tst{color:var(--tf-emerald);background:color-mix(in srgb,var(--tf-emerald) 14%,transparent);border-color:color-mix(in srgb,var(--tf-emerald) 40%,transparent)}
+.tours li.up .tdot{background:var(--card);border:2px solid var(--primary-text)}
+.tours li.up .tst{color:var(--primary-text);background:color-mix(in srgb,var(--primary-text) 12%,transparent);border-color:color-mix(in srgb,var(--primary-text) 35%,transparent)}
+.tours li.major.done .tdot{background:var(--t5)}
+[data-spoiler="on"] .twin:not(.lit){filter:blur(6px);cursor:pointer}
 .tours .hint{font-size:1.35rem;color:var(--t5)}
 .sblock .hint{padding:0 1.6rem 1.4rem;font-size:1.35rem;color:var(--t5)}
 .res-title{display:flex;align-items:baseline;flex-wrap:wrap;gap:.4rem 1rem;margin:0 0 1.2rem;font-size:2rem;color:var(--t1)}
@@ -1334,3 +1354,13 @@ li.tf-lost .tf-pst{color:var(--tf-purple);font-weight:800}
 .tf-card li.tf-flash{animation:tfFlash 1.1s ease-out 2}
 /* 격전지(10명 이상이 45~55%로 갈린 판, 심은 뒤·결과 내역에서만) */
 .tf-hot{padding:.05rem .4rem;border-radius:.3rem;background:var(--tf-amber-bg);color:var(--tf-amber);font-weight:800;font-size:1.05rem;white-space:nowrap}
+/* 시즌: 앞으로 경기가 없을 때 하나로 합친 안내 카드(끝난 시즌 → 결과·순위 / 개막 전 → 지난 시즌 결과·순위) */
+.st-card{text-align:center;padding:2.4rem 1.6rem}
+.st-msg{margin:0;font-size:1.45rem;line-height:1.6;color:var(--t1)}
+.st-acts{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:.8rem 1.4rem;margin-top:1.4rem}
+.st-go{text-decoration:none;color:var(--primary-text);border-color:var(--primary-text)}
+.st-next{font-size:1.3rem;font-weight:600;color:var(--primary-text);text-decoration:none}
+/* 스포 방지: 독버섯 심기 '결과 내역'의 경기 결과(승리 팀·민심 비율·판정)는 누를 때까지 흐리게 */
+[data-spoiler="on"] li.tf-m:not(.lit) .tf-src,[data-spoiler="on"] li.tf-m:not(.lit) .tf-tug,[data-spoiler="on"] li.tf-m:not(.lit) .tf-verdict,
+[data-spoiler="on"] li.tf-m:not(.lit) .tf-me-badge,[data-spoiler="on"] li.tf-m:not(.lit)>.tf-plot{filter:blur(6px);cursor:pointer}
+.res-all{align-self:center;font-size:1.3rem;font-weight:600;color:var(--primary-text);text-decoration:none;padding:.2rem .9rem;border:1px solid var(--primary-text);border-radius:99px}

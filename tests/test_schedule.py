@@ -106,21 +106,58 @@ class ScheduleTest(unittest.TestCase):
         # 시즌 고르기 표시: 스토브리그 기간엔 방금 끝난 시즌('2026 시즌', 안에 스토브리그 메뉴), 시즌 중엔 그 시즌('2027 시즌')
         shown = str(cs - 1) if views.stove_phase(datetime.now(views.KST).date()) else str(cs)
         pick = lambda page: re.search(r'aria-label="시즌 고르기"><b>(\d+)', page).group(1)   # noqa: E731
-        plan = views.render_schedule("lck")                           # 일정(2027): 대회 일정 안내, 결과로 가는 링크
+        # 규칙 1: 시즌 고르기 = 본문 제목 = 데이터. 규칙 3: 앞으로 경기가 없으면 안내 카드 하나
+        plan = views.render_schedule("lck")
         self.assertEqual(pick(plan), shown)
-        self.assertIn(f"{cs} LCK 대회 일정", plan)
-        self.assertIn('href="/lck/results"', plan)
+        self.assertIn(f"{shown} LCK 대회 일정", plan)
+        self.assertNotIn(f"{cs if shown != str(cs) else cs - 1} LCK 대회 일정", plan)
+        self.assertEqual(plan.count('class="card sblock'), 1)                    # 빈 카드 여러 장 대신 하나
+        if shown == "2026":
+            self.assertIn("2026 시즌 경기가 모두 종료됐어요.", plan)
+            self.assertIn('class="btn st-go" href="/lck/results">결과·순위 보기 →', plan)
+            self.assertIn('href="/lck/results" data-sec="schedule"', plan)   # 규칙 2: 끝난 시즌이면 '시즌' 메뉴가 결과·순위로
+        self.assertNotIn("'결과'에서", plan)                                     # 규칙 4: 용어 '결과·순위'로 통일
         self.assertNotIn('class="mt ', plan)
-        res = views.render_schedule("lck", None, "results")           # 결과(2027): 가장 최근 시즌(2026) 결과
+        res = views.render_schedule("lck", None, "results")
         self.assertEqual(pick(res), shown)
-        self.assertIn("2026 시즌 결과", res)
-        self.assertIn('class="mt done"', res)
+        self.assertIn(f"{shown} 시즌 결과", res)
+        if shown == "2026":
+            self.assertIn('class="mt done"', res)
+        # 개막 전 다음 시즌(경기 0건): '아직 안 올라옴' + 지난 시즌 결과·순위
+        nxt = views.render_schedule("lck", 2027)
+        self.assertIn("2027 LCK 일정이 아직 리그피디아에 올라오지 않았어요. 올라오면 바로 보여요.", nxt)
+        self.assertIn("2026 시즌 결과·순위 보기 →", nxt)
+        self.assertEqual(nxt.count('class="card'), 1 + nxt.count('class="card tours'))   # 대회 일정이 없으면 카드 1장
+        one = views.render_schedule("lck", 2026, "results", "Rounds 3-4")   # 대회 일정에서 한 대회를 눌러 들어옴
+        self.assertIn("2026 시즌 결과 · 정규 3·4라운드", one)
+        self.assertIn("전체 결과 보기", one)
+        self.assertIn('class="mt done"', one)
+        self.assertNotIn("· 엉뚱", views.render_schedule("lck", 2026, "results", "엉뚱"))   # 없는 대회 이름은 그냥 전체
         past = views.render_schedule("lck", 2026, "results")          # 2026을 고름
         self.assertEqual(pick(past), "2026")
         self.assertIn('class="mt done"', past)
         plan26 = views.render_schedule("lck", 2026)                   # 2026 일정: 그 시즌 대회 일정
         self.assertIn("정규 3·4라운드", plan26)
         self.assertEqual(pick(views.render_roster("lck")), shown)   # 다른 탭과 같은 시즌 표시
+
+    def test_tours_card(self):
+        # 대회 일정 타임라인: 상태 배지(종료·진행 중·D-N), 큰 무대 강조, 끝난 대회의 결승 우승팀
+        from datetime import date
+        today = date(2026, 8, 27)
+        d = {"tours": [{"page": "LCK/2026 Season/Cup", "start": "2026-01-14", "end": "2026-03-01", "playoff": False},
+                       {"page": "LCK/2026 Season/Season Play-In", "start": "2026-08-26", "end": "2026-08-28", "playoff": True},
+                       {"page": "LCK/2026 Season/Season Playoffs", "start": "2026-08-29", "end": "2026-09-13", "playoff": True}],
+             "matches": [{**_m("Gen.G", "BNK FEARX", "2026-03-01 08:00:00", "1", "3", "0", page="LCK/2026 Season/Cup", tab="Finals"),
+                          "k1": "geng", "k2": "bfx"}]}
+        html = views.tours_card(d, "2026", "LCK", today)
+        self.assertRegex(html, r'<li class="done">.*?LCK 컵.*?class="twin".*?GEN 우승.*?01\.14 ~ 03\.01.*?종료')
+        self.assertIn('<li class="now"><div class="trow"><i class="tdot"', html)  # 플레이-인은 큰 무대 아님, 끝난 경기 없으면 링크 없음
+        self.assertRegex(html, r'<li class="up major">.*?플레이오프.*?D-2<')
+        self.assertEqual(html.count("우승"), 1)                                # 결승이 없는(아직 안 끝난) 대회엔 우승팀 없음
+        # 끝난 경기가 있는 대회는 눌러서 결과·순위의 그 대회로
+        linked = views.tours_card(d, "2026", "LCK", today, "lck")
+        self.assertRegex(linked, r'<a class="trow" href="/lck/results\?(season=2026&amp;)?stage=Cup"')
+        self.assertEqual(linked.count('class="trow" href'), 1)
 
     def test_render_empty_and_full(self):
         schedule.DATA = {}
