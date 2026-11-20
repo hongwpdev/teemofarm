@@ -15,10 +15,10 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 
-from .classify import _has_aliases, title_has_team
+from .classify import _has_aliases, is_community, title_has_team
 from .config import FA_NAME_BATCH, NEWS_WINDOW, REQUEST_GAP, ROSTER_NAME_BATCH, TEAMS, log
 from .core import db, http_get, norm_title, save, set_status, to_utc_iso
-from .filters import is_lol_news
+from .filters import is_lol_news, lck_topic
 
 NAME_CTX = "(LCK OR 롤 OR LoL OR e스포츠 OR 스토브리그)"   # 선수 본명 검색에 붙이는 말
 NEWS_MIN_GAP = 1.2              # 구글 뉴스 요청 사이 최소 간격(초)
@@ -91,6 +91,8 @@ def fetch_news(query, key, gap=None, keep=None) -> int:
         title = _clean_title(it.findtext("title") or "", outlet)
         # (RSS <description>은 구글 뉴스에선 제목 링크 + 매체 이름뿐이라 보지 않음: '데일리e스포츠'가 붙어 아무 기사나 LoL로 통과됨)
         if not link or not title or not is_lol_news(title) or (keep and not keep(title)):
+            continue
+        if is_community(title, outlet) and not lck_topic(title):      # LCK와 상관없는 커뮤니티 수다는 저장 안 함
             continue
         nt = norm_title(title)
         if (outlet, nt) in seen:                # 같은 검색 결과 안에서 같은 매체·같은 제목은 한 번만

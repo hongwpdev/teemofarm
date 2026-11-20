@@ -194,9 +194,16 @@ async function farm(p, seeded) {
       await h.click(); await p.waitForTimeout(400);
       if (await pts() !== before + 1) bad(`수확했는데 점수가 ${before} → ${await pts()}`);
       if (await p.$('[data-harvest]')) bad('수확한 뒤에도 수확 버튼이 남아 있음');
+      // 스킨 해금 축하: 점수 3으로 처음 왔을 때 정찰부대가 이미 축하됐고, 이번 수확(최고 연속 2)으로 오소리 티모 배너가 떠야 함
+      const un = await p.waitForSelector('#tf-unlock:not([hidden])', { timeout: 2000 }).catch(() => null);
+      const unText = un ? await un.innerText() : '';
+      if (!/오소리 티모 해금/.test(unText)) bad(`수확으로 새 스킨이 열렸는데 해금 배너가 안 뜸 ('${unText.replace(/\s+/g, ' ')}')`);
+      const unl = await p.evaluate(() => JSON.parse(localStorage.getItem('teemofarm_lck_v1')).unlocked || []);
+      if (!unl.includes(2) || !unl.includes(3)) bad(`해금 축하 기록이 이상함: ${JSON.stringify(unl)}`);
       await p.reload(); await p.waitForSelector('#tf[data-ready]', { timeout: 5000 }).catch(() => {}); await p.waitForTimeout(300);
       if (await p.$('[data-harvest]')) bad('다시 들어오니 같은 버섯을 또 수확할 수 있음(중복 수령)');
       if (await pts() !== before + 1) bad(`다시 들어오니 점수가 ${await pts()} (수확 뒤 ${before + 1})`);
+      if (await p.$('#tf-unlock:not([hidden])')) bad('이미 축하한 스킨인데 다시 들어오니 해금 배너가 또 뜸');
       // 수확한 판은 '결과 내역'으로: 모두의 결과 + 내 기록
       await click(p, '#tf [data-tab="done"]', "독버섯 심기 '결과 내역' 탭");
       const mine = await p.$eval('#tf [data-panel="done"] li[data-item="rm:DevShroom:t1:m"]', e => e.innerText).catch(() => '');

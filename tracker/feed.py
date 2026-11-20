@@ -36,7 +36,7 @@ def stove_news(days: int = 7, team: str = "", since: str = ""):
         t = r["title"]
         if since and (r["first_seen"] or "") <= since:
             continue
-        kind = article_kind(t)
+        kind = article_kind(t, "news", r["outlet"] or "")
         if kind not in KINDS or not is_lol_news(t) or not any(w in t for w in MARKS):
             continue
         if "오피셜" not in t and "공식" not in t and any(w in t for w in RUMOR):

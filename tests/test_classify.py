@@ -69,3 +69,20 @@ class CommunityTest(unittest.TestCase):
                      ("[롤드컵] BLG, 젠지 3:1로 꺾고 창단 첫 우승", "news")):
             self.assertEqual(article_kind(t), k, t)
         self.assertTrue(is_stove("[잡담] 롤) 폭스 탑라이너 타나토스 합류", "talk", 2027))   # 스토브리그 보기에는 나올 수 있음
+
+    def test_slang_head_and_outlet(self):
+        from tracker.classify import article_kind
+        # 말머리 없이 '슼피셜)'·'롤)'로 시작하는 글, 매체 이름이 커뮤니티인 글도 커뮤니티
+        for t in ("슼피셜)롤 GENG 서폿 클라우드 합류", "뇌피셜) 페이커 내년에도 T1", "롤) 도란 한화 재계약 오피셜 떴네", "[펌] 오피셜) 기인 영입"):
+            self.assertEqual(article_kind(t), "talk", t)
+        self.assertEqual(article_kind("T1, 오너와 재계약 오피셜", "news", "에펨코리아"), "talk")
+        self.assertEqual(article_kind("[오피셜] T1, 오너와 재계약", "news", "인벤"), "official")     # 인벤 기사(웹진)는 그대로
+        self.assertEqual(article_kind("[오피셜] T1, 오너와 재계약", "news", "OSEN"), "official")
+
+    def test_lck_topic(self):
+        from tracker.filters import lck_topic
+        for t in ("[잡담] 롤) 폭스 탑라이너 타나토스 합류", "[일반] 그럼 카나비는 젠지 디플 lpl", "[수다] 페이커 오늘 방송 봄?",
+                  "[잡담] 한화 바텀 내년에 어떻게 됨", "슼피셜)롤 GENG 서폿 클라우드 합류"):
+            self.assertTrue(lck_topic(t), t)
+        for t in ("[잡담] 롤 패치 너무 별로", "[유머] 오늘 랭크 연패함", "[모집] 칼바람 할 사람?", "[질문] 발로란트 요원 추천좀"):
+            self.assertFalse(lck_topic(t), t)

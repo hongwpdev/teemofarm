@@ -150,7 +150,7 @@ def _guess(people, news, marks=None, allow_stay=True, off=None):
     for r in people:
         best, gone = None, set()
         for n in news:                          # 최신순
-            kind = article_kind(n["title"])
+            kind = article_kind(n["title"], "news", (n["outlet"] if "outlet" in n.keys() else "") or "")
             if kind in ("view", "talk"):        # 전망·분석 기사와 커뮤니티 글은 빼고('[기타] 오피셜 HLE 기인 영입'은 발표가 아님)
                 continue
             nix = called_off_hit(n["title"], r["nick"], r["team_from"])

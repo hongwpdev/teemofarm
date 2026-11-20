@@ -14,7 +14,7 @@ from ..config import (AUTO_MINUTES, DEFAULT_LEAGUE, KST, LEAGUES, NEW_HOURS, SIT
                       TEAMS)
 from ..core import STATUS, STATUS_LOCK, WEEKDAYS, db, kst_day_start_utc, norm_title, parse_day, rel_time
 from ..fa import FA_ROLES, fa_since
-from ..filters import is_lol_news, ko_nicks
+from ..filters import is_lol_news, ko_nicks, lck_topic
 from ..insight import is_spoiler, overseas_tag, search_terms, trust
 from ..archive import archive_years, current_season
 from .. import archive, farm as farmd, schedule, teamlogos
@@ -459,7 +459,9 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
             teams = news_teams(r["title"], teams)       # 팀 표시는 제목 기준
             if team in TEAMS and team != "lck" and team not in teams:
                 continue
-        kind = article_kind(r["title"], r["source"])
+        kind = article_kind(r["title"], r["source"], r["outlet"] or "")
+        if kind == "talk" and not lck_topic(r["title"]):
+            continue                                    # LCK와 상관없는 커뮤니티 수다(예전에 모인 것 포함)는 숨김
         if src == "news" and kind == "talk":            # '뉴스만'은 언론 기사만(커뮤니티 글은 뺌)
             continue
         if hot == 1 and kind != "official":
@@ -1850,25 +1852,30 @@ def _chip(p, cls="", extra="", pos=None):
 
 
 def render_summary(league: str) -> str:
-    """팀마다 이번 겨울 들어온 사람·나간 사람·재계약·미정, 그리고 기사로만 나온 소문(따로)."""
+    """팀마다 이번 겨울 영입·이탈·재계약(리그피디아 확정)·이적설(기사 제목)·미정. 라벨은 모두 명사(화면 용어)."""
     today = datetime.now(KST).date()
     keys = team_keys()
     sm = stv.team_summary(keys)
     rms = rumor_slots()
-    cards = []
+    cards, tot = [], {"in": 0, "stay": 0, "open": 0}
     for k in keys:
         v = sm[k]
         rumor = [x for xs in rms.get(k, {}).values() for x in xs if not x["rm"]["stay"]]
+        # 한 카드 안에서 같은 선수가 두 줄에 나오지 않게: 확정·이적설에 있는 선수는 '미정'에서 뺌
+        seen = {p["page"] for p in v["in"] + v["out"] + v["stay"]} | {x["page"] for x in rumor}
+        open_ = [p for p in v["open"] if p["page"] not in seen]
+        for key, n in (("in", len(v["in"])), ("stay", len(v["stay"])), ("open", len(open_))):
+            tot[key] += n
         lines = []
 
         def line(label, cls, chips):
             if chips:
                 lines.append(f'<div class="sl {cls}"><em>{label}</em><div>{chips}</div></div>')
-        line("들어옴", "in", "".join(_chip(p, "in", f'{team_short(p["from"])}에서' if p.get("from") else "LCK 밖에서") for p in v["in"]))
-        line("나감", "out", "".join(_chip(p, "out", "→ " + (team_short(p["to"]) if p.get("to") else (p.get("to_name") or "LCK 밖"))) for p in v["out"]))
+        line("영입", "in", "".join(_chip(p, "in", f'{team_short(p["from"])}에서' if p.get("from") else "LCK 밖에서") for p in v["in"]))
+        line("이탈", "out", "".join(_chip(p, "out", "→ " + (team_short(p["to"]) if p.get("to") else (p.get("to_name") or "LCK 밖"))) for p in v["out"]))
         line("재계약", "stay", "".join(_chip(p, "stay") for p in v["stay"]))
-        line("소문", "rm", "".join(_chip(x, "rm", f'{x["rm"]["outlet"]}: {x["rm"]["title"]}', x.get("pos")) for x in rumor))
-        line("미정", "open", "".join(_chip(p, "open") for p in v["open"]))
+        line("이적설", "rm", "".join(_chip(x, "rm", f'{x["rm"]["outlet"]}: {x["rm"]["title"]}', x.get("pos")) for x in rumor))
+        line("미정", "open", "".join(_chip(p, "open") for p in open_))
         moved = len(v["in"]) + len(v["out"]) + len(v["stay"])
         d = parse_day(v["updated"]) if v["updated"] else None
         meta = f"확정 {moved}건" + (f" · 마지막 {d.month}/{d.day}" if d else "")
@@ -1876,11 +1883,10 @@ def render_summary(league: str) -> str:
                       f'<article class="scard" id="m-{k}" style="--tc:{team_color(k)}"><header>{team_logo(k, "logo big")}'
                       f'<b>{esc(team_name(k))}</b><small>{meta}</small></header>{"".join(lines) or "<p class=sl-empty>아직 변동이 없어요</p>"}</article>'))
     cards.sort()
-    cnt = fa_counts()
-    stats = (f'<span><b>{cnt.get("move", 0)}</b>이적</span><span><b>{cnt.get("stay", 0)}</b>재계약</span>'
-             f'<span><b>{cnt.get("fa", 0)}</b>미정</span>')
+    stats = (f'<span><b>{tot["in"]}</b>영입</span><span><b>{tot["stay"]}</b>재계약</span>'      # 아래 카드들을 더한 수(카드와 숫자가 맞게)
+             f'<span><b>{tot["open"]}</b>미정</span>')
     main = (f'{stove_toggle(league, "summary")}<div class="stack">'
-            + page_head("팀별", "이번 겨울 팀마다 누가 오고 갔는지 모았어요. 확정은 리그피디아 기록, 소문은 기사 제목 기준이에요.", stats)
+            + page_head("팀별", "이번 겨울 팀별 로스터 변동을 모았어요. 영입·이탈·재계약은 리그피디아 확정 기록, 이적설은 기사 제목 기준이에요.", stats)
             + f'<div class="sgrid">{"".join(c[3] for c in cards)}</div>'
             + f'<p class="plinks"><a href="/{league}/feed.xml">이적 소식 RSS</a></p></div>')
     return shell(league, "summary", "팀별 이적", main, (), today)

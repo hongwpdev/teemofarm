@@ -116,6 +116,40 @@ class SmokeTest(unittest.TestCase):
         self.assertNotIn("폭스 탑라이너", self.get("/lck?team=all&hot=1")[1])
         self.assertNotIn("폭스 탑라이너", self.get("/lck?team=all&src=news")[1])
 
+    def test_community_chatter_hidden(self):
+        # LCK와 상관없는 커뮤니티 수다는 소식에 안 나옴(이적·팀·선수 이야기는 남음)
+        from datetime import datetime, timezone
+        from tracker.core import save
+        now = datetime.now(timezone.utc).isoformat()
+        save([{"id": "news:talk2", "team": "lck", "source": "news", "title": "[잡담] 롤 패치 너무 별로 아이템 다 너프", "url": "https://example.com/t2",
+               "outlet": "인벤", "published": now},
+              {"id": "news:talk3", "team": "lck", "source": "news", "title": "슼피셜)롤 GENG 서폿 클라우드 합류", "url": "https://example.com/t3",
+               "outlet": "에펨코리아", "published": now}])
+        body = self.get("/lck?team=all")[1]
+        self.assertNotIn("패치 너무 별로", body)
+        self.assertRegex(body, r'<span class="kb k-talk">커뮤니티</span>슼피셜\)롤 GENG')
+
+    def test_summary_labels_and_no_double_row(self):
+        # 스토브리그 팀별: 명사 라벨(영입·이탈·재계약·이적설·미정), 이적설에 잡힌 선수는 같은 카드 '미정'에 또 안 나옴
+        from unittest import mock
+        from tracker.web import views
+        sm = {k: {"in": [], "out": [], "stay": [], "open": [], "updated": ""} for k in views.team_keys()}
+        sm["hle"] = {"in": [{"page": "Zeka", "nick": "Zeka", "role": "Mid", "date": "", "from": ""}],
+                     "out": [{"page": "Doran", "nick": "Doran", "role": "Top", "date": "", "to": "t1"}],
+                     "stay": [], "open": [{"page": "Kiin", "nick": "Kiin", "role": "Top", "date": ""},
+                                          {"page": "Delight", "nick": "Delight", "role": "Support", "date": ""}], "updated": ""}
+        rm = {"team": "hle", "stay": False, "outlet": "OSEN", "title": "기인 HLE 유력"}
+        with mock.patch.object(views.stv, "team_summary", return_value=sm), \
+             mock.patch.object(views, "rumor_slots", return_value={"hle": {"top": [{"page": "Kiin", "nick": "Kiin", "role": "Top", "rm": rm, "pos": "탑"}]}}):
+            html = views.render_summary("lck")
+        card = html[html.index('id="m-hle"'):].split("</article>")[0]
+        labels = __import__("re").findall(r"<em>(.*?)</em>", card)
+        self.assertEqual(labels, ["영입", "이탈", "이적설", "미정"])
+        self.assertEqual(card.count(">Kiin<"), 1)                       # 이적설에만
+        self.assertIn(">Delight<", card)
+        for old in ("들어옴", "나감", "<em>소문</em>"):
+            self.assertNotIn(old, html)
+
     def test_ended_season_is_not_a_record(self):
         # 스토브리그 기간: 방금 끝난 시즌(2026)은 '기록'이 아니라 지금 화면 → 시즌 고르기에 2026이 두 번 나오면 안 됨
         from datetime import datetime

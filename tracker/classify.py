@@ -34,8 +34,15 @@ def news_teams(title: str, teams: list) -> list:
 COMMUNITY = re.compile(r"^\s*\[(잡담|일반|수다|계층|기타|모집|이벤트|정보|질문|유머|펌|짤|영상|스샷|후기|토론|뻘글|공략|팁|자유|응원|대회|소식|뉴스)\]")
 
 
-def is_community(title: str) -> bool:
-    return bool(COMMUNITY.match(title or ""))
+# 말머리 대신 '슼피셜)'·'뇌피셜)'·'롤)'처럼 괄호 하나로 시작하는 커뮤니티식 제목(언론은 [오피셜]처럼 대괄호를 씀)
+SLANG_HEAD = re.compile(r"^\s*(?:\[[^\]]{1,6}\]\s*)?(?:[^\s\[\]()]{0,6}피셜|롤|LOL|lol)\s*\)")
+# 매체 이름이 곧 커뮤니티인 곳(구글 뉴스에 게시글이 섞여 들어옴). 인벤은 기사(웹진)와 게시판이 같은 이름이라 말머리로만 봄
+COMMUNITY_OUTLETS = ("에펨코리아", "FM코리아", "fmkorea", "디시인사이드", "dcinside", "루리웹", "ruliweb", "더쿠", "theqoo", "네이트판")
+
+
+def is_community(title: str, outlet: str = "") -> bool:
+    o = (outlet or "").lower()
+    return bool(COMMUNITY.match(title or "") or SLANG_HEAD.match(title or "")) or any(n.lower() in o for n in COMMUNITY_OUTLETS)
 
 
 def is_official(title: str) -> bool:
@@ -63,13 +70,13 @@ def is_stove(title: str, kind: str, season: int) -> bool:
     return bool(re.search(rf"{season}\s?(?:시즌(?!\s?\d)|LCK)", title))     # '2027 시즌 1 패치'는 아님
 
 
-def article_kind(title: str, source: str = "news") -> str:
+def article_kind(title: str, source: str = "news", outlet: str = "") -> str:
     """기사 성격: official(오피셜) · rumor(단독·유력) · view(전망·분석) · talk(커뮤니티 글) · news(그 밖).
     리그피디아 편집은 로스터 변동이면 official, 아니면 edit."""
     t = title.lower()
     if source == "wiki":
         return "official" if is_official(title) else "edit"
-    if is_community(title):
+    if is_community(title, outlet):
         return "talk"
     if "[오피셜]" in t or "[공식]" in t:
         return "official"

@@ -1419,3 +1419,27 @@ main .layout.is-loading #fbar:after{content:"";position:absolute;top:1rem;right:
 .tf-skin-src{margin:.8rem 0 0!important;font-size:1.05rem!important;font-weight:500!important;color:var(--t8)!important}
 /* 커뮤니티 글(인벤 게시판 등) 배지: 오피셜·단독과 헷갈리지 않게 회색 */
 .kb.k-talk,.k-talk{background:color-mix(in srgb,var(--t8) 12%,transparent);color:var(--t5);border:1px solid color-mix(in srgb,var(--t8) 30%,transparent)}
+/* 스킨 해금 축하: ① 암전·집중선(0.45초) → ② 큰 스킨 카드 + 픽셀 폭죽 → ③ 사라지며 도감 버튼 반짝임(3.5초, 누르면 닫힘) */
+.tf-unlock{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer}
+.tf-unlock[hidden]{display:none}
+.tf-un-dim{position:absolute;inset:0;background:rgba(2,6,23,.88);animation:tfDimIn .45s ease-out forwards}
+.tf-un-rays{position:absolute;width:180vmax;height:180vmax;background:repeating-conic-gradient(from 0deg,rgba(250,204,21,.16) 0deg 6deg,rgba(52,211,153,.12) 6deg 12deg,transparent 12deg 24deg);opacity:0;pointer-events:none;animation:tfRaysSpin 3.4s linear forwards,tfRaysFade 3.5s ease forwards}
+.tf-un-fx{position:absolute;inset:0;z-index:3;pointer-events:none}
+.tf-spk{position:absolute;left:50%;top:46%;width:var(--sz,10px);height:var(--sz,10px);background:var(--c,#facc15);box-shadow:0 0 10px var(--c,#facc15);opacity:0;transform:translate(-50%,-50%);animation:tfPixelBurst 1.35s cubic-bezier(.16,1,.3,1) var(--dl,.35s) forwards}
+.tf-un-card{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:1.4rem;max-width:calc(100vw - 3.2rem);padding:2.4rem 2.8rem;border:2px solid #facc15;border-radius:2.4rem;background:radial-gradient(circle at top,rgba(30,41,59,.96),rgba(15,23,42,.98));box-shadow:0 0 36px rgba(250,204,21,.45),0 0 80px rgba(52,211,153,.28);opacity:0;transform:scale(.45) translateY(24px);animation:tfCardPop 3.5s cubic-bezier(.22,1,.36,1) forwards}
+.tf-un-badge{padding:.4rem 1.2rem;border:1px solid rgba(250,204,21,.6);border-radius:999px;background:rgba(250,204,21,.16);color:#fde047;font-size:1.1rem;font-weight:900;letter-spacing:.12em}
+.tf-un-frame{width:24rem;height:24rem;overflow:hidden;border:3px solid #34d399;border-radius:2rem;background:#090d16;box-shadow:0 0 28px rgba(52,211,153,.55)}
+.tf-un-frame img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 18%}
+.tf-un-title{font-size:2.2rem;font-weight:900;color:#fff;text-align:center;text-shadow:0 0 18px rgba(250,204,21,.55)}
+.tf-un-sub{margin:0;font-size:1.25rem;color:#cbd5e1;text-align:center}
+@media (max-width:480px){.tf-un-frame{width:19.6rem;height:19.6rem}.tf-un-title{font-size:1.9rem}}
+@keyframes tfDimIn{from{opacity:0}to{opacity:1}}
+@keyframes tfRaysSpin{from{transform:rotate(0)}to{transform:rotate(55deg)}}
+@keyframes tfRaysFade{0%{opacity:0}18%{opacity:1}75%{opacity:.9}100%{opacity:0}}
+@keyframes tfCardPop{0%{opacity:0;transform:scale(.45) translateY(24px)}16%{opacity:1;transform:scale(1.06) translateY(-4px)}24%{transform:scale(1) translateY(0)}75%{opacity:1;transform:scale(1) translateY(0)}100%{opacity:0;transform:scale(.92) translateY(-14px)}}
+@keyframes tfPixelBurst{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--tx,0px)),calc(-50% + var(--ty,0px))) scale(.4)}}
+@keyframes tfBtnBurst{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(250,204,21,0)}50%{transform:scale(1.1);box-shadow:0 0 0 12px rgba(250,204,21,.55)}}
+.tf-skin.tf-burst{border-color:#facc15;animation:tfBtnBurst .45s ease-in-out 3}
+.tf-skin-it.tf-fresh{border-color:#facc15;background:linear-gradient(90deg,rgba(250,204,21,.18),rgba(16,185,129,.16));box-shadow:0 0 14px rgba(250,204,21,.25)}
+.tf-newtag{display:inline-block;margin-left:.6rem;padding:.1rem .6rem;border-radius:99px;background:#facc15;color:#0f172a;font-size:.95rem;font-style:normal;font-weight:900;letter-spacing:.04em;vertical-align:.15em}
+@media (prefers-reduced-motion:reduce){.tf-un-dim,.tf-un-card{animation:none;opacity:1;transform:none}.tf-un-rays,.tf-un-fx{display:none}.tf-skin.tf-burst{animation:none}}

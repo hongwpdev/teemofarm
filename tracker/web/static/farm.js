@@ -27,6 +27,7 @@
       quiz: s.quiz && typeof s.quiz === "object" ? s.quiz : {},                                // 오늘의 로스터 퀴즈 {date, pick, ok}
       skin: Number.isFinite(s.skin) ? s.skin : 0,                                              // 고른 티모 스킨(라이엇 공식 스킨 번호)
       seenSkins: Array.isArray(s.seenSkins) ? s.seenSkins : [0],                               // 도감에서 본 스킨(새로 열린 것 표시용)
+      unlocked: Array.isArray(s.unlocked) ? s.unlocked : (Array.isArray(s.seenSkins) ? s.seenSkins : [0]),  // 해금 축하를 이미 보여 준 스킨
       goldenFoundDates: Array.isArray(s.goldenFoundDates) ? s.goldenFoundDates : [],
       fieldLog: Array.isArray(s.fieldLog) ? s.fieldLog : [],
     };
@@ -82,19 +83,60 @@
   const skinUrl = n => `https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/Teemo_${n}.jpg`;
   const curSkin = () => SKINS.find(k => k.n === st.skin && k.ok()) || SKINS[0];
   const newSkin = () => SKINS.some(k => k.ok() && !st.seenSkins.includes(k.n));
-  let skinOpen = false;
+  let skinOpen = false, freshShown = [];
   function skinBox() {
     const k = curSkin();
     const list = SKINS.map(x => {
-      const ok = x.ok(), on = x.n === k.n;
-      return `<li><button type="button" class="tf-skin-it${on ? " tf-on" : ""}${ok ? "" : " tf-lock"}" data-skin="${x.n}"${ok ? "" : " disabled"}>`
-        + `<img src="${skinUrl(x.n)}" alt="" width="40" height="40" loading="lazy"><span><b>${esc(x.name)}</b>`
-        + `<small>${!ok ? "🔒 " + esc(x.rule) : on ? "✓ 쓰는 중" : st.seenSkins.includes(x.n) ? "눌러서 바꾸기" : "새로 열림!"}</small></span></button></li>`;
+      const ok = x.ok(), on = x.n === k.n, fresh = ok && !on && (!st.seenSkins.includes(x.n) || freshShown.includes(x.n));
+      return `<li><button type="button" class="tf-skin-it${on ? " tf-on" : ""}${ok ? "" : " tf-lock"}${fresh ? " tf-fresh" : ""}" data-skin="${x.n}"${ok ? "" : " disabled"}>`
+        + `<img src="${skinUrl(x.n)}" alt="" width="40" height="40" loading="lazy"><span><b>${esc(x.name)}${fresh ? '<em class="tf-newtag">NEW</em>' : ""}</b>`
+        + `<small>${!ok ? "🔒 " + esc(x.rule) : on ? "✓ 쓰는 중" : fresh ? "새로 열림! 눌러서 바꾸기" : "눌러서 바꾸기"}</small></span></button></li>`;
     }).join("");
     return `<div class="tf-me"><button type="button" class="tf-skin" aria-haspopup="true" aria-expanded="${skinOpen}" title="티모 스킨 바꾸기 · ${esc(k.name)}">`
       + `<img src="${skinUrl(k.n)}" alt="${esc(k.name)}" width="44" height="44">${newSkin() ? '<i class="tf-new" aria-label="새 스킨"></i>' : ""}</button>`
       + `<div class="tf-skins"${skinOpen ? "" : " hidden"}><p>티모 스킨 도감 <small>맞힐수록 열려요 (${SKINS.filter(x => x.ok()).length}/${SKINS.length})</small></p><ul>${list}</ul>`
       + `<p class="tf-skin-src">스킨 이미지 © Riot Games</p></div></div>`;
+  }
+
+  // ── 스킨 해금 축하(한 스킨당 한 번): ① 암전·집중선 → ② 큰 스킨 카드 + 픽셀 폭죽 → ③ 사라지며 도감 버튼 반짝임. 누르거나 Esc면 바로 닫힘 ──
+  let unlockTimer = 0;
+  const SPARK = ["#facc15", "#34d399", "#38bdf8", "#fb7185", "#fef08a"];
+  const unlockKey = e => { if (e.key === "Escape") closeUnlock(); };
+  function closeUnlock() {
+    const s = document.getElementById("tf-unlock");
+    if (!s || s.hidden) return;
+    clearTimeout(unlockTimer); s.hidden = true; s.innerHTML = "";
+    document.removeEventListener("keydown", unlockKey);
+    const b = box.querySelector(".tf-skin");
+    if (b) { b.classList.remove("tf-burst"); void b.offsetWidth; b.classList.add("tf-burst"); }
+  }
+  function showUnlock(main, more) {
+    let s = document.getElementById("tf-unlock");
+    if (!s) {
+      s = document.createElement("div"); s.id = "tf-unlock"; s.className = "tf-unlock";
+      s.setAttribute("role", "status"); s.setAttribute("aria-live", "polite");
+      s.addEventListener("click", closeUnlock); document.body.appendChild(s);
+    }
+    const sparks = Array.from({ length: 36 }, (_, i) => {
+      const a = Math.PI * 2 * i / 36 + (Math.random() - 0.5) * 0.25, d = 140 + Math.random() * 190;
+      return `<i class="tf-spk" style="--tx:${Math.round(Math.cos(a) * d)}px;--ty:${Math.round(Math.sin(a) * d) - 20}px;`
+        + `--sz:${Math.random() > 0.5 ? 10 : 7}px;--dl:${(0.3 + Math.random() * 0.45).toFixed(2)}s;--c:${SPARK[i % SPARK.length]}"></i>`;
+    }).join("");
+    s.innerHTML = `<div class="tf-un-dim"></div><div class="tf-un-rays"></div><div class="tf-un-fx">${sparks}</div>`   // 새로 그리면 움직임도 처음부터
+      + `<div class="tf-un-card"><span class="tf-un-badge">SKIN UNLOCKED</span>`
+      + `<div class="tf-un-frame"><img src="${skinUrl(main.n)}" alt="${esc(main.name)}" width="240" height="240"></div>`
+      + `<strong class="tf-un-title">${esc(main.name)} 해금! 🎉</strong>`
+      + `<p class="tf-un-sub">${more ? `이번에 스킨 ${more + 1}개가 열렸어요` : "스킨 도감에서 바로 바꿀 수 있어요"} · 눌러서 닫기</p></div>`;
+    s.hidden = false;
+    document.addEventListener("keydown", unlockKey);
+    clearTimeout(unlockTimer); unlockTimer = setTimeout(closeUnlock, 3500);
+  }
+  function checkUnlock() {
+    const fresh = SKINS.filter(k => k.ok() && !st.unlocked.includes(k.n));
+    if (!fresh.length) return;
+    st.unlocked = st.unlocked.concat(fresh.map(k => k.n)); save();
+    const me = box.querySelector(".tf-me"); if (me) me.outerHTML = skinBox();     // NEW 점·NEW 배지 다시 그림
+    showUnlock(fresh[fresh.length - 1], fresh.length - 1);                        // 여럿이면 가장 어려운 스킨을 크게
   }
 
   function whoText() {
@@ -262,8 +304,8 @@ ${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">$
         board.mine[id] = board.open.find(x => x.id === id); back = true;
       }
       if (back) save();
-      judge(); paint(); hideGold();
-    }).catch(() => { paint(); hideGold(); }).finally(() => { box.dataset.ready = "1"; });
+      judge(); paint(); hideGold(); checkUnlock();
+    }).catch(() => { paint(); hideGold(); checkUnlock(); }).finally(() => { box.dataset.ready = "1"; });
   }
 
   // ── 연출 ──
@@ -298,8 +340,13 @@ ${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">$
     const sk = e.target.closest(".tf-skin");
     if (sk) {
       skinOpen = !skinOpen;
-      if (skinOpen) { st.seenSkins = SKINS.filter(k => k.ok()).map(k => k.n); save(); }
+      if (skinOpen) {                                                   // 새로 열린 스킨은 이번에 펼친 동안 NEW로 보이고, 첫 NEW까지 굴려 줌
+        freshShown = SKINS.filter(k => k.ok() && !st.seenSkins.includes(k.n)).map(k => k.n);
+        st.seenSkins = SKINS.filter(k => k.ok()).map(k => k.n); save();
+      }
       const me = box.querySelector(".tf-me"); if (me) me.outerHTML = skinBox();
+      const f = skinOpen && box.querySelector(".tf-skin-it.tf-fresh");
+      if (f) { const ul = f.closest("ul"); ul.scrollTop = Math.max(0, f.closest("li").offsetTop - ul.offsetTop - 8); }
       return;
     }
     const it = e.target.closest("[data-skin]");
@@ -343,6 +390,7 @@ ${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">$
       if (ground) sparks(ground, "+" + add);
       setPoints();
       setTimeout(() => growField("n"), 450);
+      setTimeout(checkUnlock, 900);
       setTimeout(() => { if (tab === "open") paint(); }, 1400);         // 연출이 끝나면 결과 내역으로 옮김
       return;
     }
@@ -356,7 +404,7 @@ ${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">$
       save(); paint();
       if (ok) {
         const b = box.querySelector(`[data-quiz-pick="${pick}"]`); if (b) sparks(b, "+1");
-        setPoints(); setTimeout(() => growField("n"), 450);
+        setPoints(); setTimeout(() => growField("n"), 450); setTimeout(checkUnlock, 900);
       }
       return;
     }
@@ -364,7 +412,7 @@ ${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">$
     if (e.target.closest(".tf-share")) share();
   });
 
-  const closeSkins = () => { if (!skinOpen) return; skinOpen = false; const me = box.querySelector(".tf-me"); if (me) me.outerHTML = skinBox(); };
+  const closeSkins = () => { if (!skinOpen) return; skinOpen = false; freshShown = []; const me = box.querySelector(".tf-me"); if (me) me.outerHTML = skinBox(); };
   document.addEventListener("click", e => { if (skinOpen && !e.target.closest(".tf-me")) closeSkins(); });
   document.addEventListener("keydown", e => { if (e.key === "Escape") closeSkins(); });
 
@@ -521,7 +569,7 @@ ${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">$
     g.addEventListener("click", ev => {
       ev.preventDefault(); ev.stopPropagation();
       if (st.goldenFoundDates.includes(today())) return;               // 하루 한 번
-      st.goldenFoundDates.push(today()); st.points += 5; save();
+      st.goldenFoundDates.push(today()); st.points += 5; save(); setTimeout(checkUnlock, 1200);
       const r = g.getBoundingClientRect(), f = box.querySelector(".tf-field");
       const slots = f ? f.querySelectorAll(".tf-plot") : [];
       const target = slots[Math.min(6, st.fieldLog.length)] || f;

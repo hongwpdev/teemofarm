@@ -115,6 +115,20 @@ _KO_PLAIN_SKIP = {"너구리", "커리어", "라이프", "클리어", "크레이
                   "프로그", "사루", "로치", "레이지필", "베릴", "카엘", "로케", "루스터", "엄티", "하차니"}
 
 
+# 커뮤니티 글은 LCK 이야기(팀·선수·이적)일 때만 남김 — '[잡담] 롤 패치 너무 별로'·'[유머] 오늘 랭크' 같은 수다는 뺌
+LCK_TOPIC = re.compile(r"LCK|스토브리그|이적|합류|영입|재계약|(?<![A-Za-z])FA(?![A-Za-z])|로스터|감독|코치|콜업|데뷔|입단|방출|은퇴|계약|선수단|감코진|행선지")
+
+
+def lck_topic(title: str) -> bool:
+    from .classify import TEAMS, title_has_team   # (classify가 config를 불러서 여기서)
+    if not title:
+        return False
+    if LCK_TOPIC.search(title) or any(TEAMS[k].get("aliases") and title_has_team(title, k) for k in TEAMS if k != "lck"):
+        return True
+    nick, ko = people()
+    return bool((nick and nick.search(title)) or (ko and ko.search(title)) or _ko_anywhere(title))
+
+
 def _ko_anywhere(title: str) -> bool:
     """따옴표 없이 나온 한글 닉네임(두 글자 이상). 'KT 지우 “5세트 …”'·'도란 나가고 … 데프트는 농심으로' 같은 제목용 — 팀 이름과 함께일 때만 씀."""
     return any(len(k) >= 2 and k not in _KO_PLAIN_SKIP and k in title for k in ko_nicks().values())
