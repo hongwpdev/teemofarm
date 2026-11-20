@@ -128,17 +128,39 @@ def read_title(title: str, nick: str, team_from: str):
     return None
 
 
-def _guess(people, news, marks=None, allow_stay=True):
-    """people: [{"page", "nick", "team_from"}] → {page: 유력 정보}. marks를 주면 그 말이 제목에 있는 기사만 봄."""
+def called_off_hit(title: str, nick: str, team_from: str):
+    """'T1, 제우스 영입 무산' 같은 무산·결렬 기사 → 그 선수의 (팀 키, 잔류 여부) 또는 None.
+    무산 말을 빼고 같은 규칙으로 읽고, 그래도 안 읽히면 그 선수 + 원소속이 아닌 팀 하나('T1과 협상 결렬')."""
+    if not re.search(r"[가-힣]", title) or not any(w in title for w in NEG) or nick.lower() not in persons(title):
+        return None
+    plain = title
+    for w in NEG:
+        plain = plain.replace(w, " ")
+    hit = read_title(plain, nick, team_from)
+    if hit:
+        return hit
+    others = [k for k in _teams(title) if k != team_from]
+    return (others[0], False) if len(others) == 1 else None
+
+
+def _guess(people, news, marks=None, allow_stay=True, off=None):
+    """people: [{"page", "nick", "team_from"}] → {page: 유력 정보}. marks를 주면 그 말이 제목에 있는 기사만 봄.
+    더 새 기사가 같은 행선지를 '무산·결렬'이라 하면 그 유력은 버림. off(dict)를 주면 {page: {(팀, 잔류 여부)}}로 채워 줌."""
     out = {}
     for r in people:
-        best = None
+        best, gone = None, set()
         for n in news:                          # 최신순
             kind = article_kind(n["title"])
-            if kind == "view" or (marks and not any(w in n["title"] for w in marks)):     # 전망·분석 기사는 빼고
+            if kind == "view":                  # 전망·분석 기사는 빼고
+                continue
+            nix = called_off_hit(n["title"], r["nick"], r["team_from"])
+            if nix:
+                gone.add(nix)
+                continue
+            if marks and not any(w in n["title"] for w in marks):
                 continue
             hit = read_title(n["title"], r["nick"], r["team_from"])
-            if not hit or (hit[1] and not allow_stay):
+            if not hit or (hit[1] and not allow_stay) or hit in gone:
                 continue
             # '[오피셜] 제우스 계약 종료, T1 리턴하나'처럼 공식 기사 안의 추측(…하나, 설, 유력)은 '발표'가 아니라 '유력'
             official = (kind == "official" and not any(w in n["title"] for w in GUESS)
@@ -151,6 +173,8 @@ def _guess(people, news, marks=None, allow_stay=True):
                 break
         if best:
             out[r["page"]] = best
+        if gone and off is not None:
+            off[r["page"]] = gone
     return out
 
 
@@ -180,7 +204,22 @@ def rumors(rows) -> dict:
     """FA 행 목록(미정인 선수만 봄) → {page: {"team", "stay", "official", "title", "url", "outlet", "published"}}. 1분 캐시."""
     key = tuple((r["page"], r["status"]) for r in rows)
     people = [{"page": r["page"], "nick": r["nick"], "team_from": r["team_from"]} for r in rows if r["status"] == "fa"]
-    return _cached("fa", key, lambda: _guess(people, _recent_news()))
+    return _cached("fa", key, lambda: _both(people))[0]
+
+
+def _both(people, **kw):
+    off = {}
+    return _guess(people, _recent_news(), off=off, **kw), off
+
+
+def called_off(fa_rows, roster_rows) -> dict:
+    """{page: {(팀 키, 잔류 여부), …}}: 최근 기사가 '무산·결렬'이라 한 행선지(독버섯 판을 일찍 마감하는 데 씀)."""
+    rumors(fa_rows)
+    movers(roster_rows)
+    with _LOCK:
+        a = (_CACHE.get("fa") or {}).get("val") or ({}, {})
+        b = (_CACHE.get("roster") or {}).get("val") or ({}, {})
+    return {**b[1], **a[1]}
 
 
 def movers(rows) -> dict:
@@ -188,4 +227,4 @@ def movers(rows) -> dict:
     예) "[소식통] '시우' 전시우, 2027 LCK 시즌 젠지 합류 예정" → Siwoo: DK → GEN 유력"""
     key = tuple((r["page"], r["team"]) for r in rows)
     people = [{"page": r["page"], "nick": r["nick"], "team_from": r["team"]} for r in rows if r["team"] and r["nick"]]
-    return _cached("roster", key, lambda: _guess(people, _recent_news(), marks=MOVE_MARK, allow_stay=False))
+    return _cached("roster", key, lambda: _both(people, marks=MOVE_MARK, allow_stay=False))[0]

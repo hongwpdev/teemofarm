@@ -3,7 +3,7 @@ import threading
 import time
 from datetime import datetime, timezone
 
-from .config import FA_COOLDOWN, MANUAL_COOLDOWN, MANUAL_GAP
+from .config import FA_COOLDOWN, MANUAL_COOLDOWN, MANUAL_GAP, log
 from .fa import poll_fa, retry_profiles
 from .news import poll_news
 from .wiki import poll_wiki
@@ -15,9 +15,13 @@ FA_MANUAL = {"running": False, "last_start": 0.0, "last_done": None, "done": []}
 
 
 def loop(fn, interval, lock=COLLECT_LOCK):
+    """fn을 interval초마다. 한 번 실패해도(네트워크·DB 잠김 등) 기록만 남기고 다음 차례에 다시 — 수집 스레드가 죽지 않게."""
     while True:
-        with lock:
-            fn()
+        try:
+            with lock:
+                fn()
+        except Exception:  # noqa: BLE001
+            log.exception("background loop failed: %s", getattr(fn, "__name__", fn))
         time.sleep(interval)
 
 

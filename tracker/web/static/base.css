@@ -1319,3 +1319,16 @@ li.tf-lost .tf-pst{color:var(--tf-purple);font-weight:800}
 /* 독버섯 심기 첫 화면(서버가 그린 것): PC 4개 · 휴대폰 2개 */
 .tf-mo{display:none}
 @media (max-width:640px){.tf-ssr li:nth-child(n+3){display:none}.tf-mo{display:block}}
+/* 내 기록 공유 버튼(점수 줄 끝) */
+.tf-num>.tf-share{display:flex;flex-direction:column;align-items:flex-end;font:inherit;font-size:1.1rem;color:var(--t8);white-space:nowrap;background:none;border:0;padding:0;cursor:pointer}
+.tf-num>.tf-share:hover{color:var(--tf-emerald)}
+.tf-num>.tf-share:focus-visible{outline:2px solid var(--tf-emerald);outline-offset:2px;border-radius:.4rem}
+/* 소식 목록 → 독버섯 심기 판으로('이 소식 O/X 심기 ↑') */
+.item.tfj .row{border-bottom:0}
+.tf-jw{padding:0 1.4rem 1rem;border-bottom:1px solid var(--line)}
+.item.grp .tf-jw,.item:last-child .tf-jw{border-bottom:0}
+.item.new .tf-jw{background:var(--new-row);box-shadow:inset .3rem 0 0 var(--primary)}
+.tf-jump{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .9rem;border-radius:99px;font-size:1.2rem;font-weight:700;background:var(--tf-emerald-bg);color:var(--tf-emerald);border:1px solid var(--tf-emerald);text-decoration:none}
+.tf-jump:hover{filter:brightness(1.08)}
+@keyframes tfFlash{0%{box-shadow:0 0 0 0 var(--tf-emerald)}100%{box-shadow:0 0 0 1rem transparent}}
+.tf-card li.tf-flash{animation:tfFlash 1.1s ease-out 2}

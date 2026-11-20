@@ -72,6 +72,25 @@ class FarmTest(unittest.TestCase):
         fa("Zeus", "move", "hle", "t1"); farm.sync(force=True)
         self.assertEqual(farm.plant("rm:Zeus:t1:m", "o", "abcdefgh14")[0], "이미 결과가 났거나 마감됐어요")
 
+    def test_called_off_closes_planting(self):
+        # 더 새 기사가 그 행선지를 '무산'이라 하면 새로 못 심음(결과는 계속 리그피디아 기준)
+        from tracker import rumor
+        from tracker.core import save
+        fa("Zeus", "fa")
+        save([{"id": "news:z1", "team": "lck", "source": "news", "title": "[단독] '제우스' 최우제, T1 복귀 유력", "url": "u1",
+               "outlet": "o", "published": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()}])
+        rumor._CACHE.clear(); farm.sync(force=True)
+        self.assertIn("rm:Zeus:t1:m", [it["id"] for it in farm.board([])["open"]])
+        save([{"id": "news:z2", "team": "lck", "source": "news", "title": "T1, '제우스' 최우제 영입 무산", "url": "u2",
+               "outlet": "o", "published": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()}])
+        rumor._CACHE.clear(); farm.sync(force=True)
+        self.assertNotIn("rm:Zeus:t1:m", [it["id"] for it in farm.board([])["open"]])
+        self.assertEqual(farm.plant("rm:Zeus:t1:m", "o", "abcdefgh15")[0], "이미 결과가 났거나 마감됐어요")
+        self.assertIsNone(result("rm:Zeus:t1:m"))
+        with db() as c:
+            c.execute("DELETE FROM items WHERE id IN ('news:z1','news:z2')")
+        rumor._CACHE.clear()
+
     def test_official_closes_planting(self):
         # 오피셜 기사(발표)가 나면 새로 못 심고 목록에서도 빠짐. 이미 심은 사람은 리그피디아 반영 때 판정
         item("rm:Kiin:hle:m", page="Kiin", a="geng", b="hle"); fa("Kiin", "fa")

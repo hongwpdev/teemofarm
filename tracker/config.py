@@ -60,12 +60,14 @@ _LCK = [
     ("dns",  "DN 수퍼스",     "DN SOOPers",          "DN 수퍼스",       "DNS", ["수퍼스", "DN", "DNS", "SOOPers"], "DNS OR 수퍼스"),
     ("bro",  "한진 브리온",    "HANJIN BRION",        "한진 브리온",      "BRO", ["브리온", "BRO", "BRION"], "브리온"),
 ]
-# 팀 검색어: 기사 제목·본문은 정식 이름('농심 레드포스')보다 짧은 이름('농심')을, '롤'보다 'LCK'·'LoL'을 쓰는 일이 많아서
-# (예: "[오피셜] '킹겐' 황성훈, 농심과 재계약"이 예전 검색어엔 안 걸렸음) 흔한 이름 + LCK·롤·LoL + 이적 관련 말로 찾음
-_MOVE_Q = "LCK OR 롤 OR LoL 오피셜 OR 단독 OR 소식통 OR 유력 OR 재계약 OR 영입 OR 계약 OR 동행 OR 결별 OR 떠나 OR 합류 OR 선임"
+# 팀 검색어(팀마다 1개): 기사 제목·본문은 정식 이름('농심 레드포스')보다 짧은 이름('농심')을, '롤'보다 'LCK'·'LoL'을 쓰는 일이 많아서
+# (예: "[오피셜] '킹겐' 황성훈, 농심과 재계약"이 예전 검색어엔 안 걸렸음) 흔한 이름 + (LCK·롤·LoL·이적 관련 말 중 하나)로 찾음.
+# 괄호 두 묶음(LoL 말 AND 이적 말)으로 좁히면 "[오피셜] '제우스' 최우제, 한화생명과 계약 종료"처럼 제목에 LoL 말이 없는
+# 오피셜이 빠져서(2026-11 구글 뉴스로 비교) 한 묶음 OR로 둠. 다른 종목 기사는 filters.is_lol_news가 거름
+_MOVE_Q = ("(LCK OR 롤 OR LoL OR e스포츠 OR 스토브리그 OR 오피셜 OR 단독 OR 소식통 OR 유력 OR 재계약 OR 영입 OR 계약 "
+           "OR 동행 OR 결별 OR 떠나 OR 합류 OR 선임 OR FA OR 로스터 OR 감코진)")
 DEFAULT_TEAMS = {
-    k: {"name": name, "wiki": wiki, "short": short, "aliases": aliases,
-        "news": [f"{common} {_MOVE_Q}", f"{q} 스토브리그"]}
+    k: {"name": name, "wiki": wiki, "short": short, "aliases": aliases, "news": [f"({common}) {_MOVE_Q}"]}
     for k, name, wiki, q, short, aliases, common in _LCK
 }
 # 특정 팀에 묶이지 않는 리그 전체 소식(위키 없음)
@@ -74,6 +76,9 @@ DEFAULT_TEAMS["lck"] = {"name": "LCK 공통", "wiki": "", "short": "LCK",
                                  "LCK 이적 OR 리턴 OR 유력 OR 결별 OR 합류",
                                  # 단독·소식통 기사(제목에 '영입'·팀 정식 이름이 없는 것도): "[단독] '커리어' 오형석, DK 떠나 한화생명 서포터로"
                                  "롤 OR LCK 단독 OR 소식통 OR 떠나 OR 행선지",
+                                 # e스포츠 전문 매체 4곳만: 팀 이름이 제목에 없는 단독·오피셜까지
+                                 "(LCK OR 롤) (이적 OR FA OR 오피셜 OR 단독) "
+                                 "(site:inven.co.kr OR site:fomos.kr OR site:dailyesports.com OR site:osen.co.kr)",
                                  # 영어 이적 기사(Sheep Esports 등). 소식 목록엔 안 보이고 '유력' 판단에만 씀(news.py)
                                  "LCK 2027 Sources OR joins OR re-sign OR extends OR contract OR promoted"]}
 TEAMS = DEFAULT_TEAMS

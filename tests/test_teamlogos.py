@@ -88,6 +88,30 @@ class TeamLogosTest(unittest.TestCase):
         teamlogos.INDEX["bad"] = {"remote": "https://evil.example/x.png"}      # 리그피디아 이미지 주소가 아니면 안 넘김
         self.assertEqual(teamlogos.remote("bad"), "")
 
+    def test_403_stops_and_waits_a_day(self):
+        # 이미지 서버가 403으로 막으면 나머지 팀은 두드리지 않고 바로 브라우저 몫, 하루 동안은 다시 안 받음
+        import urllib.error
+        pages = {str(i): {"title": f"File:T{i} logo.png", "imageinfo": [{"thumburl": f"https://static.wikia.nocookie.net/x/t{i}.png"}]}
+                 for i in range(5)}
+        calls = []
+
+        def denied(url):
+            calls.append(url)
+            raise urllib.error.HTTPError(url, 403, "Forbidden", {}, None)
+        with mock.patch.object(teamlogos, "http_get", denied), \
+                mock.patch.object(teamlogos, "api_get", lambda p: {"query": {"pages": pages}}), \
+                mock.patch.object(teamlogos.time, "sleep", lambda s: None):
+            imgs = {f"t{i}": f"T{i} logo.png" for i in range(5)}
+            teamlogos.ensure(imgs)
+            self.assertEqual(len(calls), 1)                                   # 첫 403 뒤로는 안 두드림
+            self.assertTrue(all(teamlogos.url(f"t{i}") == f"/tlogo/t{i}?v=r" for i in range(5)))
+            teamlogos.ensure(imgs)                                            # 서버를 다시 켜도(하루 안) 다시 안 받음
+            self.assertEqual(len(calls), 1)
+            for e in teamlogos.INDEX.values():
+                e["remote_at"] -= teamlogos.REMOTE_RETRY_SEC + 1
+            teamlogos.ensure(imgs)                                            # 하루 지나면 한 번 다시
+            self.assertEqual(len(calls), 2)
+
     def test_read_rejects_odd_keys(self):
         teamlogos.INDEX = {"../x": {"file": "../../etc/passwd", "type": "image/png", "v": "1"}}
         self.assertIsNone(teamlogos.read("../x"))

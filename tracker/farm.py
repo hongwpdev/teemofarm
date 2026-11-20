@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from . import schedule
 from .config import TEAMS
 from .core import db
-from .rumor import movers, rumors
+from .rumor import called_off, movers, rumors
 
 LOCK_MIN = 10            # 경기 시작 몇 분 전까지 심을 수 있나
 BONUS_UNDER = 0.30       # 이 비율 미만 쪽에 심어서 맞히면 역배
@@ -57,6 +57,14 @@ def sync(force=False):
             if not r or not rm.get("team") or rm["team"] == r["team"]:
                 continue
             _put(c, f"mv:{page}:{rm['team']}", page, r["nick"], r["team"], rm, now)
+        # 1-3) 더 새 기사가 그 행선지를 '무산·결렬'이라 하면 새로 심기는 마감(결과는 계속 리그피디아 기준)
+        off = called_off(fa, roster)
+        for it in [dict(r) for r in c.execute("SELECT id, page, b, tag FROM farm_items WHERE result IS NULL AND kind='rumor'")]:
+            tag = it["tag"] or ""
+            if "발표" in tag or "무산" in tag:
+                continue
+            if (it["b"], it["id"].endswith(":s")) in off.get(it["page"], ()):
+                c.execute("UPDATE farm_items SET tag=? WHERE id=?", (("잔류 " if it["id"].endswith(":s") else "") + "무산", it["id"]))
         on = {x["page"]: x["team"] for x in roster}
         started = any(m.get("win") in ("1", "2") and str(_season()) in (m.get("page") or "")
                       for m in schedule.get("lck").get("matches") or [])
@@ -129,9 +137,9 @@ def _tally(c, ids):
 
 
 def _open(it, now):
-    """새로 심을 수 있나: 결과 전 · 경기는 시작 10분 전까지 · 유력 기사가 '발표'(오피셜)로 바뀌면 마감
+    """새로 심을 수 있나: 결과 전 · 경기는 시작 10분 전까지 · 유력 기사가 '발표'(오피셜)로 바뀌거나 '무산' 기사가 나면 마감
     (발표된 건 사실상 답이 나온 것. 이미 심은 사람은 리그피디아에 반영되면 수확·폭발)."""
-    if it["result"] is not None or "발표" in (it.get("tag") or ""):
+    if it["result"] is not None or "발표" in (it.get("tag") or "") or "무산" in (it.get("tag") or ""):
         return False
     return not it["lock_at"] or it["lock_at"] > now
 

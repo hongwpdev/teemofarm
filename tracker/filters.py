@@ -8,8 +8,9 @@ from .core import db
 
 # 1단계: 하나는 꼭 있어야 하는 말(리그·게임·팀·선수)
 DOMAIN_KO = ("리그 오브 레전드", "리그오브레전드", "롤드컵", "월즈", "이스포츠", "e스포츠", "E스포츠", "라이엇", "소환사의 컵",
+             "소환사의 협곡", "케스파컵", "감코진",
              "한화생명", "티원", "젠지", "디플러스", "롤스터", "농심", "레드포스", "피어엑스", "수퍼스", "브리온")
-DOMAIN_EN = ("LoL", "LCK", "LPL", "LEC", "LCS", "LCP", "CBLOL", "MSI", "Worlds", "Riot",
+DOMAIN_EN = ("LoL", "LCK", "LPL", "LEC", "LCS", "LCP", "CBLOL", "MSI", "Worlds", "Riot", "KeSPA",
              "HLE", "T1", "GEN", "Gen.G", "DK", "KT", "NS", "BFX", "FEARX", "DRX", "DNS", "BRO")
 LOL_WORD = re.compile(r"(?<![가-힣])롤(?![러링백업]|모델|케이크|플레잉)")      # '롤'은 따로: 컨트롤·롤러·롤모델 제외
 # 한글 닉네임: 기사에선 보통 '커즈'처럼 따옴표 안에 씀. 흔한 낱말과 겹치는 게 많아 따옴표 안일 때만 인정
@@ -26,10 +27,10 @@ KO_NICKS = {
     "Rather": "래더", "Roamer": "로머", "Ruler": "룰러", "Saroo": "사루", "Scout": "스카웃", "SeTab": "세탭",
     "Sharvel": "샤벨", "ShowMaker": "쇼메이커", "Siwoo": "시우", "Smash": "스매시", "Sonstar": "손스타",
     "Sponge": "스펀지", "Taeyoon": "태윤", "Teddy": "테디", "Tom": "톰", "Ucal": "유칼", "VicLa": "빅라",
-    "Vincenzo": "빈첸조", "Willer": "윌러", "Zeka": "제카", "Zeus": "제우스", "cvMax": "씨맥", "deokdam": "덕담",
+    "Vincenzo": "빈센조", "Willer": "윌러", "Zeka": "제카", "Zeus": "제우스", "cvMax": "씨맥", "deokdam": "덕담",
     "kkOma": "꼬마", "Viper": "바이퍼", "Bin": "빈", "Knight": "나이트", "Peanut": "피넛", "Deft": "데프트",
     "BeryL": "베릴", "Morgan": "모건", "Kael": "카엘", "Loke": "로케", "Rooster": "루스터",
-    "Roach": "로치", "Umti": "엄티", "Nuguri": "너구리", "Gori": "고리", "Lazyfeel": "레이지필", "Dove": "도브",
+    "Roach": "로치", "Umti": "엄티", "Nuguri": "너구리", "Gori": "고리", "Lazyfeel": "레이지필", "Dove": "도브", "Bengi": "벵기",
 }
 _LEARN = {"at": 0.0, "map": {}}
 
@@ -92,8 +93,13 @@ def black_hit(title: str) -> bool:
     return any(w in title for w in BLACK_KO) or bool(_BLACK_EN.search(title))
 
 
+# 다른 종목 말이 함께 있어도 LoL 기사로 볼 만큼 확실한 말('페이커, 야구장 시구… T1 LCK 우승 기념').
+# 팀 이름(KT·한화생명…)은 야구·농구 팀과 겹쳐서 여기엔 안 넣음('KT 위즈 FA 영입'은 계속 버림)
+_SURE = _words(("LCK", "LoL", "리그 오브 레전드", "리그오브레전드", "롤드컵"))
+
+
 def is_lol_news(title: str) -> bool:
-    if not title or black_hit(title):
+    if not title or (black_hit(title) and not _SURE.search(title)):
         return False
     if any(w in title for w in DOMAIN_KO) or _DOMAIN_EN.search(title) or LOL_WORD.search(title):
         return True

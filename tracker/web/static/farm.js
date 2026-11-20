@@ -63,7 +63,7 @@
     return `<section class="card tf-bar" aria-label="내 버섯 농장">
 <div class="tf-field" title="수확한 버섯이 밭에 자라요">${field()}</div>
 <div class="tf-who">${whoText()}</div>
-<div class="tf-num"><span><em class="tf-pts">${st.points}</em>농장 점수</span><span class="tf-stk"><em>${st.streak}</em>연속 수확</span><span title="${found ? "오늘 황금 버섯을 찾았어요" : "오늘의 황금 버섯이 화면 어딘가에 숨어 있어요"}"><em>${found ? px("gold", 20) : "🔍"}</em>황금 버섯</span></div></section>`;
+<div class="tf-num"><span><em class="tf-pts">${st.points}</em>농장 점수</span><span class="tf-stk"><em>${st.streak}</em>연속 수확</span><span title="${found ? "오늘 황금 버섯을 찾았어요" : "오늘의 황금 버섯이 화면 어딘가에 숨어 있어요"}"><em>${found ? px("gold", 20) : "🔍"}</em>황금 버섯</span><button type="button" class="tf-share" title="내 농장 기록을 복사해 커뮤니티에 붙여 넣어요"><em>📋</em>기록 공유</button></div></section>`;
   }
 
   // ── 판 ──
@@ -97,7 +97,7 @@
     return `<div class="tf-tug"><div class="tf-tl"><span class="tf-pa">${esc(sideName(it, p))} ${pa}%</span><span class="tf-n">민심 ${m}명${minor && !it.result ? ` · <b class="tf-bonus">${esc(sideName(it, minor))} 역배 +2</b>` : ""}</span><span class="tf-pb">${esc(sideName(it, q))} ${100 - pa}%</span></div><span class="tf-gauge">${s}</span></div>`;
   }
   // 사이트 전체 점검(tools/crawl.js)이 다른 화면과 상태·행선지를 비교할 수 있게
-  const facts = it => it.kind === "rumor" && !it.result ? ` data-nick="${esc(it.nick)}" data-label="${esc(it.tag || "")}" data-dest="${esc(it.b)}"` : "";
+  const facts = it => it.kind === "rumor" && !it.result && !/무산/.test(it.tag || "") ? ` data-nick="${esc(it.nick)}" data-label="${esc(it.tag || "")}" data-dest="${esc(it.b)}"` : "";
 
   // 진행 중 한 줄
   function openRow(it) {
@@ -108,7 +108,7 @@
       act = `<div class="tf-act tf-ox">${sides(it).map((c, i) => `<button type="button" class="${i ? "" : "tf-o"}" data-plant="${esc(it.id)}" data-pick="${c}">${esc(pickLabel(it, c))}</button>`).join("")}</div>`;
     } else if (mine.status === "pending") {
       cls = "tf-pend"; ground = plot("shroom", 48);
-      const wait = it.kind !== "rumor" ? "경기 결과 기다리는 중" : /발표/.test(it.tag || "") ? "발표 나옴 · 공식 반영 기다리는 중" : "공식 발표 기다리는 중";
+      const wait = it.kind !== "rumor" ? "경기 결과 기다리는 중" : /발표/.test(it.tag || "") ? "발표 나옴 · 공식 반영 기다리는 중" : /무산/.test(it.tag || "") ? "무산 보도 · 공식 반영 기다리는 중" : "공식 발표 기다리는 중";
       act = `<span class="tf-act tf-pst">${esc(pickLabel(it, mine.picked.toLowerCase()))}에 심음 · ${wait}</span>`;
     } else if (mine.status === "won" && !mine.harvested) {
       cls = "tf-won"; ground = plot("gold", 48);
@@ -274,7 +274,46 @@
       setTimeout(() => { if (tab === "open") paint(); }, 1400);         // 연출이 끝나면 결과 내역으로 옮김
       return;
     }
-    if (e.target.closest("[data-more]")) { more = true; paint(); }
+    if (e.target.closest("[data-more]")) { more = true; paint(); return; }
+    if (e.target.closest(".tf-share")) share();
+  });
+
+  // ── 내 기록 공유(복사해서 커뮤니티·메신저에 붙여 넣기) ──
+  function shareText() {
+    const ms = Object.values(st.plantedMushrooms), t = tier(st.points);
+    const won = ms.filter(m => m.status === "won").length, lost = ms.filter(m => m.status === "lost").length;
+    const wait = ms.filter(m => m.status === "pending").length;
+    return [
+      "🍄 티모의 버섯농장 · LCK 독버섯 심기",
+      `· ${t.badge} ${t.label} · 농장 점수 ${st.points}점 · 연속 수확 ${st.streak}`,
+      `· 맞힌 판 ${won}/${won + lost}${wait ? ` · 결과 기다리는 판 ${wait}` : ""}`,
+      `👉 ${location.origin}/lck`,
+    ].join("\n");
+  }
+  function copy(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    return new Promise((ok, no) => {                 // 오래된 브라우저·http: 숨은 글상자로 복사
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy") ? ok() : no(); } catch (err) { no(err); } finally { ta.remove(); }
+    });
+  }
+  function share() {
+    copy(shareText()).then(() => toast("내 농장 기록을 복사했어요. 붙여 넣어 자랑해 보세요"))
+      .catch(() => toast("복사하지 못했어요. 잠시 뒤에 다시 눌러 주세요"));
+  }
+
+  // ── 소식 목록의 '이 소식 O/X 심기 ↑' → 위 독버섯 심기 칸의 그 판으로 ──
+  document.addEventListener("click", e => {
+    const a = e.target.closest("[data-farm-jump]");
+    if (!a) return;
+    e.preventDefault();
+    const id = a.dataset.farmJump, sel = `li[data-item="${CSS.escape(id)}"]`;
+    if (tab !== "open" || !box.querySelector(sel)) { tab = "open"; if (!box.querySelector(sel)) more = true; paint(); }
+    const li = box.querySelector(sel) || box;
+    li.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (li !== box) { li.classList.remove("tf-flash"); void li.offsetWidth; li.classList.add("tf-flash"); }
   });
 
   // ── 숨은 황금 버섯(하루 한 번) ──

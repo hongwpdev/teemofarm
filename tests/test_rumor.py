@@ -6,7 +6,7 @@ import unittest
 os.environ.setdefault("DB_PATH", os.path.join(tempfile.mkdtemp(), "test.db"))
 
 from tracker.core import init_db  # noqa: E402
-from tracker.rumor import MOVE_MARK, _guess, read_title  # noqa: E402
+from tracker.rumor import MOVE_MARK, _guess, called_off_hit, read_title  # noqa: E402
 from tracker.cluster import persons  # noqa: E402
 
 
@@ -54,6 +54,23 @@ class RumorTest(unittest.TestCase):
         got = _guess(people, news, marks=MOVE_MARK, allow_stay=False)
         self.assertNotIn("Faker", got)                 # 평범한 경기 기사는 이적으로 보지 않음
         self.assertEqual(got["Siwoo"]["team"], "geng")
+
+    def test_called_off_drops_older_rumor(self):
+        def n(t, h):
+            return {"title": t, "url": f"u{h}", "outlet": "o", "published": f"2026-11-19T{h:02d}:00:00+00:00"}
+        who = [{"page": "Zeus", "nick": "Zeus", "team_from": "hle"}]
+        rumor, nix = n("[단독] '제우스' 최우제, T1 복귀 유력", 1), n("T1, '제우스' 최우제 영입 무산", 2)
+        off = {}
+        self.assertNotIn("Zeus", _guess(who, [nix, rumor], off=off))          # 최신순: 무산 기사가 더 새것
+        self.assertEqual(off["Zeus"], {("t1", False)})
+        late = n("[단독] '제우스' 최우제, T1 복귀 유력", 3)
+        self.assertEqual(_guess(who, [late, nix, rumor])["Zeus"]["team"], "t1")   # 무산 뒤에 다시 유력이 나오면 다시 보임
+        # 다른 팀 무산은 상관없음
+        self.assertEqual(_guess(who, [n("젠지, '제우스' 영입 무산", 2), rumor])["Zeus"]["team"], "t1")
+        # 재계약 불발 → 그전의 잔류 유력도 버림
+        stay = n("한화생명, '제우스'와 재계약 임박", 1)
+        self.assertNotIn("Zeus", _guess(who, [n("'제우스' 최우제, 한화생명과 재계약 불발", 2), stay]))
+        self.assertEqual(called_off_hit("T1과 '제우스' 협상 결렬", "Zeus", "hle"), ("t1", False))
 
     def test_leave_to_other_team(self):
         # '영입' 같은 말 없이 '원소속 떠나 다른 팀 ○○로'

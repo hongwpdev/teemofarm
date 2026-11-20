@@ -203,6 +203,19 @@ async function farm(p, seeded) {
     await p.reload(); await p.waitForSelector('#tf[data-ready]', { timeout: 5000 }).catch(() => {}); await p.waitForTimeout(300);
     if (await p.$('.tf-goldspot')) bad('황금 버섯을 찾은 날인데 또 나옴');
   }
+  // 소식 목록의 '이 소식 O/X 심기 ↑' → 위 독버섯 심기 칸의 그 판(접혀 있던 판도 펼쳐서)으로
+  const jumps = await p.$$('[data-farm-jump]');
+  if (!jumps.length) bad('열린 유력 판의 기사에 O/X 심기 바로가기가 없음');
+  else {
+    const j = jumps[jumps.length - 1], id = await j.getAttribute('data-farm-jump');
+    await j.scrollIntoViewIfNeeded(); await j.click(); await p.waitForTimeout(900);
+    const ok = await p.evaluate(id => { const li = document.querySelector(`#tf li[data-item="${CSS.escape(id)}"]`); if (!li) return false;
+      const r = li.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }, id);
+    if (!ok) bad(`O/X 심기 바로가기를 눌렀는데 그 판(${id})이 화면에 안 보임`);
+  }
+  // 기록 공유: 누르면 복사됐다는 안내(복사 권한이 없는 환경이면 실패 안내라도)
+  await p.click('.tf-share'); await p.waitForTimeout(300);
+  if (!/복사/.test(await p.locator('.tf-toast').last().textContent().catch(() => ''))) bad('기록 공유를 눌렀는데 아무 안내가 없음');
 }
 
 (async () => {

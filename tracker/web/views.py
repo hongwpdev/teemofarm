@@ -521,6 +521,10 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
     nav = (f'<a class="{"on" if all_on else ""}" href="{esc(url(t="all"))}" data-t="all"{" aria-current=page" if all_on else ""}>전체</a>'
            + "".join(team_tab(k) for k in sorted(TEAMS, key=lambda k: k != "lck")))   # 'LCK 공통'을 '전체' 바로 뒤로
 
+    farm = league == "lck" and not q          # 독버섯 심기(서버가 골격·판 목록을 그리고 static/farm.js가 내 점수·심은 상태를 덮어씀)
+    tf_board = _farm_board() if farm else None
+    # 열린 '유력' 판의 기사 제목 → 판 id: 그 기사 아래에 '이 소식 O/X 심기 ↑'(누르면 위 독버섯 심기 칸의 그 판으로)
+    tf_jump = {it["title"]: it["id"] for it in (tf_board or {}).get("open", []) if it["kind"] == "rumor" and it.get("title")}
     now = datetime.now(timezone.utc)
     lis, last_day = [], None
     for r, kind, teams, rest in cluster_group(items):
@@ -553,7 +557,11 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
         ovs = overseas_tag(title, team_short) if r["source"] == "news" else ""
         if ovs:
             tit += f'<span class="ovs">{esc(ovs)}</span>'
-        cls = f'item kd-{kind} lv-{lv}' + (" new" if new else "") + (" grp" if rest else "") + (" spo" if is_spoiler(title) else "")
+        jid = next((tf_jump[t] for t in [title] + [m["title"] for m, _, _ in rest] if t in tf_jump), "")
+        jump = (f'<div class="tf-jw"><a class="tf-jump" href="#tf" data-farm-jump="{esc(jid)}">🍄 이 소식 O/X 심기 ↑</a></div>'
+                if jid else "")
+        cls = (f'item kd-{kind} lv-{lv}' + (" new" if new else "") + (" grp" if rest else "") + (" spo" if is_spoiler(title) else "")
+               + (" tfj" if jid else ""))
         ts = int(pub.timestamp() * 1000)
         more = ""
         if rest:
@@ -567,7 +575,7 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
             f'<li class="{cls}" data-id="{esc(r["id"])}" data-ts="{ts}"><a class="row" href="{esc(r["url"])}" target="_blank" rel="noopener">'
             f'<p class="tit">{kb}{tit}</p><div class="meta">{"".join(badges)}{tms}{srcb}'
             f'{f"<span class=ol>{outlet}</span>" if outlet else ""}'
-            f'<time class="rel" data-ts="{ts}" datetime="{kst.isoformat()}" title="{kst:%Y-%m-%d %H:%M} KST">{rel_time(pub, now)}</time></div></a>{more}</li>')
+            f'<time class="rel" data-ts="{ts}" datetime="{kst.isoformat()}" title="{kst:%Y-%m-%d %H:%M} KST">{rel_time(pub, now)}</time></div></a>{jump}{more}</li>')
 
     def go_link(label, **kw):
         return f'<a href="{esc(url(**kw))}">{label}</a>'
@@ -589,8 +597,7 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
             gos.append(go_link("모든 출처 보기", s="all"))
         body = f'<li class="empty"><p>{text}</p>' + (f'<div class="go">{"".join(gos)}</div>' if gos else "") + "</li>"
 
-    farm = league == "lck" and not q          # 독버섯 심기(서버가 골격·판 목록을 그리고 static/farm.js가 내 점수·심은 상태를 덮어씀)
-    main = f"""<div class="layout"><div>{farm_block() if farm else ""}
+    main = f"""<div class="layout"><div>{farm_block(tf_board) if farm else ""}
 <section class="card fbar{" open" if custom else ""}" id="fbar" aria-label="보기와 필터">
 <form class="srch" method="get" action="{base}" role="search">{"".join(f'<input type="hidden" name="{k}" value="{esc(str(v))}">' for k, v in (("team", team if team in TEAMS else ""),) if v != "")}
 <input type="search" name="q" value="{esc(q)}" placeholder="선수·키워드 검색 (예: 커즈, 기인)" aria-label="선수·키워드 검색" enterkeyhint="search">
@@ -744,17 +751,22 @@ def _tf_done_row(it) -> str:
             f'<span class="tf-src">결과 {out} · {day}</span></div>{_tf_tug(it, True)}{verdict}</li>')
 
 
-def farm_block() -> str:
+def _farm_board() -> dict:
     try:
-        board = farmd.board([])
+        return farmd.board([])
     except Exception:  # noqa: BLE001  놀이 칸이라 실패해도 소식 화면은 그대로
-        board = {"open": [], "mine": {}, "done": []}
+        return {"open": [], "mine": {}, "done": []}
+
+
+def farm_block(board=None) -> str:
+    board = board if board is not None else _farm_board()
     opn, done = board["open"], board["done"]
     holes = "".join(farm_art.plot(None, 28) for _ in range(7))
     bar = (f'<section class="card tf-bar" aria-label="내 버섯 농장">\n<div class="tf-field" title="수확한 버섯이 밭에 자라요">{holes}</div>\n'
            '<div class="tf-who"><span class="tf-tier">🌱 새싹 농부</span><small>다음 등급까지 5점 · <span class="tf-fcnt">밭 0/7칸</span></small></div>\n'
            '<div class="tf-num"><span><em class="tf-pts">0</em>농장 점수</span><span class="tf-stk"><em>0</em>연속 수확</span>'
-           '<span title="오늘의 황금 버섯이 화면 어딘가에 숨어 있어요"><em>🔍</em>황금 버섯</span></div></section>')
+           '<span title="오늘의 황금 버섯이 화면 어딘가에 숨어 있어요"><em>🔍</em>황금 버섯</span>'
+           '<button type="button" class="tf-share" title="내 농장 기록을 복사해 커뮤니티에 붙여 넣어요"><em>📋</em>기록 공유</button></div></section>')
     card = ""
     if opn or done:
         season = any(it["kind"] == "match" for it in opn)

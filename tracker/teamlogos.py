@@ -17,6 +17,7 @@ _INDEX = os.path.join(_DIR, "index.json")
 _LOCK = threading.Lock()
 INDEX = {}                     # 팀 키 -> {"file", "type", "v"(내용 해시), "image"} 또는 {"image", "failed_at"(시각)}
 RETRY_SEC = 6 * 3600           # 리그피디아에 로고가 정말 없을 때 다시 볼 때까지
+REMOTE_RETRY_SEC = 24 * 3600   # 이미지 서버가 우리 서버를 막을 때(403 등): 하루 동안은 다시 직접 받지 않고 브라우저가 받게 둠
 TYPES = {b"\x89PNG": ("png", "image/png"), b"RIFF": ("webp", "image/webp"), b"GIF8": ("gif", "image/gif"),
          b"\xff\xd8\xff": ("jpg", "image/jpeg")}
 _KEY = re.compile(r"^[a-z0-9-]{1,60}$")
@@ -139,9 +140,14 @@ def ensure(images: dict):
     """{팀 키: 리그피디아 파일 이름} 중 아직 없는 로고(또는 파일 이름이 바뀐 로고)를 받아 둠."""
     images = {k: "|".join(_cands(v)) for k, v in images.items() if v}
     now = time.time()
-    need = {k: img for k, img in images.items() if img and _KEY.match(k)
-            and ((INDEX.get(k) or {}).get("image") != img or (INDEX.get(k) or {}).get("remote") or
-                 (not (INDEX.get(k) or {}).get("file") and now - (INDEX.get(k) or {}).get("failed_at", 0) > RETRY_SEC))}
+    def due(k, img):
+        e = INDEX.get(k) or {}
+        if e.get("image") != img:
+            return True
+        if e.get("remote"):                    # 직접 못 받았던 로고: 하루에 한 번만 다시(서버를 켤 때마다 80여 번 403을 맞지 않게)
+            return now - e.get("remote_at", 0) > REMOTE_RETRY_SEC
+        return not e.get("file") and now - e.get("failed_at", 0) > RETRY_SEC
+    need = {k: img for k, img in images.items() if img and _KEY.match(k) and due(k, img)}
     if not need:
         return 0
     try:
@@ -151,24 +157,27 @@ def ensure(images: dict):
     except Exception as e:  # noqa: BLE001
         log.warning("team logos: thumb urls failed: %s", e)
         return 0
-    got, blocked = 0, []
+    got, blocked, denied = 0, [], False
     for k, img in need.items():
         data, t = None, None
         src = next((thumbs[c] for c in img.split("|") if thumbs.get(c)), "")
         if src:
             try:
+                if denied:                     # 이미지 서버가 이번에 403으로 막음: 나머지는 두드리지 않고 바로 브라우저 몫으로
+                    raise PermissionError("skipped after 403")
                 time.sleep(0.3)
                 data = http_get(src)
                 t = _sniff(data)
             except Exception as e:  # noqa: BLE001
+                denied = denied or getattr(e, "code", None) in (401, 403)
                 # 서버에서 이미지 서버로 못 감(네트워크·인증서 등): 주소만 적어 두고 브라우저가 직접 받게 함.
                 # 다음 갱신 때 다시 직접 받아 보고, 되면 파일로 바꿈
                 blocked.append(k)                                  # 팀마다 경고를 남기면 진짜 오류가 묻혀서 끝에 한 줄로 요약
-                LAST_ERROR.update(at=time.strftime("%Y-%m-%d %H:%M:%S"), msg=f"{type(e).__name__}: {e}"[:300])
+                if not isinstance(e, PermissionError):
+                    LAST_ERROR.update(at=time.strftime("%Y-%m-%d %H:%M:%S"), msg=f"{type(e).__name__}: {e}"[:300])
                 with _LOCK:
                     if not (INDEX.get(k) or {}).get("file"):
-                        INDEX[k] = {"image": img, "remote": src}
-                        _save()
+                        INDEX[k] = {"image": img, "remote": src, "remote_at": now}
                 continue
         with _LOCK:
             if t and len(data) < 200_000:
@@ -182,6 +191,8 @@ def ensure(images: dict):
                 INDEX[k] = {"image": img, "failed_at": now}   # (예전 "failed" 표시는 무시 → 한 번 다시 받음)
             _save()
     if blocked:
+        with _LOCK:
+            _save()
         log.warning("team logos: %d팀 이미지 서버에서 직접 못 받음(%s) → 브라우저가 직접 받음. 예: %s",
                     len(blocked), LAST_ERROR["msg"][:60], ", ".join(blocked[:3]))
     log.info("team logos: %d new of %d", got, len(need))
