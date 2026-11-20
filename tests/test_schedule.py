@@ -130,7 +130,7 @@ class ScheduleTest(unittest.TestCase):
         self.assertEqual(nxt.count('class="card'), 1 + nxt.count('class="card tours'))   # 대회 일정이 없으면 카드 1장
         one = views.render_schedule("lck", 2026, "results", "Rounds 3-4")   # 대회 일정에서 한 대회를 눌러 들어옴
         self.assertIn("2026 시즌 결과 · 정규 3·4라운드", one)
-        self.assertIn("전체 결과 보기", one)
+        self.assertIn("전체 대회 보기", one)
         self.assertIn('class="mt done"', one)
         self.assertNotIn("· 엉뚱", views.render_schedule("lck", 2026, "results", "엉뚱"))   # 없는 대회 이름은 그냥 전체
         past = views.render_schedule("lck", 2026, "results")          # 2026을 고름

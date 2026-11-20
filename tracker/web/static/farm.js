@@ -23,6 +23,8 @@
       points: Number.isFinite(s.points) ? s.points : 0,
       streak: Number.isFinite(s.streak) ? s.streak : 0,
       plantedMushrooms: s.plantedMushrooms && typeof s.plantedMushrooms === "object" ? s.plantedMushrooms : {},
+      best: Number.isFinite(s.best) ? s.best : (Number.isFinite(s.streak) ? s.streak : 0),   // 최고 연속 수확(수확 카드용)
+      quiz: s.quiz && typeof s.quiz === "object" ? s.quiz : {},                                // 오늘의 로스터 퀴즈 {date, pick, ok}
       goldenFoundDates: Array.isArray(s.goldenFoundDates) ? s.goldenFoundDates : [],
       fieldLog: Array.isArray(s.fieldLog) ? s.fieldLog : [],
     };
@@ -63,11 +65,11 @@
     return `<section class="card tf-bar" aria-label="내 버섯 농장">
 <div class="tf-field" title="수확한 버섯이 밭에 자라요">${field()}</div>
 <div class="tf-who">${whoText()}</div>
-<div class="tf-num"><span><em class="tf-pts">${st.points}</em>농장 점수</span><span class="tf-stk"><em>${st.streak}</em>연속 수확</span><span title="${found ? "오늘 황금 버섯을 찾았어요" : "오늘의 황금 버섯이 화면 어딘가에 숨어 있어요"}"><em>${found ? px("gold", 20) : "🔍"}</em>황금 버섯</span><button type="button" class="tf-share" title="내 농장 기록을 복사해 커뮤니티에 붙여 넣어요"><em>📋</em>기록 공유</button></div></section>`;
+<div class="tf-num"><span><em class="tf-pts">${st.points}</em>농장 점수</span><span class="tf-stk"><em>${st.streak}</em>연속 수확</span><span title="${found ? "오늘 황금 버섯을 찾았어요" : "오늘의 황금 버섯이 화면 어딘가에 숨어 있어요"}"><em>${found ? px("gold", 20) : "🔍"}</em>황금 버섯</span><button type="button" class="tf-share" title="내 농장 수확 카드를 그림으로 저장하거나 글로 복사해요"><em>📋</em>기록 공유</button></div></section>`;
   }
 
   // ── 판 ──
-  let board = { open: init.open || [], mine: {}, done: init.done || [] }, more = false, tab = "open";
+  let board = { open: init.open || [], mine: {}, done: init.done || [], quiz: init.quiz || null }, more = false, tab = "open";
   const sides = it => it.kind === "rumor" ? ["o", "x"] : ["a", "b"];
   const sideName = (it, c) => it.kind === "rumor" ? c.toUpperCase() : (c === "a" ? it.a_short : it.b_short);
   const pickLabel = (it, p) => it.kind === "rumor" ? (p === "o" ? (it.id.endsWith(":s") ? "O 남는다" : "O 간다") : (it.id.endsWith(":s") ? "X 떠난다" : "X 안 간다")) : (p === "a" ? it.a_label : it.b_label);
@@ -121,6 +123,17 @@
     } else return "";
     return `<li class="${cls}" data-item="${esc(it.id)}"${facts(it)}>${ground}<div class="tf-q">${title(it)}${source(it)}</div>${tug(it, !!mine)}${act}</li>`;
   }
+  // 심을 판이 없는 날의 '오늘의 로스터 퀴즈'(서버 views._tf_quiz와 같은 모양 + 내가 푼 기록)
+  function quizBox(q) {
+    const mine = st.quiz.date === q.date ? st.quiz : null;
+    const btns = q.options.map((o, i) => {
+      const cls = mine ? (i === q.answer ? "tf-qz-ok" : i === mine.pick ? "tf-qz-no" : "") : "";
+      return `<button type="button" data-quiz-pick="${i}"${cls ? ` class="${cls}"` : ""}${mine ? " disabled" : ""}>${esc(o)}</button>`;
+    }).join("");
+    const msg = !mine ? "심을 판이 없는 날엔 하루 한 문제 · 맞히면 버섯 +1"
+      : mine.ok ? "정답! 버섯 +1 수확 · 내일 새 문제가 나와요" : `아쉬워요. 정답은 ${esc(q.options[q.answer])} · 내일 새 문제가 나와요`;
+    return `<div class="tf-quiz" data-quiz="${esc(q.id)}"><p class="tf-qz-q"><span class="tf-qz-tag">🎯 오늘의 로스터 퀴즈</span><b>${esc(q.question)}</b></p><div class="tf-qz-opts">${btns}</div><p class="tf-qz-msg">${msg}</p></div>`;
+  }
   // 결과 내역 한 줄: 모두에게 보이는 결과·최종 민심 + (심었던 사람만) 내 기록
   function verdict(it) {
     const n = it.n || 0, w = (it.tally || {})[it.result] || 0;
@@ -155,13 +168,13 @@
     mineIds.filter(id => m(id).status === "pending").forEach(id => add(board.mine[id]));                    // 마감됐지만 결과 기다리는 내 판
     const rows = items.map(openRow).filter(Boolean);
     const done = board.done.map(doneRow);
-    if (!rows.length && !done.length) return "";
+    if (!rows.length && !done.length && !board.quiz) return "";
     const season = board.open.some(it => it.kind === "match");
     const desc = season ? "경기 시작 10분 전까지 이길 팀 진영에 심어요. 맞히면 +1점, 30% 미만 소수 쪽이 맞으면 역배 +2점(10명 이상 참여한 판)."
       : "유력 기사가 맞을지 O·X 밭에 버섯을 심어요. 심으면 민심이 공개되고, 공식 확정되면 결과가 나와요. 맞히면 +1점, 30% 미만 소수 쪽이면 역배 +2점(10명 이상 참여한 판).";
     const cut = more ? rows.length : phone() ? 2 : 4;          // 소식이 너무 밀리지 않게: 휴대폰 2개 · PC 4개, 나머지는 '더 보기'
     const openPanel = rows.length ? `<ul>${rows.slice(0, cut).join("")}</ul>${rows.length > cut ? `<button type="button" class="tf-more" data-more="1">더 보기 · 전체 ${rows.length}개</button>` : ""}`
-      : `<p class="tf-emptymsg">지금 심을 판이 없어요. 새 유력 기사가 뜨면 생겨요.</p>`;
+      : board.quiz && !board.open.length ? quizBox(board.quiz) : `<p class="tf-emptymsg">지금 심을 판이 없어요. 새 유력 기사가 뜨면 생겨요.</p>`;
     const donePanel = done.length ? `<ul>${done.join("")}</ul>` : `<p class="tf-emptymsg">아직 결과가 난 판이 없어요.</p>`;
     return `<section class="card tf-card" aria-label="독버섯 심기"><div class="tf-head"><h3>독버섯 심기 <small>${season ? "오늘의 경기" : "스토브리그 편"}</small></h3>
 <div class="tf-tabs" role="tablist"><button type="button" role="tab" data-tab="open" aria-selected="${tab === "open"}">진행 중 <b>${rows.length}</b></button><button type="button" role="tab" data-tab="done" aria-selected="${tab === "done"}">결과 내역 <b>${done.length}</b></button></div></div>
@@ -199,7 +212,7 @@
   function refresh() {
     const ids = Object.keys(st.plantedMushrooms).join(",");
     return fetch(`/api/farm?cid=${encodeURIComponent(cid)}&ids=${encodeURIComponent(ids)}`).then(r => r.json()).then(d => {
-      board = { open: d.open || [], mine: d.mine || {}, done: d.done || [] };
+      board = { open: d.open || [], mine: d.mine || {}, done: d.done || [], quiz: d.quiz || null };
       // 저장값이 지워졌어도 이 브라우저(같은 번호)가 열린 판에 심은 쪽은 서버 기록으로 되살림
       let back = false;
       for (const [id, pick] of Object.entries(d.my_picks || {})) {
@@ -269,13 +282,27 @@
       const id = hb.dataset.harvest, m = st.plantedMushrooms[id];
       if (!m || m.status !== "won" || m.harvested) return;            // 두 번 받지 않게
       const add = m.isUnderdog ? 2 : 1;
-      m.harvested = true; st.points += add; st.streak += 1; save();
+      m.harvested = true; st.points += add; st.streak += 1; st.best = Math.max(st.best, st.streak); save();
       const li = hb.closest("li"), ground = li.querySelector(".tf-plot");
       hb.outerHTML = `<span class="tf-act tf-pst tf-got">수확 완료 ✓ +${add}</span>`;
       if (ground) sparks(ground, "+" + add);
       setPoints();
       setTimeout(() => growField("n"), 450);
       setTimeout(() => { if (tab === "open") paint(); }, 1400);         // 연출이 끝나면 결과 내역으로 옮김
+      return;
+    }
+    const qb = e.target.closest("[data-quiz-pick]");
+    if (qb && board.quiz) {
+      const q = board.quiz, pick = +qb.dataset.quizPick;
+      if (st.quiz.date === q.date) return;                             // 하루 한 번
+      const ok = pick === q.answer;
+      st.quiz = { date: q.date, pick, ok };
+      if (ok) { st.points += 1; }
+      save(); paint();
+      if (ok) {
+        const b = box.querySelector(`[data-quiz-pick="${pick}"]`); if (b) sparks(b, "+1");
+        setPoints(); setTimeout(() => growField("n"), 450);
+      }
       return;
     }
     if (e.target.closest("[data-more]")) { more = true; paint(); return; }
@@ -303,9 +330,79 @@
       try { document.execCommand("copy") ? ok() : no(); } catch (err) { no(err); } finally { ta.remove(); }
     });
   }
+  // 수확 카드(1:1 그림): 화면 색(밝은/어두운)을 그대로 쓰고, 버섯은 농장과 같은 도트 그림
+  function shot() {
+    const W = 1080, cv = document.createElement("canvas"); cv.width = W; cv.height = W;
+    const c = cv.getContext("2d"), cs = getComputedStyle(document.documentElement);
+    const v = (n, d) => (cs.getPropertyValue(n) || "").trim() || d;
+    const bg = v("--card", "#1e2533"), fg = v("--t1", "#f3f4f6"), sub = v("--t5", "#9aa5b1"), em = v("--tf-emerald", "#10b981"),
+          am = v("--tf-amber", "#d97706"), soft = v("--tf-emerald-bg", "rgba(16,185,129,.12)");
+    const font = getComputedStyle(document.body).fontFamily || "sans-serif";
+    const F = (w, size) => `${w} ${size}px ${font}`;
+    const bs = getComputedStyle(box);                 // 도트 색 중 var(--shroom) 같은 것은 지금 테마의 실제 색으로
+    const col = ch => { const k = ART.col[ch] || "#000", m = /^var\((--[\w-]+)\)$/.exec(k); return m ? (bs.getPropertyValue(m[1]).trim() || "#c0392b") : k; };
+    const sprite = (k, x, y, size) => {
+      const g = ART.spr[k] || [], H = g.length, Wd = (g[0] || "").length || 1, cell = size / Wd;
+      g.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== ".") { c.fillStyle = col(ch); c.fillRect(x + i * cell, y + j * cell, Math.ceil(cell), Math.ceil(cell)); } }));
+      return H * cell;
+    };
+    const round = (x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
+    c.fillStyle = bg; c.fillRect(0, 0, W, W);
+    round(40, 40, W - 80, W - 80, 48); c.lineWidth = 6; c.strokeStyle = em; c.stroke();
+    const t = tier(st.points), ms = Object.values(st.plantedMushrooms);
+    const won = ms.filter(m => m.status === "won").length, lost = ms.filter(m => m.status === "lost").length;
+    c.textBaseline = "alphabetic";
+    c.fillStyle = fg; c.font = F(800, 46); c.textAlign = "left"; c.fillText("티모의 버섯농장", 96, 140);
+    c.fillStyle = sub; c.font = F(600, 30); c.fillText("LCK 독버섯 심기 · 내 농장 수확 카드", 96, 190);
+    c.textAlign = "right"; c.fillText(today().replace(/-/g, "."), W - 96, 140);
+    // 가운데: 큰 버섯 + 등급
+    c.fillStyle = soft; c.beginPath(); c.ellipse(W / 2, 480, 190, 40, 0, 0, Math.PI * 2); c.fill();
+    sprite(st.points >= 15 ? "gold" : "shroom", W / 2 - 120, 240, 240);
+    c.textAlign = "center"; c.fillStyle = em; c.font = F(800, 64); c.fillText(t.label, W / 2, 600);
+    // 숫자 네 칸
+    const cells = [["농장 점수", st.points + "점"], ["연속 수확 · 최고 " + st.best, String(st.streak)],
+                 ["맞힌 판", won + "/" + (won + lost)], ["찾은 황금 버섯", st.goldenFoundDates.length + "개"]];
+    const bw = (W - 192 - 3 * 24) / 4;
+    cells.forEach(([label, val], i) => {
+      const x = 96 + i * (bw + 24);
+      round(x, 650, bw, 170, 24); c.fillStyle = soft; c.fill();
+      c.fillStyle = am; c.font = F(800, 58); c.fillText(val, x + bw / 2, 740);
+      c.fillStyle = sub; c.font = F(600, 26); c.fillText(label, x + bw / 2, 790);
+    });
+    // 내 밭 7칸
+    const log = st.fieldLog.slice(-7), ps = 72, gap = 22, x0 = (W - (7 * ps + 6 * gap)) / 2;
+    for (let i = 0; i < 7; i++) sprite(log[i] ? (log[i] === "g" ? "gold" : "shroom") : "hole", x0 + i * (ps + gap), 860, ps);
+    c.fillStyle = em; c.font = F(800, 34); c.fillText(location.host.replace(/^www\./, "") + "/lck", W / 2, 1000);
+    return cv;
+  }
   function share() {
-    copy(shareText()).then(() => toast("내 농장 기록을 복사했어요. 붙여 넣어 자랑해 보세요"))
-      .catch(() => toast("복사하지 못했어요. 잠시 뒤에 다시 눌러 주세요"));
+    let d = document.getElementById("tf-shot");
+    if (!d) {
+      d = document.createElement("dialog"); d.id = "tf-shot"; d.className = "tf-shot"; d.setAttribute("aria-label", "내 농장 수확 카드");
+      d.innerHTML = '<img alt="내 농장 수확 카드" width="1080" height="1080"><div class="tf-shot-acts">'
+        + '<button type="button" class="tf-o" data-shot="save">이미지 저장</button><button type="button" data-shot="share" hidden>공유하기</button>'
+        + '<button type="button" data-shot="copy">글로 복사</button><button type="button" data-shot="close">닫기</button></div>';
+      document.body.append(d);
+      d.addEventListener("click", e => {
+        if (e.target === d) { d.close(); return; }             // 바깥(어두운 곳)을 누르면 닫기
+        const b = e.target.closest("[data-shot]"); if (!b) return;
+        const say = (t) => { const o = b.textContent; b.textContent = t; setTimeout(() => { b.textContent = o; }, 1500); };
+        const k = b.dataset.shot, cv = d._cv;
+        if (k === "close") d.close();
+        else if (k === "copy") copy(shareText()).then(() => say("복사했어요 ✓")).catch(() => say("복사 못 함"));
+        else if (k === "save") { const a = document.createElement("a"); a.href = cv.toDataURL("image/png"); a.download = `teemofarm-${today()}.png`; document.body.append(a); a.click(); a.remove(); }
+        else if (k === "share") cv.toBlob(bl => {
+          const f = new File([bl], `teemofarm-${today()}.png`, { type: "image/png" });
+          navigator.share({ files: [f], text: shareText() }).catch(() => {});
+        }, "image/png");
+      });
+    }
+    d._cv = shot();
+    d.querySelector("img").src = d._cv.toDataURL("image/png");
+    const can = (() => { try { return !!(navigator.canShare && navigator.canShare({ files: [new File([""], "a.png", { type: "image/png" })] })); } catch (e) { return false; } })();
+    d.querySelector('[data-shot="share"]').hidden = !can;
+    if (typeof d.showModal === "function") d.showModal();
+    else copy(shareText()).then(() => toast("내 농장 기록을 복사했어요. 붙여 넣어 자랑해 보세요")).catch(() => {});
   }
 
   // ── 소식 목록의 '이 소식 O/X 심기 ↑' → 위 독버섯 심기 칸의 그 판으로 ──

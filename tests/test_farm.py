@@ -236,3 +236,50 @@ class FarmViewTest(unittest.TestCase):
         self.assertNotIn("격전지", _tf_tug({**base, "tally": {"o": 2, "x": 2}, "n": 4}, True))     # 10명 미만
         self.assertNotIn("격전지", _tf_tug({**base, "tally": {"o": 8, "x": 2}, "n": 10}, True))
         self.assertNotIn("격전지", _tf_tug({**base, "tally": {"o": 5, "x": 5}, "n": 10}, False))   # 심기 전엔 비율도 비공개
+
+
+class QuizTest(unittest.TestCase):
+    """오늘의 로스터 퀴즈: 날짜가 같으면 같은 문제, 정답은 그 팀 그 자리 선수, 오답은 다른 팀 같은 자리."""
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def setUp(self):
+        with db() as c:
+            c.execute("DELETE FROM roster")
+            for team in ("t1", "geng", "hle", "dk"):
+                for role in ("Top", "Jungle", "Mid", "Bot", "Support"):
+                    c.execute("INSERT INTO roster(league,team,role,page,nick,real,until,joined) VALUES('lck',?,?,?,?,'','',1)",
+                              (team, role, f"{team}{role}", f"{team}-{role}"))
+
+    def tearDown(self):
+        with db() as c:
+            c.execute("DELETE FROM roster")
+
+    def test_daily_quiz(self):
+        from datetime import date
+        q = farm.daily_quiz(date(2027, 1, 3))
+        self.assertEqual(q, farm.daily_quiz(date(2027, 1, 3)))                 # 같은 날 = 같은 문제
+        self.assertEqual(len(set(q["options"])), 3)
+        team, role = q["options"][q["answer"]].split("-")
+        self.assertEqual(team, q["team"])
+        self.assertTrue(all(o.split("-")[1] == role and o.split("-")[0] != team for i, o in enumerate(q["options"]) if i != q["answer"]))
+        self.assertRegex(q["question"], r"^지금 .+의 (탑은|정글은|미드는|원딜은|서폿은) 누구\?$")
+        days = {farm.daily_quiz(date(2027, 1, d))["question"] + str(farm.daily_quiz(date(2027, 1, d))["options"]) for d in range(1, 11)}
+        self.assertGreater(len(days), 3)                                       # 날마다 바뀜
+
+    def test_no_quiz_without_enough_players(self):
+        with db() as c:
+            c.execute("DELETE FROM roster WHERE team != 't1'")
+        self.assertIsNone(farm.daily_quiz())
+
+    def test_board_has_quiz_only_when_nothing_to_plant(self):
+        with db() as c:
+            c.execute("DELETE FROM farm_items")
+        b = farm.board([])
+        if not b["open"]:
+            self.assertIsNotNone(b.get("quiz"))
+        from tracker.web.views import farm_block
+        html = farm_block({"open": [], "mine": {}, "done": [], "quiz": farm.daily_quiz()})
+        self.assertIn('class="tf-quiz"', html)
+        self.assertEqual(html.count("data-quiz-pick="), 3)

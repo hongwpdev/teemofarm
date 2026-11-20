@@ -19,7 +19,7 @@ _EN_TEAM = {"HLE": "hle", "Hanwha": "hle", "T1": "t1", "Gen.G": "geng", "GEN": "
 
 
 def trust(title: str, kind: str) -> int:
-    """신뢰도: 3 = 구단 공식(황금 버섯), 2 = 단독·유력 보도, 1 = 루머·썰, 0 = 표시 안 함(일반 기사·전망)."""
+    """신뢰도: 3 = 팀 공식(황금 버섯), 2 = 단독·유력 보도, 1 = 루머·썰, 0 = 표시 안 함(일반 기사·전망)."""
     if kind == "official":
         return 3
     if kind == "rumor":

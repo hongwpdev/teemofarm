@@ -159,6 +159,28 @@ async function vote(p) {
 }
 
 // 독버섯 심기: 심기 → 잠김 / (써 본 사람) 결과 난 판 수확은 한 번만 / 황금 버섯은 하루 한 번
+// 소식 보기·팀·기간을 바꾸면 소식 칸만 바뀜(새로 불러오지 않음): 주소·뒤로 가기·스크롤·[조회] 단추가 그대로인지
+async function swap(p) {
+  await p.goto(B + '/lck?team=all');
+  await p.waitForSelector('#tf[data-ready]', { timeout: 5000 }).catch(() => {});
+  await p.evaluate(() => { window.__keep = 1; });
+  const tab = p.locator('.view_tab a', { hasText: '스토브리그' });
+  await tab.scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, 100));
+  const y0 = await p.evaluate(() => scrollY);
+  await tab.click();
+  const ok = await p.waitForFunction(() => location.search.includes('hot=2') && !document.querySelector('.layout.is-loading'), null, { timeout: 5000 }).catch(() => null);
+  if (!ok) { bad('소식 보기를 바꿨는데 주소가 안 바뀜'); return; }
+  const s = await p.evaluate(() => ({ keep: window.__keep, y: scrollY, on: (document.querySelector('.view_tab a.on') || {}).textContent, go: !!document.getElementById('go') }));
+  if (s.keep !== 1) bad('소식 보기를 바꿨는데 화면 전체를 새로 불러옴(소식 칸만 바뀌어야 함)');
+  if (Math.abs(s.y - y0) > 2) bad(`소식 보기를 바꿨는데 스크롤이 ${y0} → ${s.y}로 튐`);
+  if (s.on !== '스토브리그') bad(`바꾼 뒤 보기 표시가 '${s.on}'`);
+  if (!s.go) bad('바꾼 뒤 [조회] 단추가 사라짐');
+  await p.goBack();
+  const back = await p.waitForFunction(() => !location.search.includes('hot=2') && !document.querySelector('.layout.is-loading') &&
+    (document.querySelector('.view_tab a.on') || {}).textContent === '전체', null, { timeout: 5000 }).catch(() => null);
+  if (!back) bad('뒤로 가기로 이전 소식 보기가 안 돌아옴');
+}
+
 async function farm(p, seeded) {
   const pts = async () => +(await p.$eval('.tf-pts', e => e.textContent).catch(() => 'NaN'));
   await p.goto(B + '/lck');
@@ -213,9 +235,16 @@ async function farm(p, seeded) {
       const r = li.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }, id);
     if (!ok) bad(`O/X 심기 바로가기를 눌렀는데 그 판(${id})이 화면에 안 보임`);
   }
-  // 기록 공유: 누르면 복사됐다는 안내(복사 권한이 없는 환경이면 실패 안내라도)
+  // 기록 공유: 수확 카드(그림) 창이 열리고, 그림이 그려져 있고, 닫힘
   await p.click('.tf-share'); await p.waitForTimeout(300);
-  if (!/복사/.test(await p.locator('.tf-toast').last().textContent().catch(() => ''))) bad('기록 공유를 눌렀는데 아무 안내가 없음');
+  const shot = await p.evaluate(() => { const d = document.getElementById('tf-shot'); const im = d && d.querySelector('img');
+    return { open: !!(d && d.open), img: !!(im && im.src.startsWith('data:image/png') && im.naturalWidth === 1080) }; });
+  if (!shot.open) bad('기록 공유를 눌렀는데 수확 카드 창이 안 열림');
+  else {
+    if (!shot.img) bad('수확 카드 그림이 비어 있음');
+    await p.click('[data-shot="close"]'); await p.waitForTimeout(200);
+    if (await p.evaluate(() => document.getElementById('tf-shot').open)) bad('수확 카드 창의 닫기가 안 됨');
+  }
 }
 
 (async () => {
@@ -248,6 +277,7 @@ async function farm(p, seeded) {
       await memory(p);
       await vote(p);
       await farm(p, !!seed);
+      await swap(p);
       await ctx.close();
     }
   }

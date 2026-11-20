@@ -4,13 +4,15 @@
   - 선택 집계(민심 줄다리기·역배 판정용, 브라우저 번호 하나당 한 번, 바꿀 수 없음)
   - 결과: 유력 → 리그피디아 FA 상태가 바뀌면(그 팀 이적이면 O, 다른 팀·잔류면 X), 경기 → 승리 팀
 만 맡는다. 판은 한 번 만들어지면 결과가 날 때까지 남아서, 유력 표시가 사라져도 판정할 수 있다."""
+import hashlib
+import random
 import re
 import threading
 import time
 from datetime import datetime, timedelta, timezone
 
 from . import schedule
-from .config import TEAMS
+from .config import KST, TEAMS
 from .core import db
 from .rumor import called_off, movers, rumors
 
@@ -190,8 +192,47 @@ def board(ids=(), cid: str = "") -> dict:
             "a_short": short(r["a"]), "b_short": short(r["b"])}
     # my_picks: 이 브라우저가 아직 열린 판에 심은 쪽(브라우저 저장값이 지워져도 '심음' 상태를 되살리게). 결과 난 판은 빼서
     # 저장값을 지우고 다시 수확하는 일은 없게 함
-    return {"open": [pub(r) for r in opn], "mine": {i: pub(r) for i, r in mine.items()}, "done": [pub(r) for r in done],
-            "my_picks": {r["id"]: my[r["id"]] for r in opn if r["id"] in my}}
+    out = {"open": [pub(r) for r in opn], "mine": {i: pub(r) for i, r in mine.items()}, "done": [pub(r) for r in done],
+           "my_picks": {r["id"]: my[r["id"]] for r in opn if r["id"] in my}}
+    if not opn:                                   # 심을 판이 하나도 없는 날: 오늘의 로스터 퀴즈
+        out["quiz"] = daily_quiz()
+    return out
+
+
+QUIZ_POS = {"Top": "탑", "Jungle": "정글", "Mid": "미드", "Bot": "원딜", "Support": "서폿"}   # views.FA_POS와 같은 말
+
+
+def _eun(word: str) -> str:
+    """받침이 있으면 '은', 없으면 '는'(탑은 · 미드는)."""
+    ch = word[-1]
+    return "은" if "가" <= ch <= "힣" and (ord(ch) - 0xAC00) % 28 else "는"
+
+
+def daily_quiz(today=None):
+    """오늘의 로스터 퀴즈(3지선다 1문제): 'T1의 지금 미드는?'. 날짜가 같으면 누구에게나 같은 문제(날짜로 고름).
+    지금 LCK 로스터 표에서 그 자리 선수 1명 + 다른 팀 같은 자리 선수 2명. 문제를 낼 수 없으면 None."""
+    today = today or datetime.now(KST).date()
+    with db() as c:
+        rows = [dict(r) for r in c.execute("SELECT team, role, nick FROM roster WHERE league='lck' AND nick != '' ORDER BY team, role, nick")]
+    rows = [r for r in rows if r["role"] in QUIZ_POS and r["team"] in TEAMS]
+    rng = random.Random(int(hashlib.sha256(f"quiz:{today.isoformat()}".encode()).hexdigest()[:12], 16))
+    # 한 팀·한 자리에 한 명만 있는 칸만(두 명이면 정답이 둘)
+    seats = {}
+    for r in rows:
+        seats.setdefault((r["team"], r["role"]), []).append(r["nick"])
+    seats = sorted(k for k, v in seats.items() if len(v) == 1)
+    rng.shuffle(seats)
+    for team, role in seats:
+        answer = next(r["nick"] for r in rows if (r["team"], r["role"]) == (team, role))
+        others = sorted({r["nick"] for r in rows if r["role"] == role and r["team"] != team and r["nick"].lower() != answer.lower()})
+        if len(others) < 2:
+            continue
+        options = [answer] + rng.sample(others, 2)
+        rng.shuffle(options)
+        return {"date": today.isoformat(), "id": f"quiz:{today.isoformat()}",
+                "question": f"지금 {TEAMS[team]['name']}의 {QUIZ_POS[role]}{_eun(QUIZ_POS[role])} 누구?", "team": team,
+                "options": options, "answer": options.index(answer)}
+    return None
 
 
 def plant(item: str, pick: str, cid: str):

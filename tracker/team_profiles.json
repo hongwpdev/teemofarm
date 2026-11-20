@@ -1,5 +1,5 @@
 {
- "_note": "구단 소개(소식 화면에서 팀을 고르면 보임). links에 공식 유튜브·X 주소를 넣으면 버튼이 생겨요. 비워 두면 버튼 없음. lineage(팀명 변천사)·history(연혁)를 채우면 '구단 이력' 칸이 생겨요.",
+ "_note": "팀 소개(소식 화면에서 팀을 고르면 보임). links에 공식 유튜브·X 주소를 넣으면 버튼이 생겨요. 비워 두면 버튼 없음. lineage(팀명 변천사)·history(연혁)를 채우면 '팀 이력' 칸이 생겨요.",
  "hle": {
   "fullName": "Hanwha Life Esports (한화생명e스포츠)",
   "founded": "2018년 (전신 락스 타이거즈)",
@@ -135,7 +135,7 @@
  },
  "kt": {
   "fullName": "kt Rolster (kt 롤스터)",
-  "founded": "1999년 (국내 최장수 e스포츠 구단)",
+  "founded": "1999년 (국내 최장수 e스포츠 팀)",
   "color": "#FF1E1E",
   "titles": "LCK 우승 2회 · KeSPA Cup 우승",
   "summary": "통신사 라이벌전으로 유명한 오래된 팀이에요.",
@@ -199,7 +199,7 @@
   "fullName": "BNK FEARX (BNK 피어엑스)",
   "founded": "2018년 (전신 샌드박스 게이밍)",
   "color": "#FACC15",
-  "titles": "부산 연고지 대표 구단",
+  "titles": "부산 연고지 대표 팀",
   "summary": "부산을 연고지로 하는 팀이에요. 공격적인 경기를 많이 해요.",
   "links": {
    "youtube": "",

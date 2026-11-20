@@ -234,6 +234,7 @@
     const noSeason = qs => { const q = new URLSearchParams(qs || ""); q.delete("season"); const t = q.toString(); return t ? "?" + t : ""; };
     const keep = () => sessionStorage.setItem(key, noSeason(location.search));
     keep(); window.addEventListener("pagehide", keep);
+    window.SPS.keepQs = keep;                         // 소식 목록만 바꿔 끼운 뒤(news.js)에도 지금 주소를 기억
     document.querySelectorAll("a[data-sec]").forEach(a => {
       a.addEventListener("click", keep);
       const saved = noSeason(sessionStorage.getItem("qs:" + LG + ":" + a.dataset.sec));
@@ -246,13 +247,17 @@
   } catch (e) {}
 
   // ── 팀 탭: 고른 탭을 가운데로, 옆에 더 있으면 오른쪽 끝 흐리게, 내 팀에 별 ──
-  const tabs = document.getElementById("tabs");
-  if (tabs) {
+  // (소식 목록만 바꿔 끼우면 news.js가 window.SPS.initTabs()를 다시 부름)
+  let tabHint = null;
+  window.addEventListener("resize", () => { if (tabHint) tabHint(); });
+  function initTabs() {
+    const tabs = document.getElementById("tabs");
+    if (!tabs) { tabHint = null; return; }
     const wrap = tabs.closest(".tabs-wrap");
     const hint = () => { if (wrap) wrap.classList.toggle("more", tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 4); };
     const center = () => { const on = tabs.querySelector("a.on"); if (on) tabs.scrollLeft = on.offsetLeft - (tabs.clientWidth - on.offsetWidth) / 2; hint(); };
     tabs.addEventListener("scroll", hint, { passive: true });
-    window.addEventListener("resize", hint);
+    tabHint = hint;
     window.SPS.centerTabs = center;
     window.SPS.markMy = () => {
       tabs.querySelectorAll(".star").forEach(s => s.remove());
@@ -263,6 +268,8 @@
     window.SPS.markMy();
     center();
   }
+  window.SPS.initTabs = initTabs;
+  initTabs();
 })();
 
 // 사이트 소개·개인정보처리방침: 아래쪽 링크를 누르면 팝업으로(지원 안 되는 브라우저는 /about·/privacy 페이지로 이동)
