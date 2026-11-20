@@ -171,7 +171,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, b"ok", "text/plain")
         if u.path == "/api/farm":                          # 독버섯 심기: 열린 판 + 내가 심은 판(결과 포함)
             ids = [x for x in (one("ids") or "").split(",") if x][:200]
-            return self._send(200, json.dumps(farm.board(ids), ensure_ascii=False).encode(), "application/json; charset=utf-8",
+            return self._send(200, json.dumps(farm.board(ids, one("cid")), ensure_ascii=False).encode(), "application/json; charset=utf-8",
                               cache="no-store")
         if u.path == "/api/votes":                         # 행선지 투표 현황 + 내가 고른 것
             body = json.dumps({"tally": vote.tally(), "mine": vote.mine(one("cid"))}, ensure_ascii=False).encode()

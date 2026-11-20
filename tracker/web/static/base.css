@@ -1221,7 +1221,7 @@ a.tbtn .lb{margin-left:.3rem}
 .pre-bar a{white-space:nowrap}
 @media (max-width:419px){.pv5{gap:.3rem}.pv5 li{padding:.5rem .1rem}.pv5 b{font-size:1.15rem}.pv5 .pk{font-size:1rem}}
 /* ── 독버섯 심기(소식 맨 위, static/farm.js) ── 모든 이름은 tf- 로 시작(기존 .pop·.farm 등과 겹치지 않게) */
-:root[data-theme="light"]{--tf-emerald:#059669;--tf-emerald-bg:#ecfdf5;--tf-amber:#d97706;--tf-amber-bg:#fffbeb;--tf-purple:#7e22ce;--tf-purple-bg:#faf5ff;--tf-glow:drop-shadow(0 0 2px rgba(180,83,9,.65))}
+:root,:root[data-theme="light"]{--tf-emerald:#059669;--tf-emerald-bg:#ecfdf5;--tf-amber:#d97706;--tf-amber-bg:#fffbeb;--tf-purple:#7e22ce;--tf-purple-bg:#faf5ff;--tf-glow:drop-shadow(0 0 2px rgba(180,83,9,.65))}
 :root[data-theme="dark"]{--tf-emerald:#10b981;--tf-emerald-bg:rgba(6,78,59,.35);--tf-amber:#fbbf24;--tf-amber-bg:rgba(120,53,15,.35);--tf-purple:#a855f7;--tf-purple-bg:rgba(88,28,135,.35);--tf-glow:drop-shadow(0 0 5px rgba(251,191,36,.85))}
 .tf-wrap{min-height:6.8rem}
 .tf-px{display:block;image-rendering:pixelated}
@@ -1243,9 +1243,23 @@ a.tbtn .lb{margin-left:.3rem}
 .tf-num em.tf-bump{animation:tfBump .5s}
 @keyframes tfBump{40%{transform:scale(1.35);color:var(--tf-amber)}}
 .tf-card{padding:1.6rem 1.8rem;margin-bottom:1.2rem}
-.tf-card h3{display:flex;align-items:baseline;flex-wrap:wrap;gap:.2rem .8rem;font-size:1.6rem;margin:0 0 .3rem}
+.tf-head{display:flex;align-items:center;justify-content:space-between;gap:.8rem 1.2rem;flex-wrap:wrap;margin-bottom:.4rem}
+.tf-card h3{display:flex;align-items:baseline;flex-wrap:wrap;gap:.2rem .8rem;font-size:1.6rem;margin:0}
 .tf-card h3 small{font-size:1.2rem;color:var(--t8);font-weight:500}
-.tf-card>p{font-size:1.25rem;color:var(--t5);margin:0 0 1rem}
+.tf-tabs{display:flex;gap:.2rem;padding:.25rem;border-radius:.6rem;background:var(--bg-gray);border:1px solid var(--line)}
+.tf-tabs button{height:3rem;padding:0 1.1rem;border:0;border-radius:.4rem;background:none;color:var(--t8);font-size:1.25rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.tf-tabs button b{margin-left:.2rem;font-variant-numeric:tabular-nums;color:inherit}
+.tf-tabs button[aria-selected="true"]{background:var(--card);color:var(--primary-text);font-weight:800;box-shadow:0 .1rem .3rem rgba(0,0,0,.12)}
+.tf-desc{font-size:1.25rem;color:var(--t5);margin:0 0 1rem}
+.tf-emptymsg{margin:0;padding:1.6rem;border-radius:.8rem;background:var(--bg-gray);color:var(--t8);font-size:1.25rem;text-align:center}
+li.tf-res{background:none}
+.tf-verdict{justify-self:end;padding:.3rem .8rem;border-radius:99px;font-size:1.2rem;font-weight:800;white-space:nowrap;background:var(--bg-gray);color:var(--t5)}
+.tf-v-major{background:var(--tf-emerald-bg);color:var(--tf-emerald)}
+.tf-v-minor{background:var(--bg-accent);color:var(--primary-text)}
+.tf-v-upset{background:var(--tf-amber-bg);color:var(--tf-amber)}
+.tf-me-badge{display:inline-block;margin-top:.4rem;padding:.15rem .6rem;border-radius:.4rem;font-size:1.15rem;font-weight:800}
+.tf-me-won{background:var(--tf-emerald-bg);color:var(--tf-emerald)}
+.tf-me-lost{background:var(--tf-purple-bg);color:var(--tf-purple)}
 .tf-card ul{list-style:none;margin:0;padding:0;display:grid;gap:.8rem}
 .tf-card li{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) minmax(15rem,22rem) auto;align-items:center;gap:1.2rem;padding:1rem 1.2rem;border:1px solid var(--line);border-radius:.8rem}
 .tf-card li>.tf-plot{grid-column:1;grid-row:1}
@@ -1307,3 +1321,6 @@ li.tf-lost .tf-pst{color:var(--tf-purple);font-weight:800}
  .tf-card li{grid-template-columns:auto minmax(0,1fr)}.tf-card li>.tf-tug{grid-column:1/-1;grid-row:2}.tf-card li>.tf-act{grid-column:1/-1;grid-row:3;justify-self:stretch}
  .tf-ox button{flex:1;justify-content:center}.tf-harvest{justify-content:center}}
 @media (prefers-reduced-motion:reduce){.tf-wrap *,.tf-goldspot,.tf-fly{animation:none!important;transition:none!important}}
+/* 독버섯 심기 첫 화면(서버가 그린 것): PC 4개 · 휴대폰 2개 */
+.tf-mo{display:none}
+@media (max-width:640px){.tf-ssr li:nth-child(n+3){display:none}.tf-mo{display:block}}

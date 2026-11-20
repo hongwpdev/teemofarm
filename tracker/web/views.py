@@ -17,7 +17,8 @@ from ..fa import FA_ROLES, fa_since
 from ..filters import is_lol_news, ko_nicks
 from ..insight import is_spoiler, overseas_tag, search_terms, trust
 from ..archive import archive_years, current_season
-from .. import archive, schedule, teamlogos
+from .. import archive, farm as farmd, schedule, teamlogos
+from . import farm_art
 from ..logos import TEAM_LOGOS
 
 # 제목 옆 버섯: 그림 대신 기기 기본 버섯 이모지(🍄). '조회 중' 화면에서도 같은 이모지가 뛰어감
@@ -588,8 +589,8 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
             gos.append(go_link("모든 출처 보기", s="all"))
         body = f'<li class="empty"><p>{text}</p>' + (f'<div class="go">{"".join(gos)}</div>' if gos else "") + "</li>"
 
-    farm = league == "lck" and not q          # 독버섯 심기(static/farm.js가 채움)
-    main = f"""<div class="layout"><div>{'<div id="tf" class="tf-wrap"></div>' if farm else ""}
+    farm = league == "lck" and not q          # 독버섯 심기(서버가 골격·판 목록을 그리고 static/farm.js가 내 점수·심은 상태를 덮어씀)
+    main = f"""<div class="layout"><div>{farm_block() if farm else ""}
 <section class="card fbar{" open" if custom else ""}" id="fbar" aria-label="보기와 필터">
 <form class="srch" method="get" action="{base}" role="search">{"".join(f'<input type="hidden" name="{k}" value="{esc(str(v))}">' for k, v in (("team", team if team in TEAMS else ""),) if v != "")}
 <input type="search" name="q" value="{esc(q)}" placeholder="선수·키워드 검색 (예: 커즈, 기인)" aria-label="선수·키워드 검색" enterkeyhint="search">
@@ -670,6 +671,108 @@ def rel_day(iso: str) -> str:
         return ""
     today = datetime.now(KST).date()
     return "오늘" if d == today else "어제" if d == today - timedelta(days=1) else f"{d.month}/{d.day}"
+
+
+# ── 독버섯 심기: 첫 화면(서버) ─────────────────────────────────────────────
+# 첫 HTML에 상태바(빈 밭 7칸)·진행 중 판·결과 내역을 '아직 아무것도 안 한 사람' 모양으로 그려 둠 → 자바스크립트가 내 점수·심은
+# 상태를 얹을 때 아래 소식이 밀리지 않고, 자바스크립트를 안 돌리는 검색봇·미리보기에도 보임. static/farm.js의 bar()·openRow()·
+# doneRow()·card()와 같은 모양(클래스·글자)이어야 함(바꾸면 둘 다). 그림은 farm_art 한 벌을 둘이 같이 씀.
+def _tf_tug(it, show: bool) -> str:
+    p, q = ("o", "x") if it["kind"] == "rumor" else ("a", "b")
+    n = it.get("n") or 0
+    if not show:
+        return f'<div class="tf-tug"><span class="tf-none">{f"{n}명 참여 중 · 심으면 민심 공개" if n else "아직 아무도 안 심었어요"}</span></div>'
+    a, b = it["tally"].get(p, 0), it["tally"].get(q, 0)
+    m = a + b
+    if not m:
+        return '<div class="tf-tug"><span class="tf-none">아직 아무도 안 심었어요</span></div>'
+    pa = round(100 * a / m)
+    segs = "".join(f'<i class="{"a" if i < round(pa * 20 / 100) else "b"}"></i>' for i in range(20))
+    lab = ("O", "X") if it["kind"] == "rumor" else (it["a_short"], it["b_short"])
+    return (f'<div class="tf-tug"><div class="tf-tl"><span class="tf-pa">{esc(lab[0])} {pa}%</span><span class="tf-n">민심 {m}명</span>'
+            f'<span class="tf-pb">{esc(lab[1])} {100 - pa}%</span></div><span class="tf-gauge">{segs}</span></div>')
+
+
+def _tf_title(it) -> str:
+    if it["kind"] == "rumor":
+        stay = it["id"].endswith(":s")
+        return f'<b>{esc(it["nick"])} · {esc(it["a_short"]) + " 잔류?" if stay else esc(it["a_short"]) + " → " + esc(it["b_short"])}</b>'
+    return f'<b>{esc(it["a_label"])} vs {esc(it["b_label"])}</b>'
+
+
+def _tf_open_row(it) -> str:
+    stay = it["id"].endswith(":s")
+    if it["kind"] == "rumor":
+        src = (f'<span class="tf-src">{esc(it["tag"] or "유력")} · '
+               f'<a href="{esc(it["url"])}" target="_blank" rel="noopener">{esc(it["outlet"])} 기사 ↗</a></span>')
+        picks = [("o", "O 남는다" if stay else "O 간다"), ("x", "X 떠난다" if stay else "X 안 간다")]
+        facts = f' data-nick="{esc(it["nick"])}" data-label="{esc(it["tag"] or "")}" data-dest="{esc(it["b"])}"'
+    else:
+        try:
+            d = datetime.fromisoformat(it["published"]).astimezone(KST)
+            when = f"{d.month}/{d.day} {d:%H:%M}"
+        except (TypeError, ValueError):
+            when = ""
+        src = f'<span class="tf-src">{when} · {esc(it["title"])}</span>'
+        picks = [("a", it["a_label"]), ("b", it["b_label"])]
+        facts = ""
+    btns = "".join(f'<button type="button" class="{"" if i else "tf-o"}" data-plant="{esc(it["id"])}" data-pick="{c}">{esc(label)}</button>'
+                   for i, (c, label) in enumerate(picks))
+    return (f'<li class="" data-item="{esc(it["id"])}"{facts}>{farm_art.plot(None, 48, "tf-empty")}<div class="tf-q">{_tf_title(it)}{src}</div>'
+            f'{_tf_tug(it, False)}<div class="tf-act tf-ox">{btns}</div></li>')
+
+
+def _tf_done_row(it) -> str:
+    stay = it["id"].endswith(":s")
+    if it["kind"] != "rumor":
+        out = f'{esc(it["a_short"] if it["result"] == "a" else it["b_short"])} 승'
+    elif it["result"] == "o":
+        out = f'O · {esc(it["a_short"])} 잔류 확정' if stay else f'O · {esc(it["b_short"])} 이적 확정'
+    else:
+        out = "X · 잔류 안 함" if stay else f'X · {esc(it["b_short"])}행 아님'
+    try:
+        d = datetime.fromisoformat(it["resolved_at"]).astimezone(KST)
+        day = f"{d.month}/{d.day}"
+    except (TypeError, ValueError):
+        day = ""
+    n, w = it.get("n") or 0, it["tally"].get(it["result"], 0)
+    verdict = ('<span class="tf-act tf-verdict">참여 없음</span>' if not n else
+               '<span class="tf-act tf-verdict tf-v-major">민심 적중</span>' if w / n >= .5 else
+               '<span class="tf-act tf-verdict tf-v-upset">역배 대이변!</span>' if w / n < .3 else
+               '<span class="tf-act tf-verdict tf-v-minor">소수 적중</span>')
+    return (f'<li class="tf-res" data-item="{esc(it["id"])}">{farm_art.plot("shroom", 40)}<div class="tf-q">{_tf_title(it)}'
+            f'<span class="tf-src">결과 {out} · {day}</span></div>{_tf_tug(it, True)}{verdict}</li>')
+
+
+def farm_block() -> str:
+    try:
+        board = farmd.board([])
+    except Exception:  # noqa: BLE001  놀이 칸이라 실패해도 소식 화면은 그대로
+        board = {"open": [], "mine": {}, "done": []}
+    opn, done = board["open"], board["done"]
+    holes = "".join(farm_art.plot(None, 28) for _ in range(7))
+    bar = (f'<section class="card tf-bar" aria-label="내 버섯 농장">\n<div class="tf-field" title="수확한 버섯이 밭에 자라요">{holes}</div>\n'
+           '<div class="tf-who"><span class="tf-tier">🌱 새싹 농부</span><small>다음 등급까지 5점 · <span class="tf-fcnt">밭 0/7칸</span></small></div>\n'
+           '<div class="tf-num"><span><em class="tf-pts">0</em>농장 점수</span><span class="tf-stk"><em>0</em>연속 수확</span>'
+           '<span title="오늘의 황금 버섯이 화면 어딘가에 숨어 있어요"><em>🔍</em>황금 버섯</span></div></section>')
+    card = ""
+    if opn or done:
+        season = any(it["kind"] == "match" for it in opn)
+        desc = ("경기 시작 10분 전까지 이길 팀 진영에 심어요. 맞히면 +1점, 30% 미만 소수 쪽이 맞으면 역배 +2점." if season else
+                "유력 기사가 맞을지 O·X 밭에 버섯을 심어요. 심으면 민심이 공개되고, 공식 확정되면 결과가 나와요. 맞히면 +1점, 30% 미만 소수 쪽이면 역배 +2점.")
+        # 휴대폰 2개 · PC 4개(나머지는 '더 보기'): 화면 폭은 서버가 모르니 4개를 그리고 휴대폰에선 CSS로 2개만(tf-ssr)
+        more = (f'<button type="button" class="tf-more{"" if len(opn) > 4 else " tf-mo"}" data-more="1">더 보기 · 전체 {len(opn)}개</button>'
+                if len(opn) > 2 else "")
+        open_panel = (f'<ul>{"".join(_tf_open_row(it) for it in opn[:4])}</ul>{more}' if opn else
+                      '<p class="tf-emptymsg">지금 심을 판이 없어요. 새 유력 기사가 뜨면 생겨요.</p>')
+        done_panel = (f'<ul>{"".join(_tf_done_row(it) for it in done)}</ul>' if done else '<p class="tf-emptymsg">아직 결과가 난 판이 없어요.</p>')
+        card = (f'<section class="card tf-card tf-ssr" aria-label="독버섯 심기"><div class="tf-head"><h3>독버섯 심기 <small>{"오늘의 경기" if season else "스토브리그 편"}</small></h3>\n'
+                f'<div class="tf-tabs" role="tablist"><button type="button" role="tab" data-tab="open" aria-selected="true">진행 중 <b>{len(opn)}</b></button>'
+                f'<button type="button" role="tab" data-tab="done" aria-selected="false">결과 내역 <b>{len(done)}</b></button></div></div>\n'
+                f'<p class="tf-desc">{desc}</p>\n<div class="tf-panel" data-panel="open">{open_panel}</div>\n'
+                f'<div class="tf-panel" data-panel="done" hidden>{done_panel}</div></section>')
+    data = json.dumps({**board, "art": farm_art.ART}, ensure_ascii=False).replace("<", "\\u003c")
+    return f'<div id="tf" class="tf-wrap">{bar}{card}</div><script type="application/json" id="tf-data">{data}</script>'
 
 
 def render_fa(league: str) -> str:

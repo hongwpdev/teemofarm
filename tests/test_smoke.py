@@ -125,6 +125,17 @@ class SmokeTest(unittest.TestCase):
         self.assertIn(f"{ended} 시즌 로스터", body)
         self.assertNotIn("기록을 보고 있어요", body)
 
+    def test_farm_drawn_in_first_html(self):
+        # 독버섯 심기: 자바스크립트 없이도 첫 HTML에 상태바(빈 밭 7칸)와 판 목록 데이터가 있어야 함(화면 밀림 방지·검색봇)
+        code, body = self.get("/lck")
+        self.assertEqual(code, 200)
+        self.assertIn('class="card tf-bar"', body)
+        import re as _re
+        field = _re.search(r'<div class="tf-field"[^>]*>(.*?)</div>', body, _re.S).group(1)
+        self.assertEqual(field.count('class="tf-plot'), 7)
+        self.assertIn('id="tf-data"', body)
+        self.assertNotIn('class="card tf-bar"', self.get("/lck?q=faker")[1])     # 검색 결과 화면엔 없음
+
     def test_root_redirects_and_404(self):
         self.assertEqual(self.get("/")[0], 200)          # /lck 로 넘어감
         self.assertEqual(self.get("/nope/nope/nope")[0], 404)

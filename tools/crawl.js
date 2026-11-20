@@ -33,7 +33,7 @@ async function crawl(base, opts = {}) {
     try { res = await p.goto(url, { waitUntil: 'load', timeout: 15000 }); } catch (e) { bad(url, '열리지 않음: ' + String(e.message).split('\n')[0]); await p.close(); return []; }
     await p.waitForTimeout(300);
     // 화면이 나중에 채우는 칸(독버섯 심기)이 있으면 다 그려질 때까지 조금 기다림
-    if (await p.$('#tf')) await p.waitForSelector('#tf .tf-bar', { timeout: 3000 }).then(() => p.waitForTimeout(300)).catch(() => {});
+    if (await p.$('#tf')) await p.waitForSelector('#tf[data-ready]', { timeout: 4000 }).then(() => p.waitForTimeout(200)).catch(() => {});
     const st = res ? res.status() : 0;
     if (st >= 400) { bad(url, `응답 ${st}`); await p.close(); return []; }
     errs.forEach(e => bad(url, '자바스크립트 오류: ' + e));

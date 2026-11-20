@@ -136,8 +136,12 @@ def _open(it, now):
     return not it["lock_at"] or it["lock_at"] > now
 
 
-def board(ids=()) -> dict:
-    """{"open": [열린 판 최대 OPEN_MAX], "mine": {내가 심은 판 id: 판(결과 포함)}}. 판마다 선택 집계 tally."""
+DONE_MAX = 15            # 결과 내역에 보일 최근 판 수
+
+
+def board(ids=(), cid: str = "") -> dict:
+    """{"open": [열린 판], "mine": {내가 심은 판 id: 판}, "done": [결과 난 최근 판]}.
+    민심(tally)은 결과가 났거나 그 브라우저(cid)가 이미 심은 판만 공개. 아직 안 심은 판은 참여 인원(n)만(심기 전엔 비율 비공개)."""
     sync()
     now = _now().isoformat()
     ids = [i for i in ids if isinstance(i, str) and len(i) < 120][:200]
@@ -145,15 +149,22 @@ def board(ids=()) -> dict:
         rows = [dict(r) for r in c.execute("SELECT * FROM farm_items ORDER BY COALESCE(published,'') DESC")]
         mine = {r["id"]: r for r in rows if r["id"] in ids}
         # 시즌엔 경기 판을 먼저(가까운 경기부터), 그다음 유력
-        opn = sorted((r for r in rows if _open(r, now)), key=lambda r: (r["kind"] != "match", r["published"] if r["kind"] == "match" else ""))
-        games = [r for r in opn if r["kind"] == "match"]
-        opn = (sorted(games, key=lambda r: r["published"]) + [r for r in opn if r["kind"] == "rumor"])[:OPEN_MAX]
-        t = _tally(c, [r["id"] for r in opn] + list(mine))
+        opn = [r for r in rows if _open(r, now)]
+        opn = (sorted((r for r in opn if r["kind"] == "match"), key=lambda r: r["published"]) + [r for r in opn if r["kind"] == "rumor"])[:OPEN_MAX]
+        done = sorted((r for r in rows if r["result"]), key=lambda r: r["resolved_at"] or "", reverse=True)[:DONE_MAX]
+        t = _tally(c, list({r["id"] for r in opn + done} | set(mine)))
+        voted = ({r["item"] for r in c.execute("SELECT item FROM farm_picks WHERE cid=?", (cid,))}
+                 if _CID.match(cid or "") else set())
     short = lambda k: TEAMS.get(k, {}).get("short") or (k or "").upper()  # noqa: E731
-    pub = lambda r: {k: r[k] for k in ("id", "kind", "nick", "a", "b", "a_label", "b_label", "title", "url", "outlet",  # noqa: E731
-                                      "published", "lock_at", "result", "tag")} | {"tally": t.get(r["id"], {}), "open": _open(r, now),
-                                                                                    "a_short": short(r["a"]), "b_short": short(r["b"])}
-    return {"open": [pub(r) for r in opn], "mine": {i: pub(r) for i, r in mine.items()}}
+
+    def pub(r):
+        tl = t.get(r["id"], {})
+        show = bool(r["result"]) or r["id"] in voted
+        return {k: r[k] for k in ("id", "kind", "nick", "a", "b", "a_label", "b_label", "title", "url", "outlet", "published",
+                                   "lock_at", "result", "tag", "resolved_at")} | {
+            "tally": tl if show else {}, "n": sum(tl.values()), "open": _open(r, now),
+            "a_short": short(r["a"]), "b_short": short(r["b"])}
+    return {"open": [pub(r) for r in opn], "mine": {i: pub(r) for i, r in mine.items()}, "done": [pub(r) for r in done]}
 
 
 def plant(item: str, pick: str, cid: str):

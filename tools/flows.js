@@ -163,6 +163,7 @@ async function farm(p, seeded) {
   const pts = async () => +(await p.$eval('.tf-pts', e => e.textContent).catch(() => 'NaN'));
   await p.goto(B + '/lck');
   if (!(await p.waitForSelector('#tf .tf-bar', { timeout: 5000 }).catch(() => null))) { bad('독버섯 심기 상태바가 안 보임'); return; }
+  await p.waitForSelector('#tf[data-ready]', { timeout: 5000 }).catch(() => bad('독버섯 심기가 서버 판 목록을 못 받아 옴'));
   if (seeded) {
     const h = await p.waitForSelector('[data-harvest]', { timeout: 5000 }).catch(() => null);
     if (!h) bad('결과가 난 판인데 [버섯 수확하기]가 안 보임');
@@ -171,16 +172,24 @@ async function farm(p, seeded) {
       await h.click(); await p.waitForTimeout(400);
       if (await pts() !== before + 1) bad(`수확했는데 점수가 ${before} → ${await pts()}`);
       if (await p.$('[data-harvest]')) bad('수확한 뒤에도 수확 버튼이 남아 있음');
-      await p.reload(); await p.waitForSelector('#tf .tf-bar', { timeout: 5000 }).catch(() => {}); await p.waitForTimeout(600);
+      await p.reload(); await p.waitForSelector('#tf[data-ready]', { timeout: 5000 }).catch(() => {}); await p.waitForTimeout(300);
       if (await p.$('[data-harvest]')) bad('다시 들어오니 같은 버섯을 또 수확할 수 있음(중복 수령)');
       if (await pts() !== before + 1) bad(`다시 들어오니 점수가 ${await pts()} (수확 뒤 ${before + 1})`);
+      // 수확한 판은 '결과 내역'으로: 모두의 결과 + 내 기록
+      await click(p, '#tf [data-tab="done"]', "독버섯 심기 '결과 내역' 탭");
+      const mine = await p.$eval('#tf [data-panel="done"] li[data-item="rm:DevShroom:t1:m"]', e => e.innerText).catch(() => '');
+      if (!/내 선택: O · \+1점 수확 완료/.test(mine)) bad(`결과 내역에 내 수확 기록이 안 보임 ('${mine.replace(/\s+/g, ' ').slice(0, 60)}')`);
+      if (await p.$eval('#tf [data-panel="open"]', e => !e.hidden).catch(() => true)) bad("'결과 내역'을 눌렀는데 진행 중 판이 그대로 보임");
+      await click(p, '#tf [data-tab="open"]', "독버섯 심기 '진행 중' 탭");
     }
   }
   const pb = await p.waitForSelector('.tf-card [data-plant]', { timeout: 5000 }).catch(() => null);
   if (!pb) bad('심을 수 있는 판이 없음');
   else {
     const id = await pb.getAttribute('data-plant');
+    if (await p.$(`li[data-item="${id}"] .tf-gauge`)) bad('심기 전인데 민심 비율이 보임(심은 뒤에만 공개)');
     await pb.click(); await p.waitForTimeout(600);
+    if (!(await p.$(`li[data-item="${id}"] .tf-gauge`))) bad('심었는데 민심 비율 게이지가 안 보임');
     const li = await p.$(`li[data-item="${id}"]`);
     if (!li || !(await li.evaluate(e => e.classList.contains('tf-pend')))) bad('심었는데 "심음 · 기다리는 중"으로 안 바뀜');
     if (await p.$(`[data-plant="${id}"]`)) bad('심은 판에 아직 심기 버튼이 남아 있음');
@@ -191,7 +200,7 @@ async function farm(p, seeded) {
     const before = await pts();
     await g.click({ force: true }); await p.waitForTimeout(1100);
     if (await pts() !== before + 5) bad(`황금 버섯을 찾았는데 점수가 ${before} → ${await pts()}`);
-    await p.reload(); await p.waitForTimeout(800);
+    await p.reload(); await p.waitForSelector('#tf[data-ready]', { timeout: 5000 }).catch(() => {}); await p.waitForTimeout(300);
     if (await p.$('.tf-goldspot')) bad('황금 버섯을 찾은 날인데 또 나옴');
   }
 }
