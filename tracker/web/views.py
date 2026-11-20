@@ -401,7 +401,7 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
         d_from, d_to = d_to, d_from          # 순서를 거꾸로 넣어도 동작
     frm = d_from.isoformat() if d_from else ""
     to = d_to.isoformat() if d_to else ""
-    sql, args = "SELECT * FROM items WHERE 1=1", []
+    sql, args = "SELECT * FROM items WHERE source != 'news_en'", []      # 영어 기사는 '유력' 판단에만 씀
     if d_from:
         sql += " AND published >= ?"; args.append(kst_day_start_utc(d_from))
     if d_to:

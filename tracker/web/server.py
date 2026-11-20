@@ -127,7 +127,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(code, body.encode(), "application/json; charset=utf-8")
         if u.path == "/api/items":
             with db() as c:
-                rows = [dict(r) for r in c.execute("SELECT * FROM items ORDER BY published DESC LIMIT 300").fetchall()]
+                rows = [dict(r) for r in c.execute("SELECT * FROM items WHERE source != 'news_en' ORDER BY published DESC LIMIT 300").fetchall()]
             return self._send(200, json.dumps(rows, ensure_ascii=False).encode(), "application/json")
         if u.path == "/api/status":
             st = jobs.FA_MANUAL if one("what") == "fa" else jobs.MANUAL

@@ -1,4 +1,5 @@
 """공통: HTTP, DB, 수집 상태, 날짜·제목 도우미."""
+import re
 import os
 import sqlite3
 import threading
@@ -56,6 +57,10 @@ def init_db():
             cols = {r[1] for r in c.execute(f"PRAGMA table_info({table})")}
             if "league" not in cols:
                 c.execute(f"ALTER TABLE {table} ADD COLUMN league TEXT NOT NULL DEFAULT 'lck'")
+        # 영어 기사는 소식 목록에 안 보이게 'news_en'으로(예전에 'news'로 모인 것도 한 번 옮김)
+        en = [(r[0], r[1]) for r in c.execute("SELECT id, team, title FROM items WHERE source='news'")
+              if not re.search(r"[가-힣]", r[2] or "")]
+        c.executemany("UPDATE items SET source='news_en' WHERE id=? AND team=?", en)
 
 
 def save(rows) -> int:

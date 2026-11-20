@@ -1,4 +1,4 @@
-"""수집: 구글 뉴스 RSS 검색(팀 검색어 + 아직 팀이 없는 FA 선수 본명).
+"""수집: 구글 뉴스 RSS 검색(팀 검색어 + 리그 단독·소식통 검색어 + FA·로스터 선수 본명).
 (이 파일은 직접 고쳐 씀 — gen_modules.py로 다시 만들지 않음)
 
 구글이 너무 잦은 요청을 429로 막으므로
@@ -16,10 +16,11 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
 from .classify import _has_aliases, title_has_team
-from .config import FA_NAME_BATCH, NEWS_WINDOW, REQUEST_GAP, TEAMS, log
+from .config import FA_NAME_BATCH, NEWS_WINDOW, REQUEST_GAP, ROSTER_NAME_BATCH, TEAMS, log
 from .core import db, http_get, norm_title, save, set_status, to_utc_iso
 from .filters import is_lol_news
 
+NAME_CTX = "LCK OR 롤 OR LoL OR e스포츠"   # 선수 본명 검색에 붙이는 말
 NEWS_MIN_GAP = 1.2              # 구글 뉴스 요청 사이 최소 간격(초)
 BLOCK_BASE = 600                # 429를 받으면 쉬는 시간(초), 거듭되면 두 배씩
 BLOCK_MAX = 2400
@@ -60,6 +61,13 @@ def _get(url: str, gap) -> bytes:
         return data
 
 
+EN_ONLY = "news_en"     # 한글이 없는 제목(영어 기사): 소식 목록엔 안 보이고 '유력' 판단에만 씀
+
+
+def source_of(title: str) -> str:
+    return "news" if re.search(r"[가-힣]", title) else EN_ONLY
+
+
 def fetch_news(query, key, gap=None, keep=None) -> int:
     """구글 뉴스 검색 한 번 → 저장한 새 항목 수. LoL 기사만 저장하고, keep(title)이 있으면 그 조건도 봄."""
     q = urllib.parse.urlencode({
@@ -82,7 +90,7 @@ def fetch_news(query, key, gap=None, keep=None) -> int:
             continue
         rows.append({
             "id": "news:" + hashlib.sha1(f"{outlet}|{norm_title(title)}".encode()).hexdigest()[:16],
-            "team": key, "source": "news", "title": title, "url": link,
+            "team": key, "source": source_of(title), "title": title, "url": link,
             "outlet": outlet, "published": pub,
         })
     return save(rows)
@@ -100,6 +108,19 @@ def fa_name_queries():
     return [names[i:i + FA_NAME_BATCH] for i in range(0, len(names), FA_NAME_BATCH)]
 
 
+def roster_name_queries():
+    """계약이 남은 로스터 선수의 본명 묶음. 트레이드·계약 해지 단독 기사는 팀 정식 이름('한화생명e스포츠')이나
+    '영입' 같은 말 없이 나올 때가 많아서(예: "[단독] '커리어' 오형석, DK 떠나 한화생명 서포터로") 이름으로도 찾음.
+    FA 검색에 이미 있는 이름은 뺌."""
+    try:
+        with db() as c:
+            fa = {r["real"] for r in c.execute("SELECT real FROM fa WHERE real != '' AND status='fa'")}
+            names = sorted({r["real"] for r in c.execute("SELECT real FROM roster WHERE league='lck' AND real != ''")} - fa)
+    except sqlite3.Error:
+        return []
+    return [names[i:i + ROSTER_NAME_BATCH] for i in range(0, len(names), ROSTER_NAME_BATCH)]
+
+
 def lol_title(title: str, names) -> bool:
     """본명 검색 결과 중 LoL 기사만: 제목에 그 이름이 있고, 닉네임 따옴표나 팀·LCK·롤 같은 말이 함께 있어야 함
     (흔한 이름의 다른 분야 기사를 거르려고)."""
@@ -114,7 +135,8 @@ def lol_title(title: str, names) -> bool:
 
 def poll_news(gap=None):
     jobs = [(key, query, None) for key, t in TEAMS.items() for query in t.get("news", [])]
-    jobs += [("fa", " OR ".join(f'"{n}"' for n in names), names) for names in fa_name_queries()]
+    # 이름만 찾으면 흔한 이름(김건우·이정현…)의 다른 분야 기사가 100건을 채워 정작 LoL 기사가 밀려남 → LoL 말과 함께
+    jobs += [("fa", " OR ".join(f'"{n}"' for n in names) + f" {NAME_CTX}", names) for names in fa_name_queries() + roster_name_queries()]
     if blocked_left():
         set_status("google", "news", False, f"HTTP Error 429 · {blocked_left() // 60 + 1}분 뒤 다시 가져와요")
         return

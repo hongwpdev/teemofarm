@@ -25,6 +25,7 @@ AUTO_MINUTES = int(os.getenv("AUTO_MINUTES", "5"))           # 자동 조회 간
 CARGO_GAP = float(os.getenv("CARGO_GAP_SEC", "2"))           # 리그피디아 Cargo 요청 사이 최소 간격(모든 스레드 공통)
 PROFILE_MAX_AGE = int(os.getenv("PROFILE_MAX_AGE_SEC", str(24 * 3600)))  # 프로필(커리어)은 하루에 한 번만 새로 받음(이적은 FA 목록으로 바로 보임)
 FA_NAME_BATCH = int(os.getenv("FA_NAME_BATCH", "5"))         # FA 선수 본명 검색: 한 번에 묶는 인원
+ROSTER_NAME_BATCH = int(os.getenv("ROSTER_NAME_BATCH", "8"))  # 계약 중인 로스터 선수 본명 검색: 한 번에 묶는 인원
 
 WIKI_API = "https://lol.fandom.com/api.php"
 WIKI_BASE = "https://lol.fandom.com/wiki/"
@@ -46,28 +47,35 @@ RUMOR_WORDS = _words("RUMOR_WORDS", "[단독],단독,유력,루머,관측,임박
 VIEW_WORDS = _words("VIEW_WORDS", "전망,분석,관전,유망주,정리,예상,포인트,칼럼,돌아보,결산,기대,행방,개막,시장")
 
 # ── 리그와 팀 ───────────────────────────────────────────────────────────
-# (키, 표시 이름, Leaguepedia 페이지 제목, 뉴스 검색용 이름, 짧은 이름, 제목에서 찾을 이름)
+# (키, 표시 이름, Leaguepedia 페이지 제목, 뉴스 검색용 이름, 짧은 이름, 제목에서 찾을 이름, 기사에서 흔히 쓰는 이름(검색용))
 _LCK = [
-    ("hle",  "한화생명",      "Hanwha Life Esports", "한화생명e스포츠", "HLE", ["한화", "HLE"]),
-    ("t1",   "T1",           "T1",                  "T1",            "T1",  ["T1", "티원"]),
-    ("geng", "젠지",          "Gen.G",               "젠지",           "GEN", ["젠지", "Gen.G"]),
-    ("dk",   "디플러스 기아",  "Dplus KIA",           "디플러스 기아",    "DK",  ["디플러스", "DK"]),
-    ("kt",   "kt 롤스터",     "KT Rolster",          "kt 롤스터",       "KT",  ["kt", "KT"]),
-    ("ns",   "농심",          "Nongshim RedForce",   "농심 레드포스",    "NS",  ["농심", "NS"]),
-    ("bfx",  "BNK 피어엑스",  "BNK FEARX",           "BNK 피어엑스",    "BFX", ["피어엑스", "FEARX", "BNK"]),
-    ("drx",  "키움 DRX",      "Kiwoom DRX",          "키움 DRX",       "DRX", ["DRX"]),
-    ("dns",  "DN 수퍼스",     "DN SOOPers",          "DN 수퍼스",       "DNS", ["수퍼스", "DN"]),
-    ("bro",  "한진 브리온",    "HANJIN BRION",        "한진 브리온",      "BRO", ["브리온", "BRO"]),
+    ("hle",  "한화생명",      "Hanwha Life Esports", "한화생명e스포츠", "HLE", ["한화", "HLE", "Hanwha"], "한화생명"),
+    ("t1",   "T1",           "T1",                  "T1",            "T1",  ["T1", "티원"], "T1"),
+    ("geng", "젠지",          "Gen.G",               "젠지",           "GEN", ["젠지", "Gen.G"], "젠지"),
+    ("dk",   "디플러스 기아",  "Dplus KIA",           "디플러스 기아",    "DK",  ["디플러스", "DK", "Dplus"], "DK OR 디플러스"),
+    ("kt",   "kt 롤스터",     "KT Rolster",          "kt 롤스터",       "KT",  ["kt", "KT"], "KT"),
+    ("ns",   "농심",          "Nongshim RedForce",   "농심 레드포스",    "NS",  ["농심", "NS", "Nongshim"], "농심"),
+    ("bfx",  "BNK 피어엑스",  "BNK FEARX",           "BNK 피어엑스",    "BFX", ["피어엑스", "FEARX", "BNK", "BFX"], "BFX OR 피어엑스"),
+    ("drx",  "키움 DRX",      "Kiwoom DRX",          "키움 DRX",       "DRX", ["DRX"], "DRX"),
+    ("dns",  "DN 수퍼스",     "DN SOOPers",          "DN 수퍼스",       "DNS", ["수퍼스", "DN", "DNS", "SOOPers"], "DNS OR 수퍼스"),
+    ("bro",  "한진 브리온",    "HANJIN BRION",        "한진 브리온",      "BRO", ["브리온", "BRO", "BRION"], "브리온"),
 ]
+# 팀 검색어: 기사 제목·본문은 정식 이름('농심 레드포스')보다 짧은 이름('농심')을, '롤'보다 'LCK'·'LoL'을 쓰는 일이 많아서
+# (예: "[오피셜] '킹겐' 황성훈, 농심과 재계약"이 예전 검색어엔 안 걸렸음) 흔한 이름 + LCK·롤·LoL + 이적 관련 말로 찾음
+_MOVE_Q = "LCK OR 롤 OR LoL 오피셜 OR 단독 OR 소식통 OR 유력 OR 재계약 OR 영입 OR 계약 OR 동행 OR 결별 OR 떠나 OR 합류 OR 선임"
 DEFAULT_TEAMS = {
     k: {"name": name, "wiki": wiki, "short": short, "aliases": aliases,
-        "news": [f"{q} 롤 오피셜 OR 재계약 OR 영입 OR 계약", f"{q} 스토브리그"]}
-    for k, name, wiki, q, short, aliases in _LCK
+        "news": [f"{common} {_MOVE_Q}", f"{q} 스토브리그"]}
+    for k, name, wiki, q, short, aliases, common in _LCK
 }
 # 특정 팀에 묶이지 않는 리그 전체 소식(위키 없음)
 DEFAULT_TEAMS["lck"] = {"name": "LCK 공통", "wiki": "", "short": "LCK",
                         "news": ["LCK 스토브리그", "LCK FA 오피셜",
-                                 "LCK 이적 OR 리턴 OR 유력 OR 결별 OR 합류"]}
+                                 "LCK 이적 OR 리턴 OR 유력 OR 결별 OR 합류",
+                                 # 단독·소식통 기사(제목에 '영입'·팀 정식 이름이 없는 것도): "[단독] '커리어' 오형석, DK 떠나 한화생명 서포터로"
+                                 "롤 OR LCK 단독 OR 소식통 OR 떠나 OR 행선지",
+                                 # 영어 이적 기사(Sheep Esports 등). 소식 목록엔 안 보이고 '유력' 판단에만 씀(news.py)
+                                 "LCK 2027 Sources OR joins OR re-sign OR extends OR contract OR promoted"]}
 TEAMS = DEFAULT_TEAMS
 if TEAMS_FILE and os.path.exists(TEAMS_FILE):
     with open(TEAMS_FILE, encoding="utf-8") as f:

@@ -306,7 +306,8 @@ def player_info(page: str) -> dict:
         rx = re.compile("|".join(rf"(?<![A-Za-z0-9]){re.escape(n)}(?![A-Za-z0-9])" for n in names), re.I)
         seen = set()
         with db() as c:
-            for r in c.execute("SELECT title,url,outlet,published,source FROM items ORDER BY published DESC LIMIT 3000"):
+            for r in c.execute("SELECT title,url,outlet,published,source FROM items WHERE source != 'news_en' "
+                               "ORDER BY published DESC LIMIT 3000"):
                 k = norm_title(r["title"])
                 if k in seen or not rx.search(r["title"]) or not is_lol_news(r["title"]):
                     continue
