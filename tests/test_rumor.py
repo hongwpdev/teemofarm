@@ -80,6 +80,24 @@ class RumorTest(unittest.TestCase):
         g = _guess([{"page": "Kiin", "nick": "Kiin", "team_from": "geng"}], [n, news])["Kiin"]
         self.assertEqual((g["team"], g["official"], g["outlet"]), ("hle", False, "국민일보"))
 
+    def test_vacancy_is_not_the_player(self):
+        # '카나비 떠난 자리에 젠지 FA 기인·캐니언 영입설': 카나비가 젠지로 가는 게 아니라, 그 자리를 기인·캐니언이 채움
+        t = "한화생명, 카나비 떠난 자리에 젠지 FA 기인·캐니언 영입설…공식 발표는 아직"
+        self.assertIsNone(read_title(t, "Kanavi", "hle"))
+        self.assertIsNone(read_title(t, "Kanavi", "dk"))                  # (DK로 간 뒤에도 GEN행으로 읽으면 안 됨)
+        self.assertEqual(read_title(t, "Kiin", "geng"), ("hle", False))
+        self.assertEqual(read_title(t, "Canyon", "geng"), ("hle", False))
+        self.assertIsNone(read_title("'페이커 빈자리' T1, 새 미드 영입 임박", "Faker", "t1"))
+        # 쉼표 뒤의 'FA'는 데려오는 팀 쪽('한화생명, FA 기인 영입')
+        self.assertEqual(read_title("한화생명, FA 기인 영입", "Kiin", "geng"), ("hle", False))
+
+    def test_rumor_before_settled_move_is_ignored(self):
+        # 이적이 확정된 날보다 앞선 기사는 지금 팀 기준 '이적 유력'으로 안 봄
+        old = {"title": "[단독] '카나비' 서진혁, 젠지 합류 유력", "url": "u", "outlet": "OSEN", "published": "2026-11-17T09:00:00+00:00"}
+        p = [{"page": "Kanavi", "nick": "Kanavi", "team_from": "dk"}]
+        self.assertIn("Kanavi", _guess(p, [old], marks=MOVE_MARK, allow_stay=False))
+        self.assertNotIn("Kanavi", _guess(p, [old], marks=MOVE_MARK, allow_stay=False, since={"Kanavi": "2026-11-18"}))
+
     def test_leave_to_other_team(self):
         # '영입' 같은 말 없이 '원소속 떠나 다른 팀 ○○로'
         t = "[단독] '커리어' 오형석, DK 떠나 한화생명 서포터로"

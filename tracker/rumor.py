@@ -13,6 +13,7 @@ from .classify import article_kind, title_has_team
 from .cluster import EVENTS, persons
 from .config import TEAMS
 from .core import db
+from .filters import ko_nicks
 
 DAYS = 14             # 이 기간 안의 기사만 봄
 CACHE_SEC = 60
@@ -38,6 +39,9 @@ NEG = ("불발", "결렬", "무산", "거절", "실패", "없던 일")   # '재�
 GUESS = ("하나", "할까", "?", "복귀설", "이적설", "합류설", "영입설", "유력", "전망", "가능성", "임박", "근접", "예정")
 MOVE_MARK = ("단독", "소식통", "오피셜", "공식", "유력", "임박", "합의", "예정", "근접", "협상", "이적",
              "Sources", "set to", "expected to", "reportedly", "joins", "signs", "join ")
+# '카나비 떠난 자리에 …'·'○○ 빈자리'·'○○ 후임': 그 선수가 아니라 그 자리를 채울 다른 선수 얘기
+VACANCY = re.compile(r"(?:떠난|빠진|나간|비운)\s*(?:빈\s?)?자리|빈\s?자리|공백|후임|대체자")
+_FA_FROM = re.compile(r"\s?(?:FA|출신)")     # '젠지 FA 기인·캐니언': 그 팀은 그 사람들이 떠나온 팀
 _CACHE = {}          # 이름 -> {"at", "key", "val"}
 _LOCK = threading.Lock()
 
@@ -82,6 +86,35 @@ def _joined_team(title: str):
     return None
 
 
+def _vacancy_of(title: str, nick: str) -> bool:
+    """제목이 이 선수가 '떠난 자리·빈자리·후임' 얘기인지(바로 앞 몇 글자 안에 이 선수 이름)."""
+    names = [nick.lower()] + [ko for en, ko in ko_nicks().items() if en.lower() == nick.lower() and ko]
+    for m in VACANCY.finditer(title):
+        before = title[max(0, m.start() - 14):m.start()].lower()
+        if any(n in before for n in names):
+            return True
+    return False
+
+
+def _left_teams(title: str) -> set:
+    """떠나온 팀 모두: '한화생명 떠나'(떠나는 말 앞) + '젠지 FA 기인'·'T1 출신'(FA·출신 앞)."""
+    out = set()
+    for w in LEAVE + ("출신",):
+        for m in re.finditer(re.escape(w), title):
+            if re.match(r"\s*(?:빈\s?)?자리", title[m.end():]):   # '카나비 떠난 자리에'의 팀은 그 자리를 채우는 팀
+                continue
+            hit = _teams(title[max(0, m.start() - 12):m.start()])
+            if len(hit) == 1:
+                out.add(hit[0])
+    for m in _FA_FROM.finditer(title):
+        if re.search(r"[,，:]\s*$", title[:m.start()]):     # '한화생명, FA 기인 영입'의 한화생명은 데려오는 팀
+            continue
+        hit = _teams(title[max(0, m.start() - 8):m.start()])
+        if hit:
+            out.add(hit[-1])
+    return out
+
+
 def _left_team(title: str):
     """'DK 떠나', '젠지와 결별', '한화생명 출신'처럼 떠나는 말 바로 앞(몇 글자 안)에 나온 팀."""
     for w in LEAVE + ("출신",):
@@ -108,12 +141,13 @@ def read_title(title: str, nick: str, team_from: str):
         mine = [p for p in segs if nick.lower() in persons(p)]
         my_teams = set(_teams(" ".join(mine)))
         title = " ".join(p for p in segs if p in mine or (not persons(p) and set(_teams(p)) <= my_teams))
-    if any(w in title for w in NEG):
+    if any(w in title for w in NEG) or _vacancy_of(title, nick):
         return None
     teams = _teams(title)
-    left = _left_team(title)
-    # 원소속이 아닌 '떠난 팀'은 행선지가 아님('한화생명 떠나 DN 수퍼스 합류'는 이미 DNS 로스터인 블러핑에게 HLE행이 아님)
-    others = [k for k in teams if k != team_from and k != left]
+    left = _left_teams(title)
+    # 원소속이 아닌 '떠난 팀'은 행선지가 아님('한화생명 떠나 DN 수퍼스 합류'는 이미 DNS 로스터인 블러핑에게 HLE행이 아님,
+    # '젠지 FA 기인·캐니언 영입설'의 젠지는 그 사람들이 떠나온 팀)
+    others = [k for k in teams if k != team_from and k not in left]
     renew = any(w in title for w in RENEW) or UNTIL.search(title) or (team_from in teams and any(w in title for w in STAY_UP))
     if renew and not any(w in title for w in LEAVE) and not others:
         return (team_from, True) if team_from else None
@@ -143,13 +177,17 @@ def called_off_hit(title: str, nick: str, team_from: str):
     return (others[0], False) if len(others) == 1 else None
 
 
-def _guess(people, news, marks=None, allow_stay=True, off=None):
+def _guess(people, news, marks=None, allow_stay=True, off=None, since=None):
     """people: [{"page", "nick", "team_from"}] → {page: 유력 정보}. marks를 주면 그 말이 제목에 있는 기사만 봄.
-    더 새 기사가 같은 행선지를 '무산·결렬'이라 하면 그 유력은 버림. off(dict)를 주면 {page: {(팀, 잔류 여부)}}로 채워 줌."""
+    더 새 기사가 같은 행선지를 '무산·결렬'이라 하면 그 유력은 버림. off(dict)를 주면 {page: {(팀, 잔류 여부)}}로 채워 줌.
+    since({page: 'YYYY-MM-DD'})를 주면 그날보다 앞선 기사는 안 봄(이적·재계약이 확정되기 전 소문)."""
     out = {}
     for r in people:
         best, gone = None, set()
+        cut = (since or {}).get(r["page"]) or ""
         for n in news:                          # 최신순
+            if cut and (n["published"] or "")[:10] < cut:
+                break                           # (최신순이라 이 뒤는 모두 더 예전)
             kind = article_kind(n["title"], "news", (n["outlet"] if "outlet" in n.keys() else "") or "")
             if kind in ("view", "talk"):        # 전망·분석 기사와 커뮤니티 글은 빼고('[기타] 오피셜 HLE 기인 영입'은 발표가 아님)
                 continue
@@ -227,4 +265,14 @@ def movers(rows) -> dict:
     예) "[소식통] '시우' 전시우, 2027 LCK 시즌 젠지 합류 예정" → Siwoo: DK → GEN 유력"""
     key = tuple((r["page"], r["team"]) for r in rows)
     people = [{"page": r["page"], "nick": r["nick"], "team_from": r["team"]} for r in rows if r["team"] and r["nick"]]
-    return _cached("roster", key, lambda: _both(people, marks=MOVE_MARK, allow_stay=False))[0]
+    return _cached("roster", key, lambda: _both(people, marks=MOVE_MARK, allow_stay=False, since=_settled()))[0]
+
+
+def _settled() -> dict:
+    """{page: 'YYYY-MM-DD'}: 이번 스토브리그에 이적·재계약이 확정된 날(리그피디아). 그 전 기사는 지금 팀 기준 소문이 아님."""
+    try:
+        with db() as c:
+            return {r["page"]: (r["date"] or "")[:10] for r in c.execute("SELECT page, date FROM fa WHERE status IN ('move', 'stay')")
+                    if r["date"]}
+    except Exception:  # noqa: BLE001
+        return {}
