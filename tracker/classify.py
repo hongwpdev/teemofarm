@@ -36,6 +36,24 @@ def is_official(title: str) -> bool:
     return any(w in t for w in HOT_WORDS) and not any(w in t for w in NOT_HOT_WORDS)
 
 
+# 스토브리그(선수·감독 이동) 소식인지: 오피셜·단독·유력 + 이동 사건 말(cluster.EVENTS: 재계약·떠난·복귀·입단·승격…)
+# + 아래 말 + 다음 시즌 이야기('2027시즌 감독으로', "'커즈'의 2027 LCK는 DN 수퍼스"). 인터뷰·경기 결과·패치 소식은 빠짐
+STOVE_MARK = ("FA", "이적", "스토브리그", "로스터", "행선지", "트레이드", "임대", "감코진", "선수단", "강등", "소속", "재회", "나가고")
+
+
+def is_stove(title: str, kind: str, season: int) -> bool:
+    """kind: article_kind() 결과, season: 지금 시즌(archive.current_season — 11월부터는 다음 해)."""
+    if kind in ("official", "rumor"):
+        return True
+    if kind == "edit":
+        return False
+    from .cluster import EVENTS                  # (cluster가 이 파일을 불러서 여기서)
+    # '마침표'는 '동행 마침표'(동행으로 잡힘) 말고도 '세계 정상 마침표'처럼 쓰여서 뺌
+    if any(w in title for ws in EVENTS.values() for w in ws if w != "마침표") or any(w in title for w in STOVE_MARK):
+        return True
+    return bool(re.search(rf"{season}\s?(?:시즌(?!\s?\d)|LCK)", title))     # '2027 시즌 1 패치'는 아님
+
+
 def article_kind(title: str, source: str = "news") -> str:
     """기사 성격: official(오피셜) · rumor(단독·유력) · view(전망·분석) · news(그 밖).
     리그피디아 편집은 로스터 변동이면 official, 아니면 edit."""

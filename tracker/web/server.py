@@ -44,9 +44,9 @@ def load_static():
     views.STATIC_VER = h.hexdigest()[:8]     # 파일이 바뀌면 주소의 ?v= 가 바뀌어 브라우저가 새로 받음
 
 
-def parse_hot(v: str) -> int:
-    """소식 보기: 1=오피셜, 2=오피셜+루머, 그 밖(지정 없음 포함)=0 전체(기본)."""
-    return 1 if v == "1" else 2 if v == "2" else 0
+def parse_hot(v: str, cat: str = "") -> int:
+    """소식 보기: 1=오피셜, 2=스토브리그, 그 밖(지정 없음 포함)=0 전체(기본). ?cat=stove 도 스토브리그로 받음."""
+    return 1 if v == "1" else 2 if v == "2" or cat == "stove" else 0
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -220,7 +220,7 @@ class Handler(BaseHTTPRequestHandler):
             elif season and sec in ("", "roster", "fa", "schedule", "results", "stove"):
                 page = views.render_archive(league, "fa" if sec == "stove" else sec, season, one("t"))
             elif sec == "":
-                page = views.render_news(league, one("team"), one("src", "all"), parse_hot(one("hot")),
+                page = views.render_news(league, one("team"), one("src", "all"), parse_hot(one("hot"), one("cat")),
                                          one("from"), one("to"), one("q"))
             elif sec == "roster":
                 page = views.render_roster(league)

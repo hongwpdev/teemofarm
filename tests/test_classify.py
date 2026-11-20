@@ -29,3 +29,29 @@ class WikiSummaryTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StoveTest(unittest.TestCase):
+    """소식 '스토브리그' 보기: 이동·계약 소식만(실제 기사 제목으로)."""
+    def _s(self, t):
+        from tracker.classify import article_kind, is_stove
+        return is_stove(t, article_kind(t), 2027)
+
+    def test_stove(self):
+        for t in ("[오피셜] 전설의 귀환 '데프트' 김혁규, 농심 합류… '표식'-'안딜'과 동행",
+                  "'중꺾마' 주인공 '데프트' 김혁규가 돌아왔다… 농심 입단",
+                  "한화생명 창단 첫 MSI 우승 감독 '옴므' 윤성영 떠난다",
+                  "한화생명e스포츠, '모글리' 이재하를 2027시즌 감독으로",
+                  "'커즈' 문우찬의 2027 LCK는 'DN 수퍼스'",
+                  "BNK '디아블' 남대근, 2군 강등…약속된 팬 미팅 참석 거부",
+                  "'두두' 이동주, DN 수퍼스와 2028년까지 동행 [공식]",
+                  "도란 나가고 제우스 오나...데프트는 농심으로"):
+            self.assertTrue(self._s(t), t)
+
+    def test_not_stove(self):
+        for t in ("‘제우스’ 최우제가 설명한 탑 ‘칼챔’ 메타 [쿠키인터뷰]",
+                  "젠지, 롤드컵 결승서 중국 BLG에 역전패…韓 4년 연속 세계 정상 마침표",
+                  "도벽 부활, 아이언에서 출발하는 새로운 시범 랭크 등...리그 오브 레전드 2027 시즌 1 개발자 업데이트 공개",
+                  "26.23 패치 롤 서버 점검 시간",
+                  "디플러스 기아 유스, LCK AS 상·하반기 연속 제패"):
+            self.assertFalse(self._s(t), t)

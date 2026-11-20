@@ -6,7 +6,7 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 
 from ..cargo import RATE_MSG, is_rate_limit
-from ..classify import article_kind, is_minor_wiki, news_teams, wiki_ko
+from ..classify import article_kind, is_minor_wiki, is_stove, news_teams, wiki_ko
 from ..cluster import group as cluster_group
 from ..rumor import movers, read_title, rumors
 from .. import stove as stv, vote
@@ -410,7 +410,7 @@ def _ts(r):
 
 
 def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: str = "", q: str = "") -> str:
-    """hot: 0=전체(기본), 1=오피셜, 2=오피셜+루머. team: '' = 지정 없음(내 팀이 있으면 화면에서 그 팀으로)."""
+    """hot: 0=전체(기본), 1=오피셜, 2=스토브리그(오피셜·단독·유력 + 이동·계약 소식). team: '' = 지정 없음(내 팀이 있으면 화면에서 그 팀으로)."""
     d_from, d_to = parse_day(frm), parse_day(to)
     if d_from and d_to and d_from > d_to:
         d_from, d_to = d_to, d_from          # 순서를 거꾸로 넣어도 동작
@@ -447,7 +447,7 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
         groups[key] = [r, [r["team"]]]
         order.append(key)
 
-    items = []
+    items, season_now = [], current_season()
     for key in order:
         r, teams = groups[key]
         if r["source"] == "wiki" and is_minor_wiki(r["title"]):
@@ -461,7 +461,7 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
         kind = article_kind(r["title"], r["source"])
         if hot == 1 and kind != "official":
             continue
-        if hot == 2 and kind not in ("official", "rumor"):
+        if hot == 2 and not is_stove(r["title"], kind, season_now):
             continue
         items.append((r, kind, teams))
 
@@ -511,7 +511,7 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
     def seg(label, h):
         on = h == hot
         return f'<a class="{"on" if on else ""}" href="{esc(url(h=h))}"{" aria-current=page" if on else ""}>{label}</a>'
-    view = seg("전체", 0) + seg("오피셜", 1) + seg("+루머", 2)      # 기본(전체)을 맨 앞에
+    view = seg("전체", 0) + seg("스토브리그", 2) + seg("오피셜", 1)      # 넓은 것부터: 전체 ⊃ 스토브리그 ⊃ 오피셜
 
     def team_tab(k, label=None):
         on = team == k
@@ -587,7 +587,7 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
             gos = [go_link("전체 기간 보기", f="", e="")] + ([go_link("전체 소식 보기", h=0)] if hot else [])
         elif hot:
             text = "이 보기에 맞는 소식이 아직 없어요. '전체'에서 모든 소식을 볼 수 있어요"
-            gos = [go_link("전체 소식 보기", h=0)] + ([go_link("+루머 보기", h=2)] if hot == 1 else [])
+            gos = [go_link("전체 소식 보기", h=0)] + ([go_link("스토브리그 소식 보기", h=2)] if hot == 1 else [])
         else:
             text = "아직 모인 소식이 없어요. [조회]를 눌러 지금 가져와 보세요"
             gos = []

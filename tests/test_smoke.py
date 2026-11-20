@@ -101,6 +101,8 @@ class SmokeTest(unittest.TestCase):
         self.assertRegex(on, r'class="on" href="/lck"[^>]*>전체<')               # 기본: 전체, 주소에 hot 없음
         self.assertIn('href="/lck?hot=1"', on)                                   # 오피셜은 hot=1
         self.assertRegex(self.get("/lck?hot=1")[1], r'class="on" href="/lck\?hot=1"[^>]*>오피셜<')
+        self.assertRegex(self.get("/lck?hot=2")[1], r'class="on" href="/lck\?hot=2"[^>]*>스토브리그<')   # 이동·계약 소식만
+        self.assertRegex(self.get("/lck?cat=stove")[1], r'class="on" href="/lck\?hot=2"')                    # ?cat=stove 도 같은 보기
 
     def test_ended_season_is_not_a_record(self):
         # 스토브리그 기간: 방금 끝난 시즌(2026)은 '기록'이 아니라 지금 화면 → 시즌 고르기에 2026이 두 번 나오면 안 됨
