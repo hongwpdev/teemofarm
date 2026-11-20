@@ -129,7 +129,11 @@ def _tally(c, ids):
 
 
 def _open(it, now):
-    return it["result"] is None and (not it["lock_at"] or it["lock_at"] > now)
+    """새로 심을 수 있나: 결과 전 · 경기는 시작 10분 전까지 · 유력 기사가 '발표'(오피셜)로 바뀌면 마감
+    (발표된 건 사실상 답이 나온 것. 이미 심은 사람은 리그피디아에 반영되면 수확·폭발)."""
+    if it["result"] is not None or "발표" in (it.get("tag") or ""):
+        return False
+    return not it["lock_at"] or it["lock_at"] > now
 
 
 def board(ids=()) -> dict:

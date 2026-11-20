@@ -106,7 +106,8 @@
       act = `<div class="tf-act tf-ox">${[p, q].map(c => `<button type="button" class="${c === p ? "tf-o" : ""}" data-plant="${esc(it.id)}" data-pick="${c}">${esc(pickLabel(it, c))}${minor === c ? " <small>+2</small>" : ""}</button>`).join("")}</div>`;
     } else if (mine.status === "pending") {
       cls = "tf-pend"; ground = plot("shroom", 48);
-      act = `<span class="tf-act tf-pst">${esc(pickLabel(it, mine.picked.toLowerCase()))}에 심음 · ${it.kind === "rumor" ? "공식 발표 기다리는 중" : "경기 결과 기다리는 중"}</span>`;
+      const wait = it.kind !== "rumor" ? "경기 결과 기다리는 중" : /발표/.test(it.tag || "") ? "발표 나옴 · 공식 반영 기다리는 중" : "공식 발표 기다리는 중";
+      act = `<span class="tf-act tf-pst">${esc(pickLabel(it, mine.picked.toLowerCase()))}에 심음 · ${wait}</span>`;
     } else if (mine.status === "won") {
       cls = "tf-won"; ground = plot("gold", 48);
       act = mine.harvested ? `<span class="tf-act tf-pst tf-got">수확 완료 ✓ +${mine.isUnderdog ? 2 : 1}</span>`

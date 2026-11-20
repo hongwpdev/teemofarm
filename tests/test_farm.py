@@ -72,6 +72,19 @@ class FarmTest(unittest.TestCase):
         fa("Zeus", "move", "hle", "t1"); farm.sync(force=True)
         self.assertEqual(farm.plant("rm:Zeus:t1:m", "o", "abcdefgh14")[0], "이미 결과가 났거나 마감됐어요")
 
+    def test_official_closes_planting(self):
+        # 오피셜 기사(발표)가 나면 새로 못 심고 목록에서도 빠짐. 이미 심은 사람은 리그피디아 반영 때 판정
+        item("rm:Kiin:hle:m", page="Kiin", a="geng", b="hle"); fa("Kiin", "fa")
+        self.assertEqual(farm.plant("rm:Kiin:hle:m", "o", "earlybird01")[0], "")
+        with db() as c:
+            c.execute("UPDATE farm_items SET tag='발표' WHERE id='rm:Kiin:hle:m'")
+        self.assertEqual(farm.plant("rm:Kiin:hle:m", "o", "latecomer01")[0], "이미 결과가 났거나 마감됐어요")
+        b = farm.board(["rm:Kiin:hle:m"])
+        self.assertNotIn("rm:Kiin:hle:m", [x["id"] for x in b["open"]])
+        self.assertFalse(b["mine"]["rm:Kiin:hle:m"]["open"])
+        fa("Kiin", "move", "geng", "hle"); farm.sync(force=True)
+        self.assertEqual(result("rm:Kiin:hle:m"), "o")
+
     def test_match_locks_ten_minutes_before(self):
         soon = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
         item("m:1", kind="match", lock=soon)
