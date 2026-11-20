@@ -149,6 +149,11 @@ server.player_extra.init()
 server.maint.init()
 server.share.init()
 server.vote.init()
+server.farm.init()
+# 독버섯 심기 점검용: 결과가 이미 난 판 하나('써 본 사람'이 O에 심어 둔 것으로 flows.js가 저장해 둠)
+with core.db() as _c:
+    _c.execute("INSERT OR IGNORE INTO farm_items(id,kind,page,nick,a,b,a_label,b_label,title,url,outlet,published,lock_at,result,created,tag) "
+               "VALUES('rm:DevShroom:t1:m','rumor','DevShroom','DevShroom','hle','t1','O','X','[단독] 점검용 판','https://example.com/f','점검','2026-01-01T00:00:00+00:00','','o','2026-01-01T00:00:00+00:00','유력')")
 server.riot.start()
 server.load_static()
 port = int(os.environ.get("PORT", "8099"))

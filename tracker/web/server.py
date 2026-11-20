@@ -10,7 +10,7 @@ import urllib.parse
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from .. import archive, champs, chat, diag, feed, jobs, maint, matchinfo, player_extra, riot, schedule, share, teamlogos, vote
+from .. import archive, champs, chat, diag, farm, feed, jobs, maint, matchinfo, player_extra, riot, schedule, share, teamlogos, vote
 from ..cargo import RATE_MSG, is_rate_limit
 from ..config import DEFAULT_LEAGUE, FA_INTERVAL, KST, LEAGUES, NEWS_INTERVAL, PORT, WIKI_INTERVAL, log
 from ..core import db, init_db
@@ -169,6 +169,10 @@ class Handler(BaseHTTPRequestHandler):
                               "application/json; charset=utf-8", cache="no-store")
         if u.path == "/healthz":
             return self._send(200, b"ok", "text/plain")
+        if u.path == "/api/farm":                          # 독버섯 심기: 열린 판 + 내가 심은 판(결과 포함)
+            ids = [x for x in (one("ids") or "").split(",") if x][:200]
+            return self._send(200, json.dumps(farm.board(ids), ensure_ascii=False).encode(), "application/json; charset=utf-8",
+                              cache="no-store")
         if u.path == "/api/votes":                         # 행선지 투표 현황 + 내가 고른 것
             body = json.dumps({"tally": vote.tally(), "mine": vote.mine(one("cid"))}, ensure_ascii=False).encode()
             return self._send(200, body, "application/json; charset=utf-8", cache="no-store")
@@ -266,6 +270,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps({"code": code}).encode(), "application/json")
             except Exception as e:  # noqa: BLE001
                 return self._send(400, json.dumps({"msg": str(e)[:80]}, ensure_ascii=False).encode(), "application/json; charset=utf-8")
+        if u.path == "/api/farm/plant":
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+                data = json.loads(self.rfile.read(n).decode("utf-8")) if 0 < n <= 2048 else {}
+                err, tally, bonus = farm.plant(str(data.get("item") or ""), str(data.get("pick") or ""), str(data.get("cid") or ""))
+                body = {"ok": not err, "msg": err, "tally": tally, "bonus": bonus}
+                return self._send(200 if not err else 400, json.dumps(body, ensure_ascii=False).encode(), "application/json; charset=utf-8")
+            except Exception as e:  # noqa: BLE001
+                return self._send(400, json.dumps({"ok": False, "msg": str(e)[:80]}, ensure_ascii=False).encode(), "application/json; charset=utf-8")
         if u.path == "/api/vote":
             try:
                 n = int(self.headers.get("Content-Length") or 0)
@@ -332,6 +345,7 @@ def main():
     maint.init()
     share.init()
     vote.init()
+    farm.init()
     matchinfo.init()
     champs.start()                       # 챔피언 한국어 이름·아이콘(Data Dragon, 하루 한 번)
     maint.start()

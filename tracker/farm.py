@@ -1,0 +1,183 @@
+"""독버섯 심기(소식 화면의 작은 예측 놀이): 판(항목)과 O/X·팀 선택 집계, 결과 판정.
+점수·연속 수확·밭은 이용자 브라우저에만 저장(localStorage 'teemofarm_lck_v1', static/farm.js). 서버는
+  - 판 목록: 스토브리그엔 '유력' 기사(간다 O / 안 간다 X), 시즌엔 다가오는 LCK 경기(두 팀 중 하나)
+  - 선택 집계(민심 줄다리기·역배 판정용, 브라우저 번호 하나당 한 번, 바꿀 수 없음)
+  - 결과: 유력 → 리그피디아 FA 상태가 바뀌면(그 팀 이적이면 O, 다른 팀·잔류면 X), 경기 → 승리 팀
+만 맡는다. 판은 한 번 만들어지면 결과가 날 때까지 남아서, 유력 표시가 사라져도 판정할 수 있다."""
+import re
+import threading
+import time
+from datetime import datetime, timedelta, timezone
+
+from . import schedule
+from .config import TEAMS
+from .core import db
+from .rumor import movers, rumors
+
+LOCK_MIN = 10            # 경기 시작 몇 분 전까지 심을 수 있나
+BONUS_UNDER = 0.30       # 이 비율 미만 쪽에 심어서 맞히면 역배
+BONUS_MIN = 10           # 참여가 이만큼은 돼야 역배(몇 명뿐이면 비율이 의미 없음)
+OPEN_MAX = 8             # 카드에 보일 열린 판 수(최근 것부터)
+_CID = re.compile(r"^[A-Za-z0-9_-]{8,40}$")
+_SENT, _LOCK, _SYNC = {}, threading.Lock(), {"at": 0.0}
+
+
+def init():
+    with db() as c:
+        c.execute("""CREATE TABLE IF NOT EXISTS farm_items(
+            id TEXT PRIMARY KEY, kind TEXT, page TEXT, nick TEXT, a TEXT, b TEXT, a_label TEXT, b_label TEXT,
+            title TEXT, url TEXT, outlet TEXT, published TEXT, lock_at TEXT, result TEXT, resolved_at TEXT, created TEXT, tag TEXT)""")
+        c.execute("CREATE TABLE IF NOT EXISTS farm_picks(item TEXT, cid TEXT, pick TEXT, at TEXT, PRIMARY KEY(item, cid))")
+
+
+def _now():
+    return datetime.now(timezone.utc)
+
+
+def sync(force=False):
+    """판을 새로 만들고(유력·경기) 결과를 매김. 1분에 한 번이면 충분."""
+    if not force and time.time() - _SYNC["at"] < 60:
+        return
+    _SYNC["at"] = time.time()
+    now = _now().isoformat()
+    with db() as c:
+        fa = [dict(r) for r in c.execute("SELECT * FROM fa WHERE league='lck'")]
+        st = {r["page"]: r for r in fa}
+        # 1) 유력 기사 → 판(같은 선수·같은 팀·같은 방향은 한 판)
+        for page, rm in rumors(fa).items():
+            r = st.get(page)
+            if not r or r["status"] != "fa" or not rm.get("team"):
+                continue
+            iid = f"rm:{page}:{rm['team']}:{'s' if rm['stay'] else 'm'}"
+            _put(c, iid, page, r["nick"], r["team_from"], rm, now)
+        # 1-2) 계약이 남은 선수의 이적 유력('커리어 DK → 한화생명') → 판
+        roster = [dict(r) for r in c.execute("SELECT * FROM roster WHERE league='lck'")]
+        for page, rm in movers(roster).items():
+            r = next((x for x in roster if x["page"] == page), None)
+            if not r or not rm.get("team") or rm["team"] == r["team"]:
+                continue
+            _put(c, f"mv:{page}:{rm['team']}", page, r["nick"], r["team"], rm, now)
+        on = {x["page"]: x["team"] for x in roster}
+        started = any(m.get("win") in ("1", "2") and str(_season()) in (m.get("page") or "")
+                      for m in schedule.get("lck").get("matches") or [])
+        # 2) 다가오는 LCK 경기(이틀 안) → 판
+        soon = _now() + timedelta(days=2)
+        for m in schedule.get("lck").get("matches") or []:
+            at = _at(m)
+            if not at or not m.get("id") or m.get("k1") in ("", None) or m.get("k2") in ("", None) or "TBD" in (m["t1"], m["t2"]):
+                continue
+            if _now() - timedelta(days=3) < at < soon:
+                c.execute("INSERT OR IGNORE INTO farm_items(id,kind,page,nick,a,b,a_label,b_label,title,url,outlet,published,lock_at,created) "
+                          "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                          ("m:" + m["id"], "match", m.get("page", ""), "", m["k1"], m["k2"], m["t1"], m["t2"], m.get("tour", ""),
+                           "", "", at.isoformat(), (at - timedelta(minutes=LOCK_MIN)).isoformat(), now))
+        # 3) 결과 매기기
+        games = {"m:" + m["id"]: m for m in schedule.get("lck").get("matches") or [] if m.get("id")}
+        for it in [dict(r) for r in c.execute("SELECT * FROM farm_items WHERE result IS NULL")]:
+            res = None
+            if it["id"].startswith("mv:"):            # 계약 중 선수: 로스터가 그 팀으로 바뀌면 O, 다른 팀이거나 새 시즌이 시작될 때까지 그대로면 X
+                team, r = on.get(it["page"]), st.get(it["page"])
+                if team == it["b"] or (r and r["status"] == "move" and r["team_to"] == it["b"]):
+                    res = "o"
+                elif (team and team not in (it["a"], it["b"])) or (r and r["status"] == "move" and r["team_to"] != it["b"]) or (team == it["a"] and started):
+                    res = "x"
+            elif it["kind"] == "rumor":
+                r = st.get(it["page"])
+                stay = it["id"].endswith(":s")
+                if r and r["status"] == "move":
+                    res = "o" if (r["team_to"] == it["b"] and not stay) else "x"
+                elif r and r["status"] == "stay":
+                    res = "o" if stay else "x"
+            else:
+                m = games.get(it["id"])
+                if m and m.get("win") in ("1", "2"):
+                    res = "a" if m["win"] == "1" else "b"
+            if res:
+                c.execute("UPDATE farm_items SET result=?, resolved_at=? WHERE id=?", (res, now, it["id"]))
+
+
+def _put(c, iid, page, nick, frm, rm, now):
+    """유력 기사 판 하나(같은 판이면 결과가 나기 전까지 최신 기사·표시로 바꿈: 유력 → 발표)."""
+    from .stove import outlet_name
+    tag = ("잔류 " if rm["stay"] else "") + ("발표" if rm["official"] else "유력")    # 화면 공통 글자(views.rm_label과 같음)
+    c.execute("INSERT INTO farm_items(id,kind,page,nick,a,b,a_label,b_label,title,url,outlet,published,lock_at,created,tag) "
+              "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title, url=excluded.url, "
+              "outlet=excluded.outlet, published=excluded.published, tag=excluded.tag WHERE farm_items.result IS NULL",
+              (iid, "rumor", page, nick, frm, rm["team"], "O", "X", rm["title"], rm["url"],
+               outlet_name(rm["outlet"] or ""), rm["published"], "", now, tag))
+
+
+def _season():
+    from .archive import current_season
+    return current_season()
+
+
+def _at(m):
+    try:
+        return datetime.strptime(m["at"][:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
+def _tally(c, ids):
+    out = {i: {} for i in ids}
+    if ids:
+        q = ",".join("?" * len(ids))
+        for r in c.execute(f"SELECT item, pick, COUNT(*) n FROM farm_picks WHERE item IN ({q}) GROUP BY item, pick", ids):
+            out[r["item"]][r["pick"]] = r["n"]
+    return out
+
+
+def _open(it, now):
+    return it["result"] is None and (not it["lock_at"] or it["lock_at"] > now)
+
+
+def board(ids=()) -> dict:
+    """{"open": [열린 판 최대 OPEN_MAX], "mine": {내가 심은 판 id: 판(결과 포함)}}. 판마다 선택 집계 tally."""
+    sync()
+    now = _now().isoformat()
+    ids = [i for i in ids if isinstance(i, str) and len(i) < 120][:200]
+    with db() as c:
+        rows = [dict(r) for r in c.execute("SELECT * FROM farm_items ORDER BY COALESCE(published,'') DESC")]
+        mine = {r["id"]: r for r in rows if r["id"] in ids}
+        # 시즌엔 경기 판을 먼저(가까운 경기부터), 그다음 유력
+        opn = sorted((r for r in rows if _open(r, now)), key=lambda r: (r["kind"] != "match", r["published"] if r["kind"] == "match" else ""))
+        games = [r for r in opn if r["kind"] == "match"]
+        opn = (sorted(games, key=lambda r: r["published"]) + [r for r in opn if r["kind"] == "rumor"])[:OPEN_MAX]
+        t = _tally(c, [r["id"] for r in opn] + list(mine))
+    short = lambda k: TEAMS.get(k, {}).get("short") or (k or "").upper()  # noqa: E731
+    pub = lambda r: {k: r[k] for k in ("id", "kind", "nick", "a", "b", "a_label", "b_label", "title", "url", "outlet",  # noqa: E731
+                                      "published", "lock_at", "result", "tag")} | {"tally": t.get(r["id"], {}), "open": _open(r, now),
+                                                                                    "a_short": short(r["a"]), "b_short": short(r["b"])}
+    return {"open": [pub(r) for r in opn], "mine": {i: pub(r) for i, r in mine.items()}}
+
+
+def plant(item: str, pick: str, cid: str):
+    """심기(한 사람 한 번, 바꿀 수 없음) → (오류 문구 또는 '', 심기 전 집계, 역배 여부)."""
+    if not _CID.match(cid or ""):
+        return "잘못된 요청이에요", {}, False
+    t = time.time()
+    with _LOCK:                                    # 도배 방지: 한 브라우저 1분에 20번까지
+        sent = [x for x in _SENT.get(cid, []) if t - x < 60]
+        if len(sent) >= 20:
+            return "잠시 뒤에 다시 눌러 주세요", {}, False
+        _SENT[cid] = sent + [t]
+    sync()
+    with db() as c:
+        it = c.execute("SELECT * FROM farm_items WHERE id=?", (item,)).fetchone()
+        if not it:
+            return "심을 수 없는 판이에요", {}, False
+        if not _open(dict(it), _now().isoformat()):
+            return "이미 결과가 났거나 마감됐어요", {}, False
+        ok = ("o", "x") if it["kind"] == "rumor" else ("a", "b")
+        if pick not in ok:
+            return "고를 수 없는 쪽이에요", {}, False
+        before = _tally(c, [item])[item]
+        n = sum(before.values())
+        bonus = n >= BONUS_MIN and before.get(pick, 0) / n < BONUS_UNDER
+        cur = c.execute("INSERT OR IGNORE INTO farm_picks(item, cid, pick, at) VALUES(?,?,?,?)",
+                        (item, cid, pick, _now().isoformat()))
+        if not cur.rowcount:
+            return "이미 심었어요", before, False
+        after = _tally(c, [item])[item]
+    return "", after, bonus

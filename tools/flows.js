@@ -14,7 +14,10 @@ const PERSONAS = {
   '처음 온 사람': null,
   '써 본 사람': {
     local: { theme: 'light', spoiler: '1', 'myTeam:lck': 't1', lckAuto: '1', chatCid: 'flowtestbrowser0001',
-             chatName: '티모0001', readIds: '[]', favs: '["Faker"]' },
+             chatName: '티모0001', readIds: '[]', favs: '["Faker"]',
+             // 독버섯 심기: 결과가 난 판(dev_server의 'rm:DevShroom:t1:m')에 O로 심어 둔 사람
+             teemofarm_lck_v1: JSON.stringify({ points: 3, streak: 1, goldenFoundDates: [], fieldLog: ['n', 'n'],
+               plantedMushrooms: { 'rm:DevShroom:t1:m': { picked: 'O', isUnderdog: false, plantedAt: '2026-01-01T00:00:00Z', status: 'pending', harvested: false } } }) },
     session: { 'qs:lck:fa': '?season=2025', 'qs:lck:schedule': '?season=2026&x=1', 'qs:lck:roster': '?season=2026',
                'qs:lck:news': '?team=t1&hot=0', fbarOpen: '1' },
   },
@@ -155,6 +158,44 @@ async function vote(p) {
   if (!txt.includes('HLE')) bad(`투표한 뒤에도 내 선택이 안 보임 ('${txt}')`);
 }
 
+// 독버섯 심기: 심기 → 잠김 / (써 본 사람) 결과 난 판 수확은 한 번만 / 황금 버섯은 하루 한 번
+async function farm(p, seeded) {
+  const pts = async () => +(await p.$eval('.tf-pts', e => e.textContent).catch(() => 'NaN'));
+  await p.goto(B + '/lck');
+  if (!(await p.waitForSelector('#tf .tf-bar', { timeout: 5000 }).catch(() => null))) { bad('독버섯 심기 상태바가 안 보임'); return; }
+  if (seeded) {
+    const h = await p.waitForSelector('[data-harvest]', { timeout: 5000 }).catch(() => null);
+    if (!h) bad('결과가 난 판인데 [버섯 수확하기]가 안 보임');
+    else {
+      const before = await pts();
+      await h.click(); await p.waitForTimeout(400);
+      if (await pts() !== before + 1) bad(`수확했는데 점수가 ${before} → ${await pts()}`);
+      if (await p.$('[data-harvest]')) bad('수확한 뒤에도 수확 버튼이 남아 있음');
+      await p.reload(); await p.waitForSelector('#tf .tf-bar', { timeout: 5000 }).catch(() => {}); await p.waitForTimeout(600);
+      if (await p.$('[data-harvest]')) bad('다시 들어오니 같은 버섯을 또 수확할 수 있음(중복 수령)');
+      if (await pts() !== before + 1) bad(`다시 들어오니 점수가 ${await pts()} (수확 뒤 ${before + 1})`);
+    }
+  }
+  const pb = await p.waitForSelector('.tf-card [data-plant]', { timeout: 5000 }).catch(() => null);
+  if (!pb) bad('심을 수 있는 판이 없음');
+  else {
+    const id = await pb.getAttribute('data-plant');
+    await pb.click(); await p.waitForTimeout(600);
+    const li = await p.$(`li[data-item="${id}"]`);
+    if (!li || !(await li.evaluate(e => e.classList.contains('tf-pend')))) bad('심었는데 "심음 · 기다리는 중"으로 안 바뀜');
+    if (await p.$(`[data-plant="${id}"]`)) bad('심은 판에 아직 심기 버튼이 남아 있음');
+  }
+  const g = await p.$('.tf-goldspot');
+  if (!g) bad('오늘의 황금 버섯이 화면에 없음');
+  else {
+    const before = await pts();
+    await g.click({ force: true }); await p.waitForTimeout(1100);
+    if (await pts() !== before + 5) bad(`황금 버섯을 찾았는데 점수가 ${before} → ${await pts()}`);
+    await p.reload(); await p.waitForTimeout(800);
+    if (await p.$('.tf-goldspot')) bad('황금 버섯을 찾은 날인데 또 나옴');
+  }
+}
+
 (async () => {
   const b = await chromium.launch();
   for (const [name, seed] of Object.entries(PERSONAS)) {
@@ -184,6 +225,7 @@ async function vote(p) {
       await toggles(p);
       await memory(p);
       await vote(p);
+      await farm(p, !!seed);
       await ctx.close();
     }
   }

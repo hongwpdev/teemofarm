@@ -588,7 +588,8 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
             gos.append(go_link("모든 출처 보기", s="all"))
         body = f'<li class="empty"><p>{text}</p>' + (f'<div class="go">{"".join(gos)}</div>' if gos else "") + "</li>"
 
-    main = f"""<div class="layout"><div>
+    farm = league == "lck" and not q          # 독버섯 심기(static/farm.js가 채움)
+    main = f"""<div class="layout"><div>{'<div id="tf" class="tf-wrap"></div>' if farm else ""}
 <section class="card fbar{" open" if custom else ""}" id="fbar" aria-label="보기와 필터">
 <form class="srch" method="get" action="{base}" role="search">{"".join(f'<input type="hidden" name="{k}" value="{esc(str(v))}">' for k, v in (("team", team if team in TEAMS else ""),) if v != "")}
 <input type="search" name="q" value="{esc(q)}" placeholder="선수·키워드 검색 (예: 커즈, 기인)" aria-label="선수·키워드 검색" enterkeyhint="search">
@@ -611,7 +612,7 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
 {affiliate_card("aff-narrow")}
 </div>{rail(league, team)}</div>
 {POPUP}"""
-    return shell(league, "news", "", main, ("news.js", "player.js"), today, extra_attr=' data-teamable="1"')
+    return shell(league, "news", "", main, ("news.js", "player.js") + (("farm.js",) if farm else ()), today, extra_attr=' data-teamable="1"')
 
 
 # ── 이적·FA ─────────────────────────────────────────────────────────────

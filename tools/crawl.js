@@ -32,6 +32,8 @@ async function crawl(base, opts = {}) {
     let res;
     try { res = await p.goto(url, { waitUntil: 'load', timeout: 15000 }); } catch (e) { bad(url, '열리지 않음: ' + String(e.message).split('\n')[0]); await p.close(); return []; }
     await p.waitForTimeout(300);
+    // 화면이 나중에 채우는 칸(독버섯 심기)이 있으면 다 그려질 때까지 조금 기다림
+    if (await p.$('#tf')) await p.waitForSelector('#tf .tf-bar', { timeout: 3000 }).then(() => p.waitForTimeout(300)).catch(() => {});
     const st = res ? res.status() : 0;
     if (st >= 400) { bad(url, `응답 ${st}`); await p.close(); return []; }
     errs.forEach(e => bad(url, '자바스크립트 오류: ' + e));
@@ -80,7 +82,7 @@ async function crawl(base, opts = {}) {
         if (img.complete && img.naturalWidth === 0 && u.origin === location.origin && u.pathname !== '/img/shroom.png') out.problems.push(`이미지 깨짐: ${u.pathname}`);
       }
       // 데이터: 사람마다 자리·상태·행선지(화면이 data-pos·data-label·data-dest로 알려 줌)
-      const where = e => e.closest('#falist') ? '이적 시장 목록' : e.closest('.vrow') ? '행선지 맞히기'
+      const where = e => e.closest('#falist') ? '이적 시장 목록' : e.closest('.vrow') ? '행선지 맞히기' : e.closest('.tf-card') ? '독버섯 심기'
         : e.closest('.rgrid') ? '로스터' : e.closest('[data-label]') ? '이동 보드' : '';
       for (const e of document.querySelectorAll('[data-nick]')) {
         const w = where(e);

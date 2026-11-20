@@ -11,20 +11,20 @@ from http.server import ThreadingHTTPServer
 
 os.environ.setdefault("DB_PATH", os.path.join(tempfile.mkdtemp(), "test.db"))
 
-from tracker import chat, maint, matchinfo, player_extra, share, vote  # noqa: E402
+from tracker import chat, farm, maint, matchinfo, player_extra, share, vote  # noqa: E402
 from tracker.core import init_db  # noqa: E402
 from tracker.web import server  # noqa: E402
 
 PAGES = ["/lck", "/lck/roster", "/lck/fa", "/lck/summary", "/lck/predict", "/lck/contracts", "/lck/teams", "/lck/schedule", "/lck/results", "/lck/stove", "/lck/teams", "/lpl/results", "/lck/builder", "/lck/game", "/lpl", "/lpl/schedule", "/lec/schedule", "/cblol/roster",
          "/lck?team=t1", "/lck?q=faker", "/lck?hot=0&src=news"]
-APIS = ["/api/votes", "/api/items", "/api/people", "/api/schedule", "/api/schedule?league=lpl", "/api/status", "/api/chat", "/healthz"]
+APIS = ["/api/farm", "/api/farm?ids=rm:x:t1:m", "/api/votes", "/api/items", "/api/people", "/api/schedule", "/api/schedule?league=lpl", "/api/status", "/api/chat", "/healthz"]
 
 
 class SmokeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         init_db()
-        for m in (chat, player_extra, maint, share, matchinfo, vote):
+        for m in (chat, player_extra, maint, share, matchinfo, vote, farm):
             m.init()
         server.load_static()
         cls.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
