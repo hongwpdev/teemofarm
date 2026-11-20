@@ -59,11 +59,25 @@
     return h;
   }
   // ── 티모 스킨 도감: 라이엇 공식 이미지(데이터 드래곤 타일)만 씀. 연속 수확·점수·황금 버섯으로 열림 ──
+  // 데이터 드래곤 Teemo.json의 스킨 16종(크로마 제외). 쉬운 것부터 — 점수·최고 연속 수확·황금 버섯을 번갈아
+  const gold = () => st.goldenFoundDates.length;
   const SKINS = [
     { n: 0, name: "기본 티모", rule: "처음부터", ok: () => true },
+    { n: 2, name: "정찰부대 티모", rule: "농장 점수 3", ok: () => st.points >= 3 },
+    { n: 3, name: "오소리 티모", rule: "최고 연속 수확 2", ok: () => st.best >= 2 },
+    { n: 1, name: "행복한 엘프 티모", rule: "농장 점수 5", ok: () => st.points >= 5 },
     { n: 4, name: "우주비행사 티모", rule: "최고 연속 수확 3", ok: () => st.best >= 3 },
+    { n: 5, name: "복실복실 티모", rule: "황금 버섯 1번 찾기", ok: () => gold() >= 1 },
+    { n: 6, name: "슈퍼 티모", rule: "최고 연속 수확 4", ok: () => st.best >= 4 },
+    { n: 7, name: "판다 티모", rule: "농장 점수 8", ok: () => st.points >= 8 },
     { n: 8, name: "오메가 분대 티모", rule: "최고 연속 수확 5 또는 농장 점수 10", ok: () => st.best >= 5 || st.points >= 10 },
-    { n: 18, name: "꿀잼 티모", rule: "황금 버섯 2번 찾기", ok: () => st.goldenFoundDates.length >= 2 },
+    { n: 18, name: "꿀잼 티모", rule: "황금 버섯 2번 찾기", ok: () => gold() >= 2 },
+    { n: 14, name: "작은 악마 티모", rule: "최고 연속 수확 7", ok: () => st.best >= 7 },
+    { n: 37, name: "불꽃놀이 티모", rule: "농장 점수 15", ok: () => st.points >= 15 },
+    { n: 47, name: "우주 그루브 티모", rule: "황금 버섯 3번 찾기", ok: () => gold() >= 3 },
+    { n: 25, name: "영혼의 꽃 티모", rule: "최고 연속 수확 10", ok: () => st.best >= 10 },
+    { n: 27, name: "프레스티지 영혼의 꽃 티모", rule: "농장 점수 25", ok: () => st.points >= 25 },
+    { n: 54, name: "영혼의 꽃 온천 티모", rule: "최고 연속 수확 15 그리고 황금 버섯 5번", ok: () => st.best >= 15 && gold() >= 5 },
   ];
   const skinUrl = n => `https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/Teemo_${n}.jpg`;
   const curSkin = () => SKINS.find(k => k.n === st.skin && k.ok()) || SKINS[0];
@@ -79,7 +93,7 @@
     }).join("");
     return `<div class="tf-me"><button type="button" class="tf-skin" aria-haspopup="true" aria-expanded="${skinOpen}" title="티모 스킨 바꾸기 · ${esc(k.name)}">`
       + `<img src="${skinUrl(k.n)}" alt="${esc(k.name)}" width="44" height="44">${newSkin() ? '<i class="tf-new" aria-label="새 스킨"></i>' : ""}</button>`
-      + `<div class="tf-skins"${skinOpen ? "" : " hidden"}><p>티모 스킨 도감 <small>맞힐수록 열려요</small></p><ul>${list}</ul>`
+      + `<div class="tf-skins"${skinOpen ? "" : " hidden"}><p>티모 스킨 도감 <small>맞힐수록 열려요 (${SKINS.filter(x => x.ok()).length}/${SKINS.length})</small></p><ul>${list}</ul>`
       + `<p class="tf-skin-src">스킨 이미지 © Riot Games</p></div></div>`;
   }
 

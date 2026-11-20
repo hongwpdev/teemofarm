@@ -241,7 +241,7 @@ async function farm(p, seeded) {
     lockedOk: [...document.querySelectorAll('.tf-skin-it.tf-lock')].every(b => b.disabled), on: document.querySelectorAll('.tf-skin-it.tf-on').length }));
   if (!sk.open) bad('티모 스킨 도감이 안 열림');
   else {
-    if (sk.n < 4 || sk.on !== 1 || !sk.lockedOk) bad(`스킨 도감 이상: 스킨 ${sk.n}개 · 쓰는 중 ${sk.on}개 · 잠긴 것 눌림 ${!sk.lockedOk}`);
+    if (sk.n !== 16 || sk.on !== 1 || !sk.lockedOk) bad(`스킨 도감 이상: 스킨 ${sk.n}개 · 쓰는 중 ${sk.on}개 · 잠긴 것 눌림 ${!sk.lockedOk}`);
     await p.mouse.click(5, 5); await p.waitForTimeout(200);
     if (await p.$('.tf-skins:not([hidden])')) bad('바깥을 눌러도 스킨 도감이 안 닫힘');
   }

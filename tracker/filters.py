@@ -6,12 +6,19 @@ import time
 
 from .core import db
 
-# 1단계: 하나는 꼭 있어야 하는 말(리그·게임·팀·선수)
+# 1단계: 하나만 있어도 LoL 기사(리그·게임·e스포츠에서만 쓰는 팀 이름)
 DOMAIN_KO = ("리그 오브 레전드", "리그오브레전드", "롤드컵", "월즈", "이스포츠", "e스포츠", "E스포츠", "라이엇", "소환사의 컵",
              "소환사의 협곡", "케스파컵", "감코진",
-             "한화생명", "티원", "젠지", "디플러스", "롤스터", "농심", "레드포스", "피어엑스", "수퍼스", "브리온")
+             "한화생명e스포츠", "티원", "젠지", "디플러스", "롤스터", "레드포스", "피어엑스", "수퍼스", "브리온")
 DOMAIN_EN = ("LoL", "LCK", "LPL", "LEC", "LCS", "LCP", "CBLOL", "MSI", "Worlds", "Riot", "KeSPA",
-             "HLE", "T1", "GEN", "Gen.G", "DK", "KT", "NS", "BFX", "FEARX", "DRX", "DNS", "BRO")
+             "HLE", "T1", "GEN", "Gen.G", "BFX", "FEARX", "DRX", "Dplus")
+# 1-2단계: 팀 이름이 다른 회사·다른 종목 팀과 같아서 혼자서는 모자란 말 → 아래 '함께 있어야 하는 말'이 있을 때만
+#  - 회사 이름(보험·식품·홈쇼핑): 선수·감독·영입 같은 '사람이 움직이는' 말이 함께 있으면 LoL('한화생명, 청년 95명 지원'은 아님)
+#  - 야구·농구 팀과 겹치는 이름(KT)·흔한 약자(DNS·BRO)·'롤'(화장지): LoL에서만 쓰는 말이나 선수 닉네임이 있어야
+CORP_KO, CORP_EN = ("한화생명", "농심"), ("DK", "NS")
+STRICT_EN = ("KT", "DNS", "BRO")
+SPORT_CTX = re.compile(r"선수|감독|코치|영입|재계약|합류|결별|계약 ?종료|로스터|승격|선임|FA|이적|우승|트레이드|주전|패배|승리|연패|연승|결승|정글|서폿|원딜|미드|탑 ?라이너")
+LOL_CTX = re.compile(r"정글러|서포터|서폿|원딜|미드 ?라이너|탑 ?라이너|바텀|세트|챔피언|패치|랭크|스킨|소환사|협곡|칼바람|아이템|밴픽")
 LOL_WORD = re.compile(r"(?<![가-힣])롤(?![러링백업]|모델|케이크|플레잉)")      # '롤'은 따로: 컨트롤·롤러·롤모델 제외
 # 한글 닉네임: 기사에선 보통 '커즈'처럼 따옴표 안에 씀. 흔한 낱말과 겹치는 게 많아 따옴표 안일 때만 인정
 KO_NICKS = {
@@ -54,7 +61,8 @@ QUOTES = "'\u2018\u2019\"\u201c\u201d"
 BLACK_KO = ("프로야구", "한국시리즈", "야구", "농구", "점프볼", "K리그", "축구", "배구", "V리그", "골프", "호나우지뉴",
             "FC 온라인", "FC온라인", "피파", "발로란트", "배그", "배틀그라운드", "오버워치", "스타크래프트", "철권", "이터널 리턴",
             "투수", "타자", "포수", "내야수", "외야수", "홈런", "이글스", "위즈", "자이언츠", "트윈스", "베어스", "랜더스",
-            "라이온즈", "타이거즈", "다이노스", "히어로즈", "소닉붐", "프로미", "점보스")
+            "라이온즈", "타이거즈", "다이노스", "히어로즈", "소닉붐", "프로미", "점보스",
+            "아시아쿼터", "홀드", "좌완", "우완", "불펜", "마운드", "이닝", "타율")
 BLACK_EN = ("KBO", "MLB", "KBL", "WKBL", "NBA", "EPL", "PUBG", "LPGA", "KLPGA", "FIFA", "VCT", "FSL", "APBC", "F1")
 
 
@@ -94,14 +102,34 @@ def black_hit(title: str) -> bool:
 
 
 # 다른 종목 말이 함께 있어도 LoL 기사로 볼 만큼 확실한 말('페이커, 야구장 시구… T1 LCK 우승 기념').
-# 팀 이름(KT·한화생명…)은 야구·농구 팀과 겹쳐서 여기엔 안 넣음('KT 위즈 FA 영입'은 계속 버림)
+# 팀 이름(KT·한화생명…)은 야구·농구 팀·회사와 겹쳐서 여기엔 안 넣음('KT 위즈 FA 영입'은 계속 버림)
 _SURE = _words(("LCK", "LoL", "리그 오브 레전드", "리그오브레전드", "롤드컵"))
+
+
+_CORP_EN, _STRICT_EN = _words(CORP_EN), _words(STRICT_EN)
+
+
+# 흔한 낱말·상품명과 겹치는 한글 닉네임('농심 너구리', '한화생명 커리어 설계사')은 따옴표 없이는 닉네임으로 안 봄
+_KO_PLAIN_SKIP = {"너구리", "커리어", "라이프", "클리어", "크레이지", "나이트", "스매시", "노바", "피터", "마타", "캐스팅", "에포트",
+                  "클로저", "딜라이트", "로머", "모건", "스펀지", "에도", "고리", "도브", "꼬마", "덕담", "오너", "듀크", "조커",
+                  "프로그", "사루", "로치", "레이지필", "베릴", "카엘", "로케", "루스터", "엄티", "하차니"}
+
+
+def _ko_anywhere(title: str) -> bool:
+    """따옴표 없이 나온 한글 닉네임(두 글자 이상). 'KT 지우 “5세트 …”'·'도란 나가고 … 데프트는 농심으로' 같은 제목용 — 팀 이름과 함께일 때만 씀."""
+    return any(len(k) >= 2 and k not in _KO_PLAIN_SKIP and k in title for k in ko_nicks().values())
 
 
 def is_lol_news(title: str) -> bool:
     if not title or (black_hit(title) and not _SURE.search(title)):
         return False
-    if any(w in title for w in DOMAIN_KO) or _DOMAIN_EN.search(title) or LOL_WORD.search(title):
+    if any(w in title for w in DOMAIN_KO) or _DOMAIN_EN.search(title):
         return True
     nick, ko = people()
-    return bool((nick and nick.search(title)) or (ko and ko.search(title)))
+    if (nick and nick.search(title)) or (ko and ko.search(title)):
+        return True
+    if (any(w in title for w in CORP_KO) or _CORP_EN.search(title)) and (SPORT_CTX.search(title) or _ko_anywhere(title)):
+        return True                                   # '한화생명, 새 사령탑에 …' / '농심, 서포터 영입' / '데프트는 농심으로'
+    if _STRICT_EN.search(title) or LOL_WORD.search(title):
+        return bool(LOL_CTX.search(title) or _ko_anywhere(title))
+    return False
