@@ -59,27 +59,6 @@
     read.add(li.dataset.id); S.store.set("readIds", Array.from(read).slice(-600).join("|"));
   });
 
-  // ── 오피셜(시야 확보): 새 오피셜이 처음 화면에 들어오면 포자가 팡 ──
-  const burst = new Set((S.store.get("burstIds") || "").split("|").filter(Boolean));
-  if ("IntersectionObserver" in window && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    const io = new IntersectionObserver(es => es.forEach(en => {
-      if (!en.isIntersecting) return;
-      const li = en.target; io.unobserve(li);
-      if (burst.has(li.dataset.id)) return;
-      burst.add(li.dataset.id); S.store.set("burstIds", Array.from(burst).slice(-300).join("|"));
-      const b = li.querySelector(".trust") || li.querySelector(".kb");
-      const x = b ? b.offsetLeft + b.offsetWidth / 2 : 40, y = b ? b.offsetTop + b.offsetHeight / 2 : 30;
-      for (let i = 0; i < 12; i++) {
-        const sp = document.createElement("i"), ang = Math.PI * 2 * i / 12, d = 24 + Math.random() * 26;
-        sp.className = "spore" + (i % 3 ? "" : " p");
-        sp.style.left = x + "px"; sp.style.top = y + "px";
-        sp.style.setProperty("--dx", Math.cos(ang) * d + "px"); sp.style.setProperty("--dy", Math.sin(ang) * d + "px");
-        li.append(sp); setTimeout(() => sp.remove(), 900);
-      }
-    }), { threshold: .6 });
-    items.filter(li => li.classList.contains("kd-official") && li.classList.contains("new")).forEach(li => io.observe(li));
-  }
-
   // ── 찜한 소식: 선수 팝업에서 찜한 선수 이름이 들어간 소식을 맨 위에 모음 + 새 오피셜 알림 ──
   let favs = [];
   try { favs = JSON.parse(localStorage.getItem("favs") || "[]"); } catch (e) {}

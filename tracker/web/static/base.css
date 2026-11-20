@@ -475,8 +475,6 @@ body{padding-bottom:7rem}
 @keyframes shake{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-1px,-1px) rotate(-4deg)}75%{transform:translate(1px,0) rotate(4deg)}}
 /* 오피셜(시야 확보): 처음 보이면 포자가 팡 */
 .item{position:relative}
-.spore{position:absolute;width:.8rem;height:.8rem;border-radius:50%;background:var(--lime);pointer-events:none;z-index:3;animation:burst .8s ease-out forwards}
-.spore.p{background:var(--primary)}
 @keyframes burst{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
 /* 안 읽은 최신 소식은 어두운 안개, 읽으면 환하게 */
 .item.unread:not(.lv-1) .row{background-image:linear-gradient(90deg,var(--fog),transparent 45%)}
@@ -562,7 +560,7 @@ body{padding-bottom:7rem}
 /* 이스터에그: 화면 가득 포자 */
 .rain{position:fixed;top:-2rem;z-index:200;pointer-events:none;font-size:2.4rem;animation:fall linear forwards}
 @keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:.2}}
-@media (prefers-reduced-motion:reduce){.teemo .mk,.st.nw,.item.lv-2 .row,.item.lv-2 .trust,.track .plant,.spore,.rain{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.teemo .mk,.st.nw,.item.lv-2 .row,.item.lv-2 .trust,.track .plant,.rain{animation:none!important}}
 .msgs .msg,.msgs .sys{flex:none}
 .msgs{gap:1.4rem}
 .msg .who{margin-bottom:.4rem}
@@ -752,12 +750,10 @@ body{padding-bottom:7rem}
 .aff b{font-size:1.4rem;color:var(--t1)}
 .aff p{font-size:1.2rem;color:var(--t8);line-height:1.45}
 .aff .btn{height:3.6rem;font-size:1.3rem}
-.aff small{font-size:1.05rem;color:var(--t8);line-height:1.4;word-break:keep-all}
-.aff small{font-size:1.15rem;color:var(--t5)}
+.aff small{font-size:1.15rem;color:var(--t5);line-height:1.4;word-break:keep-all;margin-top:.2rem;padding-top:.8rem;border-top:1px dashed var(--line)}
 .aff-note{max-width:72rem;margin:.6rem auto 0;font-size:1.15rem;color:var(--t5);word-break:keep-all}
 .aff .ag-top{display:flex;justify-content:space-between;align-items:center;gap:.6rem}
 .aff .ag-mark{font-size:1.05rem;font-weight:700;color:var(--t5);border:1px solid var(--border);padding:.1rem .5rem;border-radius:.4rem}
-.aff small{margin-top:.2rem;padding-top:.8rem;border-top:1px dashed var(--line)}
 .aff:hover{border-color:var(--primary)}
 .support{position:relative}
 .sup-qr{display:inline-flex;flex-direction:column;align-items:center;gap:.8rem;margin-top:1rem;padding:1.4rem;border-radius:1rem;background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow)}
@@ -977,7 +973,6 @@ body{padding-bottom:7rem}
 .tbtn.ico .i{margin:0}
 .live-dot{display:inline-block;width:.8rem;height:.8rem;border-radius:50%;background:var(--red);margin-right:.6rem;vertical-align:.15rem}
 .champ>div{padding-left:.4rem}
-.spore{display:none}
 /* ── 4~6(2026.11): 그림자 대신 얇은 테두리, 보라색은 '선택됨'·주요 버튼에만, 휴대폰 머리말 줄이기 ── */
 .card,.rc,.bteam{box-shadow:none;border:1px solid var(--line)}
 .lgsel summary{background:var(--bg-gray);color:var(--t1);border:1px solid var(--border)}

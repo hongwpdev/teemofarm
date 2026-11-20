@@ -133,6 +133,19 @@ class FarmTest(unittest.TestCase):
         finally:
             schedule.DATA = old
 
+    def test_ratio_hidden_until_planted(self):
+        # 심기 전엔 참여 인원만, 심은 브라우저에만 비율(서버가 숨김) · 심은 쪽은 my_picks로 되살릴 수 있게
+        item("rm:Zeus:t1:m"); fa("Zeus", "fa")
+        farm.plant("rm:Zeus:t1:m", "o", "someone001")
+        b = farm.board([], "viewer0001")
+        z = next(x for x in b["open"] if x["id"] == "rm:Zeus:t1:m")
+        self.assertEqual((z["n"], z["tally"]), (1, {}))
+        farm.plant("rm:Zeus:t1:m", "x", "viewer0001")
+        b = farm.board([], "viewer0001")
+        z = next(x for x in b["open"] if x["id"] == "rm:Zeus:t1:m")
+        self.assertEqual(z["tally"], {"o": 1, "x": 1})
+        self.assertEqual(b["my_picks"], {"rm:Zeus:t1:m": "x"})
+
     def test_board_shows_mine_after_result(self):
         item("rm:Zeus:t1:m"); fa("Zeus", "move", "hle", "t1")
         farm.sync(force=True)

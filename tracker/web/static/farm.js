@@ -155,8 +155,8 @@
     const done = board.done.map(doneRow);
     if (!rows.length && !done.length) return "";
     const season = board.open.some(it => it.kind === "match");
-    const desc = season ? "경기 시작 10분 전까지 이길 팀 진영에 심어요. 맞히면 +1점, 30% 미만 소수 쪽이 맞으면 역배 +2점."
-      : "유력 기사가 맞을지 O·X 밭에 버섯을 심어요. 심으면 민심이 공개되고, 공식 확정되면 결과가 나와요. 맞히면 +1점, 30% 미만 소수 쪽이면 역배 +2점.";
+    const desc = season ? "경기 시작 10분 전까지 이길 팀 진영에 심어요. 맞히면 +1점, 30% 미만 소수 쪽이 맞으면 역배 +2점(10명 이상 참여한 판)."
+      : "유력 기사가 맞을지 O·X 밭에 버섯을 심어요. 심으면 민심이 공개되고, 공식 확정되면 결과가 나와요. 맞히면 +1점, 30% 미만 소수 쪽이면 역배 +2점(10명 이상 참여한 판).";
     const cut = more ? rows.length : phone() ? 2 : 4;          // 소식이 너무 밀리지 않게: 휴대폰 2개 · PC 4개, 나머지는 '더 보기'
     const openPanel = rows.length ? `<ul>${rows.slice(0, cut).join("")}</ul>${rows.length > cut ? `<button type="button" class="tf-more" data-more="1">더 보기 · 전체 ${rows.length}개</button>` : ""}`
       : `<p class="tf-emptymsg">지금 심을 판이 없어요. 새 유력 기사가 뜨면 생겨요.</p>`;
@@ -198,6 +198,14 @@
     const ids = Object.keys(st.plantedMushrooms).join(",");
     return fetch(`/api/farm?cid=${encodeURIComponent(cid)}&ids=${encodeURIComponent(ids)}`).then(r => r.json()).then(d => {
       board = { open: d.open || [], mine: d.mine || {}, done: d.done || [] };
+      // 저장값이 지워졌어도 이 브라우저(같은 번호)가 열린 판에 심은 쪽은 서버 기록으로 되살림
+      let back = false;
+      for (const [id, pick] of Object.entries(d.my_picks || {})) {
+        if (st.plantedMushrooms[id]) continue;
+        st.plantedMushrooms[id] = { picked: String(pick).toUpperCase(), isUnderdog: false, plantedAt: "", status: "pending", harvested: false };
+        board.mine[id] = board.open.find(x => x.id === id); back = true;
+      }
+      if (back) save();
       judge(); paint(); hideGold();
     }).catch(() => { paint(); hideGold(); }).finally(() => { box.dataset.ready = "1"; });
   }

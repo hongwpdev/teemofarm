@@ -153,8 +153,9 @@ def board(ids=(), cid: str = "") -> dict:
         opn = (sorted((r for r in opn if r["kind"] == "match"), key=lambda r: r["published"]) + [r for r in opn if r["kind"] == "rumor"])[:OPEN_MAX]
         done = sorted((r for r in rows if r["result"]), key=lambda r: r["resolved_at"] or "", reverse=True)[:DONE_MAX]
         t = _tally(c, list({r["id"] for r in opn + done} | set(mine)))
-        voted = ({r["item"] for r in c.execute("SELECT item FROM farm_picks WHERE cid=?", (cid,))}
-                 if _CID.match(cid or "") else set())
+        my = ({r["item"]: r["pick"] for r in c.execute("SELECT item, pick FROM farm_picks WHERE cid=?", (cid,))}
+              if _CID.match(cid or "") else {})
+        voted = set(my)
     short = lambda k: TEAMS.get(k, {}).get("short") or (k or "").upper()  # noqa: E731
 
     def pub(r):
@@ -164,7 +165,10 @@ def board(ids=(), cid: str = "") -> dict:
                                    "lock_at", "result", "tag", "resolved_at")} | {
             "tally": tl if show else {}, "n": sum(tl.values()), "open": _open(r, now),
             "a_short": short(r["a"]), "b_short": short(r["b"])}
-    return {"open": [pub(r) for r in opn], "mine": {i: pub(r) for i, r in mine.items()}, "done": [pub(r) for r in done]}
+    # my_picks: 이 브라우저가 아직 열린 판에 심은 쪽(브라우저 저장값이 지워져도 '심음' 상태를 되살리게). 결과 난 판은 빼서
+    # 저장값을 지우고 다시 수확하는 일은 없게 함
+    return {"open": [pub(r) for r in opn], "mine": {i: pub(r) for i, r in mine.items()}, "done": [pub(r) for r in done],
+            "my_picks": {r["id"]: my[r["id"]] for r in opn if r["id"] in my}}
 
 
 def plant(item: str, pick: str, cid: str):
