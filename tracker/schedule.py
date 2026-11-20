@@ -27,9 +27,21 @@ KEEP_SEC = 6 * 3600                      # 대회 목록·순위표는 이 시�
 _NOT_LEAGUE = re.compile(r"Promotion|Qualifier|Regional Finals|Play-In|Showmatch|Tiebreak", re.I)   # 순위표로 안 쓰는 단계
 
 
+INTL = "intl"        # 국제전(퍼스트 스탠드·MSI·월즈·EWC): 메뉴엔 없고, LCK 팀 경기를 독버섯 판·소식 검색어에 쓰려고 받음
+INTL_LEAGUES = ("First Stand", "Mid-Season Invitational", "World Championship", "Esports World Cup")
+
+
 def leagues():
-    """일정을 받는 리그(설정 순서)."""
+    """일정을 보여 주는 리그(설정 순서). 메뉴·화면용."""
     return [k for k, v in LEAGUES.items() if v.get("wiki")]
+
+
+LCK_KEYS = {k for k in LEAGUES["lck"]["teams"] if k != "lck"}
+
+
+def fetched():
+    """일정을 받아 두는 것 전부: 리그 + 국제전."""
+    return leagues() + [INTL]
 
 
 def _path(league: str) -> str:
@@ -39,7 +51,7 @@ def _path(league: str) -> str:
 def _load():
     global DATA
     out = {}
-    for lg in leagues():
+    for lg in fetched():
         try:
             with open(_path(lg), encoding="utf-8") as f:
                 out[lg] = json.load(f)
@@ -60,13 +72,18 @@ def slug(name: str) -> str:
 
 
 def team_id(league: str, name: str) -> str:
-    """LCK는 기존 팀 키(로고·색·내 팀과 같음), 다른 리그는 이름에서 만든 키."""
+    """LCK(그리고 국제전에 나온 LCK 팀)는 기존 팀 키(로고·색·내 팀과 같음), 다른 팀은 이름에서 만든 키."""
     if not name or name == "TBD":
         return ""
-    return (team_key(name) if league == "lck" else "") or slug(name)
+    return (team_key(name) if league in ("lck", INTL) else "") or slug(name)
 
 
 def _tours(prefix: str, year: int):
+    if prefix == INTL:                       # 국제전은 문서 이름이 제각각('2026 First Stand', '2026 Season World Championship/Main Event')
+        leagues_in = ",".join(_cq(x) for x in INTL_LEAGUES)
+        return cargo(None, tables="Tournaments", fields="OverviewPage,Name,DateStart,Date,IsPlayoffs",
+                     where=f'Region="International" AND League IN ({leagues_in}) AND TournamentLevel="Primary" '
+                           f'AND DateStart >= "{year}-01-01" AND DateStart <= "{year}-12-31"', order_by="DateStart")
     return cargo(None, tables="Tournaments", fields="OverviewPage,Name,DateStart,Date,IsPlayoffs",
                  where=f'OverviewPage LIKE "{prefix}/{year} Season/%" AND TournamentLevel="Primary"', order_by="DateStart")
 
@@ -115,7 +132,7 @@ def _groups(table, matches, page):
 def refresh(league: str = "lck", gap=None) -> bool:
     """대회 목록 → 그 시즌 모든 경기 → 지금(또는 마지막) 정규 대회 순위 → 팀 약칭. 실패하면 이전 내용을 그대로 둠."""
     global DATA
-    prefix = LEAGUES[league]["wiki"]
+    prefix = INTL if league == INTL else LEAGUES[league]["wiki"]
     with _RUN:
         try:
             cs = current_season()
@@ -138,11 +155,11 @@ def refresh(league: str = "lck", gap=None) -> bool:
                         break
             matches.sort(key=lambda m: m["at"])
             cur = f"{prefix}/{cs} Season/"
-            season = cs if any(m["page"].startswith(cur) for m in matches) else cs - 1
+            season = cs if any(m["page"].startswith(cur) if league != INTL else m["at"].startswith(str(cs)) for m in matches) else cs - 1
             # 순위표: 이미 시작한 정규 대회(플레이오프·승강전·선발전 제외) 중 순위표가 있는 가장 최근 것
             today = datetime.now(KST).date().isoformat()
             regular = [t for t in tours if t.get("IsPlayoffs") != "1" and (t.get("DateStart") or "9") <= today
-                       and not _NOT_LEAGUE.search(t["OverviewPage"])]
+                       and not _NOT_LEAGUE.search(t["OverviewPage"])] if league != INTL else []   # 국제전은 순위표를 안 씀
             stand = {}
             old = prev.get("standings") or {}
             if fresh and old and not busy(league) and any(t["OverviewPage"] == old.get("page") for t in regular[-3:]):
@@ -165,11 +182,15 @@ def refresh(league: str = "lck", gap=None) -> bool:
             names = {m[s] for m in matches for s in ("t1", "t2")}
             names |= {r["team"] for g in stand.get("groups") or [] for r in g["table"]}
             known = {t["name"]: t for t in (prev.get("teams") or {}).values() if t.get("image") or league == "lck"}
-            rows = {} if league == "lck" else teamlogos.team_rows(names - set(known), gap)   # 처음 보는 팀만 물어봄
+            # 국제전의 LCK 팀은 LCK 로고·약칭을 그대로 씀(따로 묻거나 받지 않음)
+            ours = {n: team_id(league, n) for n in names if league == INTL and team_id(league, n) in LCK_KEYS}
+            rows = {} if league == "lck" else teamlogos.team_rows(names - set(known) - set(ours), gap)   # 처음 보는 팀만 물어봄
             teams = {}
             for n in names:
                 k = team_id(league, n)
-                if k:
+                if n in ours:
+                    teams[k] = {"name": n, "short": LEAGUES["lck"]["teams"][k].get("short") or n, "image": ""}
+                elif k:
                     teams[k] = known.get(n) or {"name": n, "short": (rows.get(n) or {}).get("Short") or n,
                                                 "image": (rows.get(n) or {}).get("Image") or ""}
             d = {"league": league, "season": season, "current": season == cs, "at": datetime.now(timezone.utc).isoformat(),
@@ -191,7 +212,7 @@ def refresh(league: str = "lck", gap=None) -> bool:
             log.warning("schedule %s save failed: %s", league, e)
         log.info("schedule %s %s: %d matches, standings %d", league, season, len(matches),
                  sum(len(g["table"]) for g in stand.get("groups") or []))
-    if league != "lck":                                # 해외 팀 로고(없는 것만 받음)
+    if league not in ("lck", INTL):                    # 해외 팀 로고(없는 것만 받음). 국제전은 화면이 없어 로고를 안 받음
         try:
             teamlogos.ensure({k: t["image"] for k, t in teams.items() if t.get("image")})
         except Exception as e:  # noqa: BLE001
@@ -238,7 +259,7 @@ def start():
     def loop():
         time.sleep(90)                          # 켜자마자 몰리는 다른 수집(위키·FA·아카이브)과 겹치지 않게
         due = {}
-        for lg in leagues():
+        for lg in fetched():
             d = get(lg)
             try:
                 last = datetime.fromisoformat(d["at"]).timestamp()
@@ -246,7 +267,7 @@ def start():
                 last = 0
             due[lg] = 0 if d.get("error") else last + interval(lg)
         while True:
-            for lg in leagues():
+            for lg in fetched():
                 if time.time() >= due[lg]:
                     ok = refresh(lg)
                     due[lg] = time.time() + (interval(lg) if ok else RETRY_SEC)

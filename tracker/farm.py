@@ -68,9 +68,10 @@ def sync(force=False):
         on = {x["page"]: x["team"] for x in roster}
         started = any(m.get("win") in ("1", "2") and str(_season()) in (m.get("page") or "")
                       for m in schedule.get("lck").get("matches") or [])
-        # 2) 다가오는 LCK 경기(이틀 안) → 판
+        # 2) 다가오는 LCK 경기 + LCK 팀이 나오는 국제전 경기(이틀 안) → 판
         soon = _now() + timedelta(days=2)
-        for m in schedule.get("lck").get("matches") or []:
+        all_games = _games()
+        for m in all_games:
             at = _at(m)
             if not at or not m.get("id") or m.get("k1") in ("", None) or m.get("k2") in ("", None) or "TBD" in (m["t1"], m["t2"]):
                 continue
@@ -80,7 +81,7 @@ def sync(force=False):
                           ("m:" + m["id"], "match", m.get("page", ""), "", m["k1"], m["k2"], m["t1"], m["t2"], m.get("tour", ""),
                            "", "", at.isoformat(), (at - timedelta(minutes=LOCK_MIN)).isoformat(), now))
         # 3) 결과 매기기
-        games = {"m:" + m["id"]: m for m in schedule.get("lck").get("matches") or [] if m.get("id")}
+        games = {"m:" + m["id"]: m for m in all_games}
         for it in [dict(r) for r in c.execute("SELECT * FROM farm_items WHERE result IS NULL")]:
             res = None
             if it["id"].startswith("mv:"):            # 계약 중 선수: 로스터가 그 팀으로 바뀌면 O, 다른 팀이거나 새 시즌이 시작될 때까지 그대로면 X
@@ -102,6 +103,19 @@ def sync(force=False):
                     res = "a" if m["win"] == "1" else "b"
             if res:
                 c.execute("UPDATE farm_items SET result=?, resolved_at=? WHERE id=?", (res, now, it["id"]))
+
+
+def _games():
+    """판을 만들 경기: LCK 전부 + 국제전(퍼스트 스탠드·MSI·월즈·EWC) 중 LCK 팀이 나오는 경기. 대회가 바뀌어도 일정만 보고 저절로."""
+    out, seen = [], set()
+    for lg in ("lck", schedule.INTL):
+        for m in schedule.get(lg).get("matches") or []:
+            if not m.get("id") or m["id"] in seen:
+                continue
+            if lg == "lck" or m.get("k1") in schedule.LCK_KEYS or m.get("k2") in schedule.LCK_KEYS:
+                seen.add(m["id"])
+                out.append(m)
+    return out
 
 
 def _put(c, iid, page, nick, frm, rm, now):
@@ -164,7 +178,8 @@ def board(ids=(), cid: str = "") -> dict:
         my = ({r["item"]: r["pick"] for r in c.execute("SELECT item, pick FROM farm_picks WHERE cid=?", (cid,))}
               if _CID.match(cid or "") else {})
         voted = set(my)
-    short = lambda k: TEAMS.get(k, {}).get("short") or (k or "").upper()  # noqa: E731
+    intl = schedule.get(schedule.INTL).get("teams") or {}
+    short = lambda k: TEAMS.get(k, {}).get("short") or (intl.get(k) or {}).get("short") or (k or "").upper()  # noqa: E731
 
     def pub(r):
         tl = t.get(r["id"], {})

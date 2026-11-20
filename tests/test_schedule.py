@@ -43,6 +43,39 @@ class ScheduleTest(unittest.TestCase):
         self.assertEqual(schedule.team_id("lpl", "Bilibili Gaming"), "bilibili-gaming")
         self.assertEqual(schedule.team_id("lpl", "TBD"), "")
 
+    def test_intl(self):
+        # 국제전: LCK 팀은 LCK 키(로고·내 팀과 같음), 그 밖의 팀은 이름 키. 대회는 리그 이름(First Stand·MSI·월즈·EWC)으로 찾음
+        from unittest import mock
+        self.assertEqual(schedule.team_id(schedule.INTL, "Hanwha Life Esports"), "hle")
+        self.assertEqual(schedule.team_id(schedule.INTL, "Bilibili Gaming"), "bilibili-gaming")
+        self.assertNotIn(schedule.INTL, schedule.leagues())               # 메뉴엔 없음
+        self.assertIn(schedule.INTL, schedule.fetched())
+        seen = []
+
+        def cargo(gap, tables, fields, where, **kw):
+            seen.append((tables, where))
+            if tables == "Tournaments":
+                return [{"OverviewPage": "2027 Mid-Season Invitational", "Name": "MSI 2027", "DateStart": "2027-06-27",
+                         "Date": "2027-07-12", "IsPlayoffs": "0"}] if "2027" in where else []
+            if tables == "MatchSchedule":
+                return [{"Team1": "Bilibili Gaming", "Team2": "T1", "DT": "2027-06-27 09:00:00", "MatchId": "msi_1",
+                         "OverviewPage": "2027 Mid-Season Invitational", "Winner": ""}]
+            return []
+        old = dict(schedule.DATA)
+        try:
+            with mock.patch.object(schedule, "cargo", cargo), mock.patch.object(schedule, "current_season", lambda: 2027), \
+                    mock.patch.object(schedule.teamlogos, "team_rows", lambda names, gap: {"Bilibili Gaming": {"Short": "BLG", "Image": ""}}), \
+                    mock.patch.object(schedule.teamlogos, "ensure", lambda imgs: 0), mock.patch.object(schedule, "_path", lambda lg: os.devnull):
+                self.assertTrue(schedule.refresh(schedule.INTL))
+            d = schedule.get(schedule.INTL)
+            self.assertTrue(any('League IN' in w and 'Region="International"' in w for t, w in seen if t == "Tournaments"))
+            self.assertFalse([t for t, w in seen if t == "Standings"])     # 국제전은 순위표를 안 받음
+            self.assertEqual((d["matches"][0]["k1"], d["matches"][0]["k2"]), ("bilibili-gaming", "t1"))
+            self.assertEqual(d["teams"]["t1"]["image"], "")                  # LCK 팀 로고는 따로 안 받음
+            self.assertEqual(d["teams"]["bilibili-gaming"]["short"], "BLG")
+        finally:
+            schedule.DATA = old
+
     def test_state(self):
         now = datetime.now(timezone.utc)
         self.assertEqual(views._sch_state(_m("A", "B", _f(now + timedelta(hours=2))), now), "up")

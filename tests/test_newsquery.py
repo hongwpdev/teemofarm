@@ -25,6 +25,30 @@ class NewsQueryTest(unittest.TestCase):
             self.assertTrue(q.startswith("(") and q.count("(") == q.count(")"), q)
         self.assertTrue(NAME_CTX.startswith("(") and NAME_CTX.endswith(")"))
 
+    def test_no_fixed_year(self):
+        import re
+        qs = [q for t in DEFAULT_TEAMS.values() for q in t["news"]]
+        self.assertFalse([q for q in qs if re.search(r"20\d\d", q)])            # 해가 바뀌어도 손댈 필요 없게
+        self.assertTrue(any("{season}" in q for q in qs))
+
+    def test_tour_queries_follow_schedule(self):
+        from datetime import date
+        from tracker import schedule
+        from tracker.news import tour_queries
+        schedule.DATA = {"lck": {"tours": [{"name": "LCK Cup 2027", "start": "2027-01-14", "end": "2027-02-22", "playoff": False},
+                                           {"name": "LCK 2027 Playoffs", "start": "2027-09-01", "end": "2027-09-20", "playoff": True}]},
+                         "intl": {"tours": [{"name": "MSI 2027", "start": "2027-06-27", "end": "2027-07-12"},
+                                            {"name": "Worlds 2027 Main Event", "start": "2027-10-20", "end": "2027-11-10"}]}}
+        try:
+            self.assertEqual(tour_queries(date(2026, 11, 20)), [])                       # 스토브리그: 없음
+            self.assertIn("LCK컵", tour_queries(date(2027, 1, 12))[0][1])                # 개막 이틀 전부터
+            self.assertIn("MSI", tour_queries(date(2027, 7, 13))[0][1])                  # 끝난 다음 날까지
+            self.assertEqual(tour_queries(date(2027, 7, 20)), [])
+            self.assertIn("플레이오프", tour_queries(date(2027, 9, 5))[0][1])
+            self.assertIn("롤드컵", tour_queries(date(2027, 10, 30))[0][1])
+        finally:
+            schedule.DATA = {}
+
     def test_clean_title(self):
         self.assertEqual(_clean_title("  [오피셜]  농심,  '킹겐' 재계약 - OSEN ", "OSEN"), "[오피셜] 농심, '킹겐' 재계약")
         self.assertEqual(_clean_title("제목 - 인벤", ""), "제목 - 인벤")

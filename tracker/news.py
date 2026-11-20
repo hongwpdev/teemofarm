@@ -12,7 +12,7 @@ import time
 import urllib.error
 import urllib.parse
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 
 from .classify import _has_aliases, title_has_team
@@ -148,8 +148,41 @@ def lol_title(title: str, names) -> bool:
     return any(_has_aliases(k) and title_has_team(title, k) for k in TEAMS)
 
 
+# 진행 중(또는 곧 시작하는) 대회 → 검색어에 붙일 말. 일정(schedule)의 대회 이름을 보고 고름
+_TOUR_WORDS = (("First Stand", "퍼스트 스탠드 OR First Stand"), ("MSI", "MSI"), ("Worlds", "월즈 OR 롤드컵"),
+               ("Esports World Cup", "e스포츠 월드컵 OR EWC"), ("Cup", "LCK컵"))
+_LCK_NAMES = "(LCK OR T1 OR 젠지 OR 한화생명 OR 디플러스 OR 롤스터 OR 농심 OR 피어엑스 OR DRX OR 수퍼스 OR 브리온)"
+
+
+def tour_queries(today=None):
+    """지금(앞 3일 ~ 끝난 뒤 하루) 열리는 대회가 있으면 그 대회 검색어 한 줄 → [(팀 키, 검색어, None)].
+    LCK컵·플레이오프·퍼스트 스탠드·MSI·월즈·EWC가 일정에 잡히면 코드를 안 고쳐도 저절로 붙고, 끝나면 빠짐."""
+    from . import schedule
+    today = today or datetime.now(timezone.utc).date()
+    words = []
+    for lg in ("lck", schedule.INTL):
+        for t in schedule.get(lg).get("tours") or []:
+            try:
+                start = datetime.strptime(t.get("start") or "", "%Y-%m-%d").date()
+                end = datetime.strptime(t.get("end") or t.get("start") or "", "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if not (start - timedelta(days=3) <= today <= end + timedelta(days=1)):
+                continue
+            name = t.get("name") or ""
+            w = next((v for k, v in _TOUR_WORDS if k.lower() in name.lower()), "")
+            if lg == "lck" and t.get("playoff"):
+                w = "플레이오프 OR 결승"
+            if w and w not in words:
+                words.append(w)
+    return [("lck", f"{_LCK_NAMES} ({' OR '.join(words)})", None)] if words else []
+
+
 def poll_news(gap=None):
-    jobs = [(key, query, None) for key, t in TEAMS.items() for query in t.get("news", [])]
+    from .archive import current_season
+    season = str(current_season())
+    jobs = [(key, query.replace("{season}", season), None) for key, t in TEAMS.items() for query in t.get("news", [])]
+    jobs += tour_queries()
     # 이름만 찾으면 흔한 이름(김건우·이정현…)의 다른 분야 기사가 100건을 채워 정작 LoL 기사가 밀려남 → LoL 말과 함께
     names = fa_name_queries()
     # 계약이 남은 선수 본명은 30분에 한 번만([조회] 버튼은 매번): 구글 요청 수를 줄여 429를 덜 맞게

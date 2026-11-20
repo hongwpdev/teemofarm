@@ -68,7 +68,7 @@ def snapshot() -> dict:
         status = {f"{t}/{s}": {"ok": v["ok"], "at": v["at"].isoformat(timespec="seconds"), "msg": str(v["msg"])[:200]}
                   for (t, s), v in STATUS.items()}
     sched = {}
-    for lg in schedule.leagues():
+    for lg in schedule.fetched():
         d = schedule.get(lg)
         sched[lg] = {"at": d.get("at", ""), "season": d.get("season"), "matches": len(d.get("matches") or []),
                      "teams": len(d.get("teams") or {}), "error": d.get("error", "")}

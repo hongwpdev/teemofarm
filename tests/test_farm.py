@@ -177,6 +177,40 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class FarmIntlTest(unittest.TestCase):
+    """국제전: 일정에 잡힌 경기 중 LCK 팀이 나오는 것만 판으로(코드 수정 없이 대회가 바뀌어도)."""
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+        farm.init()
+
+    def tearDown(self):
+        from tracker import schedule
+        schedule.DATA = {}
+        with db() as c:
+            c.execute("DELETE FROM farm_items")
+
+    def test_intl_matches_with_lck_team(self):
+        from tracker import schedule
+        at = (datetime.now(timezone.utc) + timedelta(hours=20)).strftime("%Y-%m-%d %H:%M:%S")
+
+        def m(mid, t1, k1, t2, k2):
+            return {"id": mid, "page": "2027 Mid-Season Invitational", "tour": "MSI 2027", "at": at,
+                    "t1": t1, "k1": k1, "t2": t2, "k2": k2, "win": ""}
+        schedule.DATA = {"intl": {"matches": [m("msi1", "Bilibili Gaming", "bilibili-gaming", "T1", "t1"),
+                                              m("msi2", "G2 Esports", "g2-esports", "Team Liquid", "team-liquid")],
+                                  "teams": {"bilibili-gaming": {"name": "Bilibili Gaming", "short": "BLG"}}}}
+        farm.sync(force=True)
+        ids = {it["id"]: it for it in farm.board([])["open"]}
+        self.assertIn("m:msi1", ids)                         # LCK 팀(T1)이 나오는 국제전 경기
+        self.assertNotIn("m:msi2", ids)                      # LCK 팀이 없는 경기는 판 없음
+        self.assertEqual((ids["m:msi1"]["a_short"], ids["m:msi1"]["b_short"]), ("BLG", "T1"))
+        # 결과가 나면 판정
+        schedule.DATA["intl"]["matches"][0]["win"] = "2"
+        farm.sync(force=True)
+        self.assertEqual(result("m:msi1"), "b")
+
+
 class FarmViewTest(unittest.TestCase):
     """소식 목록 → 판 바로가기 · 격전지 표시(화면 쪽 규칙)."""
     @classmethod

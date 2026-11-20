@@ -80,7 +80,8 @@ DEFAULT_TEAMS["lck"] = {"name": "LCK 공통", "wiki": "", "short": "LCK",
                                  "(LCK OR 롤) (이적 OR FA OR 오피셜 OR 단독) "
                                  "(site:inven.co.kr OR site:fomos.kr OR site:dailyesports.com OR site:osen.co.kr)",
                                  # 영어 이적 기사(Sheep Esports 등). 소식 목록엔 안 보이고 '유력' 판단에만 씀(news.py)
-                                 "LCK 2027 Sources OR joins OR re-sign OR extends OR contract OR promoted"]}
+                                 # {season}은 수집할 때 지금 시즌(11월부터는 다음 해)으로 바뀜(news.py) — 해가 바뀌어도 손댈 필요 없음
+                                 "LCK {season} (Sources OR joins OR re-sign OR extends OR contract OR promoted OR leaves)"]}
 TEAMS = DEFAULT_TEAMS
 if TEAMS_FILE and os.path.exists(TEAMS_FILE):
     with open(TEAMS_FILE, encoding="utf-8") as f:
