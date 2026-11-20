@@ -70,6 +70,21 @@ class SmokeTest(unittest.TestCase):
         code, _ = self.get(f"/lck/predict?season={y}")
         self.assertIn(code, (200, 301, 302, 303))
 
+    def test_roster_complete_mark(self):
+        # 주전 5명 + 감독이 다 있으면 'n/5' 대신 '로스터 완성 ✓', 한 자리라도 비면 그대로 n/5
+        from tracker.web import views
+        def row(role, nick):
+            return {"team": "dns", "role": role, "page": nick, "nick": nick, "real": "", "until": "", "joined": 0}
+        full = [row(r, n) for r, n in zip(views.ROSTER_SLOTS, ("DuDu", "Cuzz", "Ucal", "deokdam", "Bluffing", "Ggoong"))]
+        self.assertTrue(views.roster_complete("dns", full))
+        self.assertIn("로스터 완성", views.roster_card("dns", full))
+        no_coach = full[:-1]
+        self.assertFalse(views.roster_complete("dns", no_coach))
+        card = views.roster_card("dns", no_coach)
+        self.assertNotIn("로스터 완성", card)
+        self.assertIn(">5/5<", card)
+        self.assertNotIn("로스터 완성", views.roster_card("dns", full, rm=False))       # 지난 시즌 기록에는 안 붙임
+
     def test_predict_is_off(self):
         # 행선지 맞히기는 잠시 쉼: 메뉴에 없고, 예전 주소는 팀별로, 투표 API는 404. 켜면 다시 보임
         from unittest import mock

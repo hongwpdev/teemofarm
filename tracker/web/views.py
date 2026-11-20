@@ -313,6 +313,15 @@ def shown_pos(role: str, rm=None) -> str:
     return FA_POS.get(role, role)
 
 
+DONE_MARK = '<span class="fill done" title="주전 5명과 감독이 모두 정해졌어요(리그피디아 계약 기준)">로스터 완성 ✓</span>'
+
+
+def roster_complete(k: str, rows) -> bool:
+    """지금 로스터에 주전 5자리(탑·정글·미드·원딜·서폿)와 감독이 모두 있는지. 유력(기사)은 세지 않음."""
+    have = {r["role"] for r in rows if r["team"] == k}
+    return all(p in have for p in ROSTER_SLOTS)
+
+
 def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True, name_then: str = "") -> str:
     """name_then: 지난 시즌 기록에서 그 당시 팀 이름(지금 이름과 다르면 제목에 쓰고 아래에 '지금: …')."""
     by = {}
@@ -353,7 +362,7 @@ def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True, name_then: s
                      f'{"<i class=in>영입</i>" if r["joined"] else ""}</li>')
     anchor = "" if extra_cls else f' id="t-{k}"'              # 팀 안내의 '로스터 →'가 이 카드로
     return (f'<article class="rc{extra_cls}"{anchor} data-team="{k}" style="--tc:{team_color(k)}"><header>{team_logo(k, "logo big")}'
-            f'<div>{_rc_title(k, name_then)}</div><span class="fill">{filled}/5</span></header>'
+            f'<div>{_rc_title(k, name_then)}</div>{DONE_MARK if rm and roster_complete(k, rows) else f"<span class=fill>{filled}/5</span>"}</header>'
             f'<ul>{"".join(cells)}</ul></article>')
 
 
@@ -1859,6 +1868,7 @@ def render_summary(league: str) -> str:
     sm = stv.team_summary(keys)
     rms = rumor_slots()
     cards, tot = [], {"in": 0, "stay": 0, "open": 0}
+    ros = roster_rows()
     for k in keys:
         v = sm[k]
         rumor = [x for xs in rms.get(k, {}).values() for x in xs if not x["rm"]["stay"]]
@@ -1882,7 +1892,7 @@ def render_summary(league: str) -> str:
         meta = f"확정 {moved}건" + (f" · 마지막 {d.month}/{d.day}" if d else "")
         cards.append((-moved, -len(rumor), keys.index(k),
                       f'<article class="scard" id="m-{k}" style="--tc:{team_color(k)}"><header>{team_logo(k, "logo big")}'
-                      f'<b>{esc(team_name(k))}</b><small>{meta}</small></header>{"".join(lines) or "<p class=sl-empty>아직 변동이 없어요</p>"}</article>'))
+                      f'<b>{esc(team_name(k))}</b>{DONE_MARK if roster_complete(k, ros) else ""}<small>{meta}</small></header>{"".join(lines) or "<p class=sl-empty>아직 변동이 없어요</p>"}</article>'))
     cards.sort()
     stats = (f'<span><b>{tot["in"]}</b>영입</span><span><b>{tot["stay"]}</b>재계약</span>'      # 아래 카드들을 더한 수(카드와 숫자가 맞게)
              f'<span><b>{tot["open"]}</b>미정</span>')

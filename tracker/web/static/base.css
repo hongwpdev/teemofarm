@@ -1443,3 +1443,10 @@ main .layout.is-loading #fbar:after{content:"";position:absolute;top:1rem;right:
 .tf-skin-it.tf-fresh{border-color:#facc15;background:linear-gradient(90deg,rgba(250,204,21,.18),rgba(16,185,129,.16));box-shadow:0 0 14px rgba(250,204,21,.25)}
 .tf-newtag{display:inline-block;margin-left:.6rem;padding:.1rem .6rem;border-radius:99px;background:#facc15;color:#0f172a;font-size:.95rem;font-style:normal;font-weight:900;letter-spacing:.04em;vertical-align:.15em}
 @media (prefers-reduced-motion:reduce){.tf-un-dim,.tf-un-card{animation:none;opacity:1;transform:none}.tf-un-rays,.tf-un-fx{display:none}.tf-skin.tf-burst{animation:none}}
+/* 로스터 완성(주전 5명 + 감독): 로스터 카드의 'n/5' 자리와 팀별 카드 이름 옆 */
+.fill.done{color:var(--tf-emerald);background:var(--tf-emerald-bg);border:1px solid color-mix(in srgb,var(--tf-emerald) 45%,transparent);border-radius:.4rem;padding:.2rem .7rem;font-size:1.2rem;font-weight:800;white-space:nowrap}
+.rc .fill.done{margin-left:auto}
+.scard header .fill.done{margin-left:.2rem}
+.scard header:has(.fill.done){flex-wrap:wrap}
+.scard header:has(.fill.done) b{white-space:nowrap}
+
