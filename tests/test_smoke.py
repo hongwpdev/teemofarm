@@ -102,6 +102,29 @@ class SmokeTest(unittest.TestCase):
         self.assertIn('href="/lck?hot=1"', on)                                   # 오피셜은 hot=1
         self.assertRegex(self.get("/lck?hot=1")[1], r'class="on" href="/lck\?hot=1"[^>]*>오피셜<')
 
+    def test_ended_season_is_not_a_record(self):
+        # 스토브리그 기간: 방금 끝난 시즌(2026)은 '기록'이 아니라 지금 화면 → 시즌 고르기에 2026이 두 번 나오면 안 됨
+        from datetime import datetime
+        import re as _re
+        from tracker.archive import current_season
+        from tracker.config import KST
+        from tracker.web import views
+        if not views.stove_phase(datetime.now(KST).date()):
+            self.skipTest("스토브리그 기간에만")
+        ended = current_season() - 1
+        for p in ("/lck", "/lck/fa", "/lck/roster", "/lck/schedule", "/lck/results"):
+            with self.subTest(p):
+                code, body = self.get(f"{p}?season={ended}")          # 예전 주소로 와도 지금 화면으로
+                self.assertEqual(code, 200)
+                sel = _re.search(r'<details class="lgsel ssel">.*?</details>', body, _re.S).group(0)
+                years = _re.findall(r">(\d{4}) 시즌<small>", sel)
+                self.assertEqual(len(years), len(set(years)), years)
+                self.assertNotIn("기록을 보고 있어요", body)
+        code, body = self.get(f"/lck/roster?final={ended}")            # 그 시즌 최종 로스터는 '팀' 안의 탭으로
+        self.assertEqual(code, 200)
+        self.assertIn(f"{ended} 시즌 로스터", body)
+        self.assertNotIn("기록을 보고 있어요", body)
+
     def test_root_redirects_and_404(self):
         self.assertEqual(self.get("/")[0], 200)          # /lck 로 넘어감
         self.assertEqual(self.get("/nope/nope/nope")[0], 404)

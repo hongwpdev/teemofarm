@@ -184,7 +184,7 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
     here = SEC_PATH.get(active, "")
     # 스토브리그 기간엔 방금 끝난 시즌(now_y-1)이 곧 '지금' 화면(경기·결과는 시즌 메뉴에 그대로)이라 기록 목록엔 안 둠.
     # 같은 해가 '지금'과 '기록'으로 두 번 보이면 헷갈림. 주소로 직접 들어온 경우만 표시
-    past_ys = [y for y in archive_years() if not (stove and y == now_y - 1 and season != y)]
+    past_ys = [y for y in archive_years() if not (stove and y == now_y - 1)]
     pre_here = here if active in ("news", "schedule", "results", "roster") else ""
     s_items = ((f'<li><a class="{"on" if pre else ""}" href="/{league}{pre_here}?season={now_y}">{now_y} 시즌<small>예정</small></a></li>' if stove else "")
                + f'<li><a class="{"" if season else "on"}" href="/{league}{here}">{now_label}<small>지금</small></a></li>'
@@ -713,7 +713,8 @@ def render_roster(league: str, season=None) -> str:
         u = datetime.fromisoformat(upd["v"]).astimezone(KST)
         when = f" · {u.month}/{u.day} {u:%H:%M} 갱신"
     empty = '' if rows else '<p class="note">아직 로스터 정보를 모으는 중이에요. [조회]를 눌러 보세요.</p>'
-    past = " · ".join(f'<a href="/{league}/roster?season={y}">{y} 시즌</a>' for y in archive_years())
+    ended = current_season(today) - 1 if stove_phase(today) else None     # 스토브리그 기간: 위 탭 '{ended} 시즌 로스터'
+    past = " · ".join(f'<a href="/{league}/roster?season={y}">{y} 시즌</a>' for y in archive_years() if y != ended)
     head = (f'{team_toggle(league, "roster", season)}{page_head(f"{season} 시즌 로스터", "지금까지 계약으로 정해진 팀별 선수예요. 스토브리그가 끝날 때까지 계속 바뀌어요.")}'
             if season else f'{squad_toggle(league, "roster")}<p class="past-link">지난 시즌 로스터 보기: {past}</p>')
     main = f"""{head}<section class="card panel fa" aria-label="조회"><div class="ptop"><p class="src">리그피디아 계약 기준 현재 로스터{when} · 빗금 칸은 아직 미정인 자리, '영입'은 이번 스토브리그에 새로 온 사람 · <i class="in rm">유력</i>은 최근 기사 제목 기준 참고 표시(공식 확정 전) · 이름을 누르면 프로필</p>{ACT}</div>{MSG}
@@ -741,11 +742,14 @@ def stove_toggle(league: str, on: str, season=None) -> str:
 
 
 def team_toggle(league: str, on: str, season=None) -> str:
-    """'팀' 탭 안: 현재 로스터 | 구단 안내."""
+    """'팀' 탭 안: 현재 로스터 | (스토브리그 기간) 방금 끝난 시즌 로스터 | 계약 만료 | 구단 안내."""
     if season:
         return _toggle(league, on, season, "팀 보기", [("roster", "/roster", f"{season} 로스터")])
-    return _toggle(league, on, None, "팀 보기", [("roster", "/roster", "현재 로스터"), ("contracts", "/contracts", "계약 만료"),
-                                                 ("teams", "/teams", "구단 안내")])
+    today = datetime.now(KST).date()
+    ended = [("final", f"/roster?final={current_season(today) - 1}", f"{current_season(today) - 1} 시즌 로스터")] \
+        if stove_phase(today) else []
+    return _toggle(league, on, None, "팀 보기", [("roster", "/roster", "현재 로스터")] + ended +
+                   [("contracts", "/contracts", "계약 만료"), ("teams", "/teams", "구단 안내")])
 
 
 def squad_toggle(league: str, on: str, season=None) -> str:
@@ -1106,7 +1110,7 @@ def _tname(key, name):
             else f'<span class="tm ext">{esc(name or "LCK 밖")}</span>')
 
 
-def render_archive(league: str, sec: str, year: int, t_sel: str = "") -> str:
+def render_archive(league: str, sec: str, year: int, t_sel: str = "", inline: bool = False) -> str:
     """?season=2026 처럼 지난 시즌을 고르면: 소식=시즌 요약, 로스터=최종 로스터, 이적=그 시즌 스토브리그 이동, 일정=순위표."""
     today = datetime.now(KST).date()
     d = archive.get(year)
@@ -1115,7 +1119,8 @@ def render_archive(league: str, sec: str, year: int, t_sel: str = "") -> str:
     if not d:
         main = (f'<div class="card soon"><h2>{year} 시즌 기록을 모으는 중이에요</h2>'
                 f'<p>리그피디아에서 순위·로스터·이적 기록을 한 번 받아 저장해 둬요(처음 한 번만, 1~2분).<br>잠시 뒤 새로고침해 주세요.</p></div>')
-        return shell(league, active, title, main, (), today, season=year)
+        return shell(league, active, title, (team_toggle(league, "final") if inline else "") + main, (), today,
+                     season=None if inline else year)
     stages, champ = d.get("stages") or [], d.get("champion") or {}
     roster, moves = d.get("roster") or [], d.get("moves") or []
     note = ('<p class="src">일부 기록은 아직 못 받았어요(리그피디아 요청 한도). 30분 뒤 다시 받아요.</p>' if d.get("missing") else "")
@@ -1163,10 +1168,11 @@ def render_archive(league: str, sec: str, year: int, t_sel: str = "") -> str:
         tabs = ""
         if len(tours) > 1:
             tabs = ('<nav class="view_tab ar-tours" aria-label="대회 고르기">' + "".join(
-                f'<a class="{"on" if i == ti else ""}" href="/{league}/roster?season={year}&amp;t={i}"{" aria-current=page" if i == ti else ""}>'
+                f'<a class="{"on" if i == ti else ""}" href="/{league}/roster?{"final" if inline else "season"}={year}&amp;t={i}"{" aria-current=page" if i == ti else ""}>'
                 f'{esc(tour_ko(t["page"], "LCK"))}</a>' for i, t in enumerate(tours)) + '</nav>')
         what = f'{esc(tour_ko(tours[ti]["page"], "LCK"))}에 등록된 로스터' if tours else '시즌 마지막 정규 대회에 등록된 로스터'
-        main = (f'{squad_toggle(league, "roster", year)}{tabs}<section class="card panel"><p class="src">{year} {what}(리그피디아) · '
+        head = team_toggle(league, "final") if inline else squad_toggle(league, "roster", year)
+        main = (f'{head}{tabs}<section class="card panel"><p class="src">{year} {what}(리그피디아) · '
                 f'팀 이름은 그 당시 이름, 로고는 지금 것</p>{note}</section>'
                 f'<div class="rgrid">{cards or "<p class=note>로스터 기록이 없어요.</p>"}</div>{POPUP}')
         scripts = ("player.js",)
@@ -1180,6 +1186,8 @@ def render_archive(league: str, sec: str, year: int, t_sel: str = "") -> str:
         main = (f'{champ_card()}{note}<div class="stands">{standings(limit=3)}</div>'
                 f'<p class="note"><a href="/{league}/results?season={year}">전체 순위표 보기 →</a></p>{moves_list(limit=8)}')
         scripts = ()
+    if inline:                                         # 지금 화면 안(시즌 선택 그대로 '지금')
+        return shell(league, "roster", f"{year} 시즌 로스터", main, scripts, today)
     return shell(league, active, title, main, scripts, today, season=year)
 
 

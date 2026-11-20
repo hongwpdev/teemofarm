@@ -185,7 +185,15 @@ class Handler(BaseHTTPRequestHandler):
             # 스토브리그 기간엔 개막 전 다음 시즌(지금 데이터 시즌)도 고를 수 있음: '2027 시즌 · 예정'
             pre = archive.current_season() if views.stove_phase(datetime.now(KST).date()) else None
             season = season if season in archive.archive_years() or (pre and season == pre) else None
-            if season and season == pre and LEAGUES[league]["enabled"]:
+            if pre and season == pre - 1 and LEAGUES[league]["enabled"]:
+                # 스토브리그 기간의 방금 끝난 시즌(2026)은 '기록'이 아니라 지금 화면. 그 시즌 최종 로스터는 '팀 > 2026 시즌 로스터'
+                if sec == "roster":
+                    t = f"&t={urllib.parse.quote(one('t'))}" if one("t") else ""
+                    return self._redirect(f"/{league}/roster?final={season}{t}")
+                return self._redirect(f"/{league}" + (f"/{sec}" if sec else ""))
+            if pre and sec == "roster" and one("final") == str(pre - 1) and LEAGUES[league]["enabled"]:
+                page = views.render_archive(league, "roster", pre - 1, one("t"), inline=True)
+            elif season and season == pre and LEAGUES[league]["enabled"]:
                 if sec in ("schedule", "results"):
                     page = views.render_schedule(league, season, "results" if sec == "results" else "plan")
                 elif sec == "roster":
