@@ -235,6 +235,16 @@ async function farm(p, seeded) {
       const r = li.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }, id);
     if (!ok) bad(`O/X 심기 바로가기를 눌렀는데 그 판(${id})이 화면에 안 보임`);
   }
+  // 티모 스킨 도감: 열리고, 잠긴 스킨은 못 누르고, 바깥을 누르면 닫힘
+  await p.click('.tf-skin'); await p.waitForTimeout(200);
+  const sk = await p.evaluate(() => ({ open: !!document.querySelector('.tf-skins:not([hidden])'), n: document.querySelectorAll('[data-skin]').length,
+    lockedOk: [...document.querySelectorAll('.tf-skin-it.tf-lock')].every(b => b.disabled), on: document.querySelectorAll('.tf-skin-it.tf-on').length }));
+  if (!sk.open) bad('티모 스킨 도감이 안 열림');
+  else {
+    if (sk.n < 4 || sk.on !== 1 || !sk.lockedOk) bad(`스킨 도감 이상: 스킨 ${sk.n}개 · 쓰는 중 ${sk.on}개 · 잠긴 것 눌림 ${!sk.lockedOk}`);
+    await p.mouse.click(5, 5); await p.waitForTimeout(200);
+    if (await p.$('.tf-skins:not([hidden])')) bad('바깥을 눌러도 스킨 도감이 안 닫힘');
+  }
   // 기록 공유: 수확 카드(그림) 창이 열리고, 그림이 그려져 있고, 닫힘
   await p.click('.tf-share'); await p.waitForTimeout(300);
   const shot = await p.evaluate(() => { const d = document.getElementById('tf-shot'); const im = d && d.querySelector('img');

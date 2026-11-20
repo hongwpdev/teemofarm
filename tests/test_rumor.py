@@ -72,6 +72,14 @@ class RumorTest(unittest.TestCase):
         self.assertNotIn("Zeus", _guess(who, [n("'제우스' 최우제, 한화생명과 재계약 불발", 2), stay]))
         self.assertEqual(called_off_hit("T1과 '제우스' 협상 결렬", "Zeus", "hle"), ("t1", False))
 
+    def test_community_post_is_not_evidence(self):
+        # '[기타] 오피셜 HLE 기인 캐니언 영입' 같은 커뮤니티 글은 '발표'·'유력' 근거로 쓰지 않음
+        n = {"title": "[기타] 오피셜 HLE 기인 캐니언 영입", "url": "u", "outlet": "인벤", "published": "2026-11-19T09:00:00+00:00"}
+        self.assertNotIn("Kiin", _guess([{"page": "Kiin", "nick": "Kiin", "team_from": "geng"}], [n]))
+        news = {"title": "[단독] 한화생명, '기인' 김기인 영입", "url": "u2", "outlet": "국민일보", "published": "2026-11-19T08:00:00+00:00"}
+        g = _guess([{"page": "Kiin", "nick": "Kiin", "team_from": "geng"}], [n, news])["Kiin"]
+        self.assertEqual((g["team"], g["official"], g["outlet"]), ("hle", False, "국민일보"))
+
     def test_leave_to_other_team(self):
         # '영입' 같은 말 없이 '원소속 떠나 다른 팀 ○○로'
         t = "[단독] '커리어' 오형석, DK 떠나 한화생명 서포터로"

@@ -90,7 +90,7 @@ def group(items):
     clusters = []                       # [씨앗 특징, 구성원 목록]
     for it in items:
         r, kind, teams = it
-        if r["source"] != "news":
+        if r["source"] != "news" or kind == "talk":    # 커뮤니티 글은 기사 묶음('관련 보도')에 넣지 않음
             clusters.append([None, [it]])
             continue
         feat = (_ts(r), persons(r["title"]), events(r["title"]))

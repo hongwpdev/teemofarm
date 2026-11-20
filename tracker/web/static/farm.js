@@ -25,6 +25,8 @@
       plantedMushrooms: s.plantedMushrooms && typeof s.plantedMushrooms === "object" ? s.plantedMushrooms : {},
       best: Number.isFinite(s.best) ? s.best : (Number.isFinite(s.streak) ? s.streak : 0),   // 최고 연속 수확(수확 카드용)
       quiz: s.quiz && typeof s.quiz === "object" ? s.quiz : {},                                // 오늘의 로스터 퀴즈 {date, pick, ok}
+      skin: Number.isFinite(s.skin) ? s.skin : 0,                                              // 고른 티모 스킨(라이엇 공식 스킨 번호)
+      seenSkins: Array.isArray(s.seenSkins) ? s.seenSkins : [0],                               // 도감에서 본 스킨(새로 열린 것 표시용)
       goldenFoundDates: Array.isArray(s.goldenFoundDates) ? s.goldenFoundDates : [],
       fieldLog: Array.isArray(s.fieldLog) ? s.fieldLog : [],
     };
@@ -56,6 +58,31 @@
     for (let i = 0; i < 7; i++) h += log[i] ? plot(log[i] === "g" ? "gold" : "shroom", 28, log[i] === "g" ? "tf-gold" : "") : plot(null, 28);
     return h;
   }
+  // ── 티모 스킨 도감: 라이엇 공식 이미지(데이터 드래곤 타일)만 씀. 연속 수확·점수·황금 버섯으로 열림 ──
+  const SKINS = [
+    { n: 0, name: "기본 티모", rule: "처음부터", ok: () => true },
+    { n: 4, name: "우주비행사 티모", rule: "최고 연속 수확 3", ok: () => st.best >= 3 },
+    { n: 8, name: "오메가 분대 티모", rule: "최고 연속 수확 5 또는 농장 점수 10", ok: () => st.best >= 5 || st.points >= 10 },
+    { n: 18, name: "꿀잼 티모", rule: "황금 버섯 2번 찾기", ok: () => st.goldenFoundDates.length >= 2 },
+  ];
+  const skinUrl = n => `https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/Teemo_${n}.jpg`;
+  const curSkin = () => SKINS.find(k => k.n === st.skin && k.ok()) || SKINS[0];
+  const newSkin = () => SKINS.some(k => k.ok() && !st.seenSkins.includes(k.n));
+  let skinOpen = false;
+  function skinBox() {
+    const k = curSkin();
+    const list = SKINS.map(x => {
+      const ok = x.ok(), on = x.n === k.n;
+      return `<li><button type="button" class="tf-skin-it${on ? " tf-on" : ""}${ok ? "" : " tf-lock"}" data-skin="${x.n}"${ok ? "" : " disabled"}>`
+        + `<img src="${skinUrl(x.n)}" alt="" width="40" height="40" loading="lazy"><span><b>${esc(x.name)}</b>`
+        + `<small>${!ok ? "🔒 " + esc(x.rule) : on ? "✓ 쓰는 중" : st.seenSkins.includes(x.n) ? "눌러서 바꾸기" : "새로 열림!"}</small></span></button></li>`;
+    }).join("");
+    return `<div class="tf-me"><button type="button" class="tf-skin" aria-haspopup="true" aria-expanded="${skinOpen}" title="티모 스킨 바꾸기 · ${esc(k.name)}">`
+      + `<img src="${skinUrl(k.n)}" alt="${esc(k.name)}" width="44" height="44">${newSkin() ? '<i class="tf-new" aria-label="새 스킨"></i>' : ""}</button>`
+      + `<div class="tf-skins"${skinOpen ? "" : " hidden"}><p>티모 스킨 도감 <small>맞힐수록 열려요</small></p><ul>${list}</ul>`
+      + `<p class="tf-skin-src">스킨 이미지 © Riot Games</p></div></div>`;
+  }
+
   function whoText() {
     const t = tier(st.points), n = Math.min(7, st.fieldLog.length), basket = Math.max(0, st.fieldLog.length - 7);
     return `<span class="tf-tier">${t.badge} ${t.label}</span><small>${t.next ? `다음 등급까지 ${t.next}점 · ` : ""}<span class="tf-fcnt">밭 ${n}/7칸${basket ? ` · 바구니 ${basket}` : ""}</span></small>`;
@@ -63,7 +90,7 @@
   function bar() {
     const found = st.goldenFoundDates.includes(today());
     return `<section class="card tf-bar" aria-label="내 버섯 농장">
-<div class="tf-field" title="수확한 버섯이 밭에 자라요">${field()}</div>
+${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">${field()}</div>
 <div class="tf-who">${whoText()}</div>
 <div class="tf-num"><span><em class="tf-pts">${st.points}</em>농장 점수</span><span class="tf-stk"><em>${st.streak}</em>연속 수확</span><span title="${found ? "오늘 황금 버섯을 찾았어요" : "오늘의 황금 버섯이 화면 어딘가에 숨어 있어요"}"><em>${found ? px("gold", 20) : "🔍"}</em>황금 버섯</span><button type="button" class="tf-share" title="내 농장 수확 카드를 그림으로 저장하거나 글로 복사해요"><em>📋</em>기록 공유</button></div></section>`;
   }
@@ -254,6 +281,20 @@
   }
 
   box.addEventListener("click", e => {
+    const sk = e.target.closest(".tf-skin");
+    if (sk) {
+      skinOpen = !skinOpen;
+      if (skinOpen) { st.seenSkins = SKINS.filter(k => k.ok()).map(k => k.n); save(); }
+      const me = box.querySelector(".tf-me"); if (me) me.outerHTML = skinBox();
+      return;
+    }
+    const it = e.target.closest("[data-skin]");
+    if (it) {
+      st.skin = +it.dataset.skin; save(); skinOpen = false;
+      const me = box.querySelector(".tf-me"); if (me) me.outerHTML = skinBox();
+      toast(curSkin().name + "로 바꿨어요");
+      return;
+    }
     const sp = e.target.closest("li.tf-m");                              // '스포 방지'로 가린 경기 결과: 누르면 보임
     if (sp && document.documentElement.dataset.spoiler === "on" && !sp.classList.contains("lit")) { sp.classList.add("lit"); return; }
     const tb = e.target.closest("[data-tab]");
@@ -309,6 +350,10 @@
     if (e.target.closest(".tf-share")) share();
   });
 
+  const closeSkins = () => { if (!skinOpen) return; skinOpen = false; const me = box.querySelector(".tf-me"); if (me) me.outerHTML = skinBox(); };
+  document.addEventListener("click", e => { if (skinOpen && !e.target.closest(".tf-me")) closeSkins(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeSkins(); });
+
   // ── 내 기록 공유(복사해서 커뮤니티·메신저에 붙여 넣기) ──
   function shareText() {
     const ms = Object.values(st.plantedMushrooms), t = tier(st.points);
@@ -332,7 +377,7 @@
   }
   // 수확 카드(1:1 그림): 화면 밝기와 상관없이 늘 어두운 게임 카드(차분한 남색 + 에메랄드·골드). 버섯은 농장과 같은 도트 그림
   const PUBLIC_URL = "teemofarm.com/lck";
-  function shot() {
+  function shot(face) {
     const W = 1080, cv = document.createElement("canvas"); cv.width = W; cv.height = W;
     const c = cv.getContext("2d");
     const fg = "#f8fafc", sub = "#94a3b8", em = "#34d399", am = "#fbbf24", cell = "rgba(15,23,42,.82)", cellLine = "rgba(148,163,184,.22)";
@@ -361,9 +406,19 @@
     c.fillStyle = sub; c.font = F(600, 30); c.fillText("LCK 독버섯 심기 · 내 농장 수확 카드", 96, 190);
     c.textAlign = "right"; c.fillText(today().replace(/-/g, "."), W - 96, 140);
     // 가운데: 큰 버섯 + 등급
-    c.fillStyle = "rgba(16,185,129,.16)"; c.beginPath(); c.ellipse(W / 2, 480, 190, 40, 0, 0, Math.PI * 2); c.fill();
-    sprite(st.points >= 15 ? "gold" : "shroom", W / 2 - 120, 240, 240);
-    c.textAlign = "center"; c.fillStyle = em; c.font = F(800, 64); c.fillText(t.label, W / 2, 600);
+    if (face) {                                 // 고른 티모 스킨(라이엇 공식 타일 이미지)
+      const k = curSkin(), S = 250, x = W / 2 - S / 2, y = 232;
+      c.save(); round(x, y, S, S, 36); c.clip(); c.drawImage(face, x, y, S, S); c.restore();
+      round(x, y, S, S, 36); c.lineWidth = 6; c.strokeStyle = em; c.stroke();
+      c.textAlign = "center"; c.fillStyle = em; c.font = F(800, 58); c.fillText(t.label, W / 2, 556);
+      c.fillStyle = sub; c.font = F(600, 28); c.fillText(k.name + " 장착 중", W / 2, 600);
+      c.textAlign = "left"; c.font = F(500, 20); c.fillText("스킨 이미지 © Riot Games", 76, 1018);
+    } else {                                    // 이미지를 못 받으면 농장 버섯
+      c.fillStyle = "rgba(16,185,129,.16)"; c.beginPath(); c.ellipse(W / 2, 480, 190, 40, 0, 0, Math.PI * 2); c.fill();
+      sprite(st.points >= 15 ? "gold" : "shroom", W / 2 - 120, 240, 240);
+      c.textAlign = "center"; c.fillStyle = em; c.font = F(800, 64); c.fillText(t.label, W / 2, 600);
+    }
+    c.textAlign = "center";
     // 숫자 네 칸
     const cells = [["농장 점수", st.points + "점"], ["연속 수확 · 최고 " + st.best, String(st.streak)],
                  ["맞힌 판", won + "/" + (won + lost)], ["찾은 황금 버섯", st.goldenFoundDates.length + "개"]];
@@ -402,7 +457,10 @@
         }, "image/png");
       });
     }
-    d._cv = shot();
+    d._cv = shot();                              // 먼저 버섯으로 그려 두고, 스킨 이미지가 오면 다시 그림
+    const im = new Image(); im.crossOrigin = "anonymous";
+    im.onload = () => { try { d._cv = shot(im); d.querySelector("img").src = d._cv.toDataURL("image/png"); } catch (e) {} };
+    im.src = skinUrl(curSkin().n);
     d.querySelector("img").src = d._cv.toDataURL("image/png");
     const can = (() => { try { return !!(navigator.canShare && navigator.canShare({ files: [new File([""], "a.png", { type: "image/png" })] })); } catch (e) { return false; } })();
     d.querySelector('[data-shot="share"]').hidden = !can;

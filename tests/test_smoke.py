@@ -104,6 +104,18 @@ class SmokeTest(unittest.TestCase):
         self.assertRegex(self.get("/lck?hot=2")[1], r'class="on" href="/lck\?hot=2"[^>]*>스토브리그<')   # 이동·계약 소식만
         self.assertRegex(self.get("/lck?cat=stove")[1], r'class="on" href="/lck\?hot=2"')                    # ?cat=stove 도 같은 보기
 
+    def test_community_posts(self):
+        # 인벤 게시판 글: '오피셜' 대신 '커뮤니티' 배지, 오피셜 보기·'뉴스만'에서는 빠짐
+        from datetime import datetime, timezone
+        from tracker.core import save
+        t = "[잡담] 롤) 폭스 탑라이너 타나토스 합류"
+        save([{"id": "news:talk1", "team": "lck", "source": "news", "title": t, "url": "https://example.com/t",
+               "outlet": "인벤", "published": datetime.now(timezone.utc).isoformat()}])
+        body = self.get("/lck?team=all")[1]
+        self.assertRegex(body, r'<span class="kb k-talk">커뮤니티</span>\[잡담\] 롤\) 폭스')
+        self.assertNotIn("폭스 탑라이너", self.get("/lck?team=all&hot=1")[1])
+        self.assertNotIn("폭스 탑라이너", self.get("/lck?team=all&src=news")[1])
+
     def test_ended_season_is_not_a_record(self):
         # 스토브리그 기간: 방금 끝난 시즌(2026)은 '기록'이 아니라 지금 화면 → 시즌 고르기에 2026이 두 번 나오면 안 됨
         from datetime import datetime

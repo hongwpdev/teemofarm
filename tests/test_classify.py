@@ -55,3 +55,17 @@ class StoveTest(unittest.TestCase):
                   "26.23 패치 롤 서버 점검 시간",
                   "디플러스 기아 유스, LCK AS 상·하반기 연속 제패"):
             self.assertFalse(self._s(t), t)
+
+
+class CommunityTest(unittest.TestCase):
+    """인벤 게시판 같은 커뮤니티 글: 제목에 '오피셜'·'합류'가 있어도 오피셜·단독이 아님."""
+    def test_kind(self):
+        from tracker.classify import article_kind, is_stove
+        for t in ("[잡담] 롤) 폭스 탑라이너 타나토스 합류", "[잡담] 쉽피셜)롤 GENG 서폿 클라우드 합류",
+                  "[기타] 오피셜 HLE 기인 캐니언 영입", "[수다] 롤) 쇼메 스매쉬 씨맥 재계약했네", "[일반] 그럼 카나비는 젠지 디플 lpl",
+                  "[정보] [단독] ‘기인’ ‘캐니언’ 빠진 젠지, 탑 ‘시우’ 유력", "[모집] 롤 할 사람?"):
+            self.assertEqual(article_kind(t), "talk", t)
+        for t, k in (("[오피셜] kt 롤스터, '랩터' 전어진 영입", "official"), ("[단독] '제우스' 최우제, T1 리턴 유력", "rumor"),
+                     ("[롤드컵] BLG, 젠지 3:1로 꺾고 창단 첫 우승", "news")):
+            self.assertEqual(article_kind(t), k, t)
+        self.assertTrue(is_stove("[잡담] 롤) 폭스 탑라이너 타나토스 합류", "talk", 2027))   # 스토브리그 보기에는 나올 수 있음

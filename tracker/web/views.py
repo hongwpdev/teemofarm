@@ -36,7 +36,7 @@ STATIC_VER = "1"           # server가 정적 파일 내용으로 바꿔 넣음(
 FA_POS = {"Top": "탑", "Jungle": "정글", "Mid": "미드", "Bot": "원딜", "Support": "서폿",
           "Head Coach": "감독", "Coach": "코치", "Analyst": "분석"}
 FA_ST = {"move": ("이적 확정", "s-move"), "stay": ("잔류", "s-stay"), "fa": ("미정", "s-fa")}
-KIND = {"official": ("오피셜", "k-official"), "rumor": ("단독·유력", "k-rumor"),
+KIND = {"official": ("오피셜", "k-official"), "rumor": ("단독·유력", "k-rumor"), "talk": ("커뮤니티", "k-talk"),
         "view": ("전망·분석", "k-view"), "edit": ("편집", "k-edit")}
 SECTIONS = [("news", "", "소식"), ("roster", "/roster", "로스터"), ("fa", "/fa", "이적·FA"), ("builder", "/builder", "내맘대로 로스터"),
             ("schedule", "/schedule", "일정·결과"), ("game", "/game", "🍄 미니게임")]
@@ -460,6 +460,8 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
             if team in TEAMS and team != "lck" and team not in teams:
                 continue
         kind = article_kind(r["title"], r["source"])
+        if src == "news" and kind == "talk":            # '뉴스만'은 언론 기사만(커뮤니티 글은 뺌)
+            continue
         if hot == 1 and kind != "official":
             continue
         if hot == 2 and not is_stove(r["title"], kind, season_now):
@@ -783,6 +785,15 @@ def _farm_board() -> dict:
         return {"open": [], "mine": {}, "done": []}
 
 
+TEEMO_TILE = "https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/Teemo_{}.jpg"   # 라이엇 공식 스킨 타일(데이터 드래곤)
+
+
+def _tf_skin_btn() -> str:
+    """농장 칸 왼쪽 티모 아바타(첫 화면은 기본 티모, 고른 스킨·도감은 farm.js가 덧칠 — 같은 크기라 화면이 안 밀림)."""
+    return ('<div class="tf-me"><button type="button" class="tf-skin" aria-haspopup="true" aria-expanded="false" title="티모 스킨 바꾸기 · 기본 티모">'
+            f'<img src="{TEEMO_TILE.format(0)}" alt="기본 티모" width="44" height="44"></button></div>')
+
+
 def _tf_quiz(q) -> str:
     """심을 판이 없는 날의 '오늘의 로스터 퀴즈'(farm.js quizBox와 같은 모양. 맞혔는지는 브라우저가 덧칠)."""
     opts = "".join(f'<button type="button" data-quiz-pick="{i}">{esc(o)}</button>' for i, o in enumerate(q["options"]))
@@ -795,7 +806,7 @@ def farm_block(board=None) -> str:
     board = board if board is not None else _farm_board()
     opn, done = board["open"], board["done"]
     holes = "".join(farm_art.plot(None, 28) for _ in range(7))
-    bar = (f'<section class="card tf-bar" aria-label="내 버섯 농장">\n<div class="tf-field" title="수확한 버섯이 밭에 자라요">{holes}</div>\n'
+    bar = (f'<section class="card tf-bar" aria-label="내 버섯 농장">\n{_tf_skin_btn()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">{holes}</div>\n'
            '<div class="tf-who"><span class="tf-tier">🌱 새싹 농부</span><small>다음 등급까지 5점 · <span class="tf-fcnt">밭 0/7칸</span></small></div>\n'
            '<div class="tf-num"><span><em class="tf-pts">0</em>농장 점수</span><span class="tf-stk"><em>0</em>연속 수확</span>'
            '<span title="오늘의 황금 버섯이 화면 어딘가에 숨어 있어요"><em>🔍</em>황금 버섯</span>'

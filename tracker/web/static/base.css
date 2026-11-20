@@ -1393,3 +1393,27 @@ main .layout.is-loading #fbar:after{content:"";position:absolute;top:1rem;right:
 .tf-shot-acts button.tf-o{border-color:#10b981;background:#10b981;color:#052e16}
 .tf-shot-acts button[hidden]{display:none}
 .tf-shot-acts:has([data-shot="share"][hidden]) [data-shot="close"]{grid-column:1/-1}
+/* 티모 스킨 도감(라이엇 공식 스킨 이미지) */
+.tf-bar{position:relative}
+.tf-me{position:relative;flex:none}
+.tf-skin{position:relative;display:block;width:4.4rem;height:4.4rem;padding:0;border:2px solid var(--tf-emerald);border-radius:1rem;background:var(--card);overflow:visible;cursor:pointer}
+.tf-skin img{display:block;width:100%;height:100%;border-radius:.8rem;object-fit:cover}
+.tf-skin:focus-visible{outline:2px solid var(--tf-emerald);outline-offset:2px}
+.tf-new{position:absolute;top:-.4rem;right:-.4rem;width:1.2rem;height:1.2rem;border-radius:50%;background:var(--tf-amber);box-shadow:0 0 0 2px var(--card)}
+.tf-skins{position:absolute;top:calc(100% + .8rem);left:0;z-index:40;width:28rem;max-width:calc(100vw - 3.2rem);padding:1.2rem;border:1px solid var(--line);border-radius:1.2rem;background:var(--card);box-shadow:0 12px 28px rgba(0,0,0,.28)}
+.tf-skins>p{margin:0 0 .8rem;font-size:1.3rem;font-weight:800;color:var(--t1)}
+.tf-skins>p small{margin-left:.4rem;font-weight:500;color:var(--t8)}
+.tf-skins ul{list-style:none;display:grid;gap:.6rem;margin:0;padding:0}
+.tf-skin-it{display:flex;align-items:center;gap:1rem;width:100%;min-height:5.2rem;padding:.6rem .8rem;border:1px solid var(--line);border-radius:1rem;background:var(--card);color:var(--t1);text-align:left;cursor:pointer}
+.tf-skin-it img{width:4rem;height:4rem;border-radius:.8rem;object-fit:cover;flex:none}
+.tf-skin-it span{display:flex;flex-direction:column;gap:.2rem;min-width:0}
+.tf-skin-it b{font-size:1.35rem}
+.tf-skin-it small{font-size:1.15rem;color:var(--t8)}
+.tf-skin-it.tf-on{border-color:var(--tf-emerald);background:var(--tf-emerald-bg)}
+.tf-skin-it.tf-on small{color:var(--tf-emerald);font-weight:700}
+.tf-skin-it.tf-lock{cursor:not-allowed}
+.tf-skin-it.tf-lock img{filter:grayscale(1) brightness(.55)}
+.tf-skin-it.tf-lock b{color:var(--t8)}
+.tf-skin-src{margin:.8rem 0 0!important;font-size:1.05rem!important;font-weight:500!important;color:var(--t8)!important}
+/* 커뮤니티 글(인벤 게시판 등) 배지: 오피셜·단독과 헷갈리지 않게 회색 */
+.kb.k-talk,.k-talk{background:color-mix(in srgb,var(--t8) 12%,transparent);color:var(--t5);border:1px solid color-mix(in srgb,var(--t8) 30%,transparent)}

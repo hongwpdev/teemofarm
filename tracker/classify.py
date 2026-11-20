@@ -29,6 +29,15 @@ def news_teams(title: str, teams: list) -> list:
     return hit or ["lck"]
 
 
+# 커뮤니티 글(인벤 게시판 등이 구글 뉴스에 섞여 들어옴): 말머리가 게시판 분류인 글.
+# 이런 글은 제목에 '오피셜'·'합류'가 있어도 오피셜·단독·유력이 아님(소식에는 '커뮤니티'로만, 이적 '유력·발표' 판단과 독버섯 판에는 안 씀)
+COMMUNITY = re.compile(r"^\s*\[(잡담|일반|수다|계층|기타|모집|이벤트|정보|질문|유머|펌|짤|영상|스샷|후기|토론|뻘글|공략|팁|자유|응원|대회|소식|뉴스)\]")
+
+
+def is_community(title: str) -> bool:
+    return bool(COMMUNITY.match(title or ""))
+
+
 def is_official(title: str) -> bool:
     t = title.lower()
     if "[오피셜]" in t:
@@ -55,11 +64,13 @@ def is_stove(title: str, kind: str, season: int) -> bool:
 
 
 def article_kind(title: str, source: str = "news") -> str:
-    """기사 성격: official(오피셜) · rumor(단독·유력) · view(전망·분석) · news(그 밖).
+    """기사 성격: official(오피셜) · rumor(단독·유력) · view(전망·분석) · talk(커뮤니티 글) · news(그 밖).
     리그피디아 편집은 로스터 변동이면 official, 아니면 edit."""
     t = title.lower()
     if source == "wiki":
         return "official" if is_official(title) else "edit"
+    if is_community(title):
+        return "talk"
     if "[오피셜]" in t or "[공식]" in t:
         return "official"
     if any(w in t for w in RUMOR_WORDS):
