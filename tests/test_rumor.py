@@ -79,6 +79,16 @@ class RumorTest(unittest.TestCase):
         self.assertIsNone(read_title(t, _nick("블러핑"), "dns"))
         self.assertEqual(read_title(t, _nick("블러핑"), "hle"), ("dns", False))
 
+    def test_partnership_ended(self):
+        # '동행 마무리'는 떠난다는 말(잔류로 읽으면 안 됨)
+        self.assertIsNone(read_title("[오피셜] '도란' 최현준, T1과 동행 마무리", "Doran", "t1"))
+
+    def test_former_team(self):
+        # '한화생명 출신'은 예전 팀: 이미 DNS 로스터인 블러핑을 한화생명행으로 읽으면 안 됨
+        t = "[오피셜] 한화생명 출신 '블러핑', DNS 합류"
+        self.assertIsNone(read_title(t, _nick("블러핑"), "dns"))
+        self.assertEqual(read_title(t, _nick("블러핑"), "hle"), ("dns", False))
+
     def test_split_headline(self):
         # '…'로 이어진 다른 선수 소식은 섞지 않음
         t = "'커즈'·'유칼', DN 수퍼스로 복귀…빈센조도 BNK 피어엑스행"

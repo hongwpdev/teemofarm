@@ -94,15 +94,16 @@ def classify_fa(rc, exp, players, today: str):
             to = lck.get(to_name.lower(), "")
             if cur_team.lower() == to_name.lower() and cur_until > today:
                 until = cur_until
-        out[page] = (page, nick(page), _real_name(cur.get("N", "")), frm, show_role,
-                     st, to, "" if to else to_name, until, d, memo)
+        # 같은 사람이 리그피디아에 대소문자만 다른 문서로 둘 있는 경우('cvMax'·'CvMax'): 한 사람으로(나중 기록이 이김)
+        out[(nick(page).lower(), frm)] = (page, nick(page), _real_name(cur.get("N", "")), frm, show_role,
+                                         st, to, "" if to else to_name, until, d, memo)
 
     for r in exp:   # 계약은 끝났지만 아직 결별·재계약 기록이 없는 사람
         page, frm, role = r["P"], lck.get((r["Team"] or "").lower()), fa_role(r["Role"])
-        if page in out or not frm or not role:
+        if (nick(page).lower(), frm) in out or not frm or not role:
             continue
-        out[page] = (page, nick(page), _real_name(r.get("N", "")), frm, role,
-                     "fa", "", "", "", (r["Contract"] or "")[:10], "계약 만료")
+        out[(nick(page).lower(), frm)] = (page, nick(page), _real_name(r.get("N", "")), frm, role,
+                                         "fa", "", "", "", (r["Contract"] or "")[:10], "계약 만료")
     return list(out.values())
 
 
@@ -172,6 +173,12 @@ def poll_fa(gap=None, max_age=FA_FULL_SEC):
             note = " · 프로필은 이전 것 유지"
             PROFILE_RETRY.update(pages=list(dict.fromkeys(pages)), players=list(exp) + list(players) + list(roster_players))
             log.warning("fa profiles failed: %s", e)
+        try:                                      # 같은 사람이 화면마다 다르게 보일 데이터면 로그에 남김
+            from . import integrity
+            for p in integrity.check():
+                log.warning("정합성: %s", p)
+        except Exception as e:  # noqa: BLE001
+            log.warning("정합성 점검 실패: %s", e)
         set_status("fa", "fa", True, f"FA {len(rows)}명{note}")
     except Exception as e:  # noqa: BLE001
         set_status("fa", "fa", False, RATE_MSG if is_rate_limit(e) else str(e)[:120])
@@ -199,6 +206,12 @@ def poll_roster(gap, names, today, fa_rows, rc=None):
     rows = [("lck", lck[p["Team"].lower()], fa_role(p["Role"]), p["P"], (p.get("ID") or p["P"].split(" (")[0]),
              _real_name(p.get("N", "")), (p.get("Contract") or "")[:10],
              1 if (lck[p["Team"].lower()], p["P"]) in joined else 0) for p in keep]
+    one = {}                                  # 같은 사람(대소문자만 다른 문서)은 계약이 긴 쪽 하나만
+    for r in rows:
+        k = (r[1], r[4].lower())
+        if k not in one or r[6] > one[k][6]:
+            one[k] = r
+    rows = list(one.values())
     # 감독: Players에 Head Coach가 없으면 이번 스토브리그 기록(잔류·이적)의 감독으로 채움
     has_coach = {r[1] for r in rows if r[2] == "Head Coach"}
     for r in fa_rows:

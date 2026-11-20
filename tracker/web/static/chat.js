@@ -1,4 +1,4 @@
-// 수다방: 사이트 전체 대화방(로그인 없음). 닉네임은 '챔피언 이름+숫자 4자리'로 자동, 바꿀 수 있음(이 브라우저에만 기억)
+// 밴들 광장(예전 이름 수다방): 사이트 전체 대화방(로그인 없음). 닉네임은 '챔피언 이름+숫자 4자리'로 자동, 바꿀 수 있음(이 브라우저에만 기억)
 (function () {
   const S = window.SPS && window.SPS.store || { get: () => "", set: () => {} };
   const CHAMPS = ("가렌 갈리오 갱플랭크 그라가스 그레이브즈 나미 나서스 노틸러스 녹턴 누누 니달리 다리우스 다이애나 드레이븐 라이즈 람머스 럭스 럼블 레넥톤 " +
@@ -20,10 +20,10 @@
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const ICON = '<svg class="ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>';
   document.body.insertAdjacentHTML("beforeend",
-    '<button class="chat-fab" type="button" id="cfab" aria-label="수다방 열기">' + ICON + '<span class="lb">수다방</span><span class="n" hidden></span></button>' +
+    '<button class="chat-fab" type="button" id="cfab" aria-label="밴들 광장(대화방) 열기">' + ICON + '<span class="lb">밴들 광장</span><span class="n" hidden></span></button>' +
     '<div class="chat-dim" id="cdim" hidden></div>' +
-    '<section class="chat" id="chat" hidden aria-label="수다방">' +
-    '<header><span class="grab"></span><div><b>버섯농장 수다방</b><small><i></i><span id="con">연결 중…</span></small></div>' +
+    '<section class="chat" id="chat" hidden aria-label="밴들 광장">' +
+    '<header><span class="grab"></span><div><b>밴들 광장</b><small><i></i><span id="con">연결 중…</span></small></div>' +
     '<button class="x" id="cx" type="button" aria-label="닫기">×</button></header>' +
     '<div class="me" id="cme"></div>' +
     '<div class="msgs" id="msgs" aria-live="polite"></div>' +

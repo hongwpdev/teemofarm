@@ -17,7 +17,7 @@ from .core import db
 DAYS = 14             # 이 기간 안의 기사만 봄
 CACHE_SEC = 60
 RENEW = EVENTS["renew"]
-LEAVE = EVENTS["leave"]                  # '3년 동행 마침표'처럼 재계약 단어가 있어도 떠나는 기사
+LEAVE = EVENTS["leave"] + ("마무리", "작별", "이별", "굿바이")   # '3년 동행 마침표', 'T1과 동행 마무리'처럼 재계약 단어가 있어도 떠나는 기사
 JOIN = EVENTS["join"] + ("이적", "합의", "손잡", "유니폼", "입성", "돌아오", "돌아가", "유력")   # '젠지, 탑 시우 유력'
 # 영어 기사(Sheep Esports 등): "Sources: Cuzz set to join DN SOOPers", "VicLa extends contract with BNK FEARX"
 EN_RENEW = ("re-sign", "resign", "extend", "renew", "stay with", "remain with", "stays with", "remains with")
@@ -70,9 +70,21 @@ def _teams(text: str) -> list:
     return [k for k in TEAMS if k != "lck" and TEAMS[k].get("aliases") and title_has_team(text, k)]
 
 
+def _joined_team(title: str):
+    """'DNS 합류', 'DN 수퍼스로 복귀'처럼 합류하는 말 바로 앞(몇 글자 안)에 나온 팀."""
+    for w in JOIN:
+        i = title.find(w)
+        if i <= 0:
+            continue
+        hit = _teams(title[max(0, i - 10):i])
+        if len(hit) == 1:
+            return hit[0]
+    return None
+
+
 def _left_team(title: str):
-    """'DK 떠나', '젠지와 결별'처럼 떠나는 말 바로 앞(몇 글자 안)에 나온 팀."""
-    for w in LEAVE:
+    """'DK 떠나', '젠지와 결별', '한화생명 출신'처럼 떠나는 말 바로 앞(몇 글자 안)에 나온 팀."""
+    for w in LEAVE + ("출신",):
         i = title.find(w)
         if i <= 0:
             continue
@@ -105,6 +117,8 @@ def read_title(title: str, nick: str, team_from: str):
     renew = any(w in title for w in RENEW) or UNTIL.search(title) or (team_from in teams and any(w in title for w in STAY_UP))
     if renew and not any(w in title for w in LEAVE) and not others:
         return (team_from, True) if team_from else None
+    if team_from and _joined_team(title) == team_from:
+        return None                           # '한화생명 출신 블러핑, DNS 합류': 이미 DNS 선수에겐 지금 팀 얘기
     if any(w in title for w in JOIN) and len(others) == 1:
         return (others[0], False)
     # 'DK 떠나 한화생명 서포터로'처럼 '영입' 같은 말 없이 원소속을 떠나 다른 팀 하나로 가는 기사.

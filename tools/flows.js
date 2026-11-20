@@ -187,8 +187,11 @@ async function vote(p) {
       await ctx.close();
     }
   }
+  // 사이트 전체: 본문 속 링크까지 모든 화면을 따라가며 같은 규칙 + 데이터 정합성(tools/crawl.js)
+  const site = await require('./crawl').crawl(B, { browser: b });
+  site.fails.forEach(m => fails.push(`[사이트 전체] ${m}`));
   await b.close();
   const uniq = [...new Set(fails)];
   if (uniq.length) { console.log(`흐름 점검 실패 ${uniq.length}건\n` + uniq.join('\n')); process.exit(1); }
-  console.log('흐름 점검 실패 0건 (처음 온 사람·써 본 사람 × PC·휴대폰)');
+  console.log(`흐름 점검 실패 0건 (처음 온 사람·써 본 사람 × PC·휴대폰 + 사이트 전체 화면 ${site.pages}개)`);
 })();

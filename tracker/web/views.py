@@ -284,17 +284,31 @@ def rumor_slots() -> dict:
         for r, rm in people:
             if not rm or not rm["team"]:
                 continue
-            coach_news = any(w in rm["title"] for w in ("코치", "감독", "코칭"))    # 선수 출신이 코치로 가는 기사
+            coach_news = _coach_news(rm)
             slot = r["role"] if r["role"] in ROSTER_SLOTS and not coach_news else "Head Coach"
-            # 팝업에 보일 직책: 리그피디아 직책(코치·감독), 선수 출신이 코치로 가는 기사면 기사 제목 기준
-            pos = FA_POS.get(r["role"], r["role"])
-            if coach_news and r["role"] in FA_ROLES:
-                pos = "감독" if "감독" in rm["title"] and "코치" not in rm["title"] else "코치"
+            pos = shown_pos(r["role"], rm)
             out.setdefault(rm["team"], {}).setdefault(slot, []).append({**dict(r), "until": "", "rm": rm, "pos": pos})
     except Exception:  # noqa: BLE001  참고 표시라 실패해도 로스터는 그대로
         out, leaving = {}, {}
     _RM_SLOTS.update(at=_t.time(), val=out, out=leaving)
     return out
+
+
+def rm_label(rm) -> str:
+    """'유력' 표시 글자(이적 시장·로스터·이동 보드·행선지 맞히기 공통): 발표 · 유력 · 잔류 발표 · 잔류 유력."""
+    return ("잔류 " if rm["stay"] else "") + ("발표" if rm["official"] else "유력")
+
+
+def _coach_news(rm) -> bool:
+    return bool(rm) and any(w in rm["title"] for w in ("코치", "감독", "코칭"))    # 선수 출신이 코치로 가는 기사
+
+
+def shown_pos(role: str, rm=None) -> str:
+    """화면마다 같은 직책을 보이게(이적 시장·로스터·팝업 공통): 리그피디아 직책,
+    선수 출신이 코치로 간다는 기사면 기사 제목 기준('라이프': 서폿 → 코치)."""
+    if _coach_news(rm) and role in FA_ROLES:
+        return "감독" if "감독" in rm["title"] and "코치" not in rm["title"] else "코치"
+    return FA_POS.get(role, role)
 
 
 def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True, name_then: str = "") -> str:
@@ -316,7 +330,7 @@ def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True, name_then: s
                     f' data-real="{esc(r["real"] or "")}" data-pos="{(r.get("pos") if isinstance(r, dict) else "") or FA_POS[p]}"'
                     f' data-team="{k}" data-until="{esc(until)}">{esc(r["nick"])}</span>')
         def rtag(x, small=False):
-            t = "발표" if x["rm"]["official"] else ("잔류 유력" if x["rm"]["stay"] else "유력")
+            t = rm_label(x["rm"])
             return f'<i class="in{" s" if small else ""} rm" title="{esc(x["rm"]["outlet"] + " · " + x["rm"]["title"])}">{t}</i>'
         if not rs:
             if rmp:      # 빈자리에 들어올 것 같은 선수(유력)
@@ -352,7 +366,7 @@ def narrow_roster(league: str, team: str) -> str:
     if team not in team_keys():
         return ""
     return (f'<details class="card rs-narrow" open><summary><span>{team_logo(team)} {esc(team_short(team))} 로스터</span>'
-            f'<a href="/{league}/roster">전체 로스터 →</a><i aria-hidden="true">▾</i></summary>{roster_card(team, roster_rows())}</details>')
+            f'<a href="/{league}/roster">전체 로스터 →</a><i aria-hidden="true">▾</i></summary>{roster_card(team, roster_rows(), " rc-narrow")}</details>')
 
 
 def stove_strip(league: str) -> str:
@@ -374,7 +388,7 @@ def rail(league: str, team: str) -> str:
            f'<a href="/{league}/fa?s=fa"><b>{cnt.get("fa", 0)}</b>미정</a></div></section>')
     if team in team_keys():
         box += team_profile(team)
-        card = roster_card(team, roster_rows())
+        card = roster_card(team, roster_rows(), " rc-side")
         box += (f'<section class="card"><h3><span>{team_logo(team)} {esc(team_short(team))} 로스터</span>'
                 f'<a href="/{league}/roster">전체 로스터 →</a></h3>{card}</section>')
     else:
@@ -605,8 +619,8 @@ def fa_row_html(r, rm=None) -> str:
     """rm: 미정인 선수의 뉴스 기반 '유력'·'발표' 정보(rumor.py). 공식 상태는 그대로 두고 덧붙여 보여 줌."""
     def tm(k):
         return f'<span class="tm" title="{esc(team_name(k))}">{team_logo(k)}{esc(team_short(k))}</span>'
-    pos = FA_POS.get(r["role"], r["role"])
-    coach = r["role"] not in FA_ROLES
+    pos = shown_pos(r["role"], rm if r["status"] == "fa" else None)
+    coach = r["role"] not in FA_ROLES or pos in ("코치", "감독")
     if r["status"] == "stay":
         mv = f'{tm(r["team_from"])}<span class="und">잔류</span>'
     else:
@@ -630,7 +644,7 @@ def fa_row_html(r, rm=None) -> str:
         sub.append((f"{d.month}/{d.day}" if d else r["date"]) + (" 합류 발표" if r["status"] == "move" else " 결별"))
     lbl, cls = FA_ST.get(r["status"], ("?", "s-fa"))
     if rm and r["status"] == "fa":
-        lbl, cls = ("발표" if rm["official"] else ("잔류 유력" if rm["stay"] else "유력")), ("s-ann" if rm["official"] else "s-rm")
+        lbl, cls = rm_label(rm), ("s-ann" if rm["official"] else "s-rm")
         d = rel_day(rm["published"])
         src = f'{rm["outlet"]}{" " + d if d else ""}'
         sub = [f'<a class="rm-src" href="{esc(rm["url"])}" target="_blank" rel="noopener" title="{esc(rm["title"])}">{esc(src)} 기사 ↗</a>']
@@ -638,7 +652,9 @@ def fa_row_html(r, rm=None) -> str:
     ak = r["team_to"] if r["status"] == "move" and r["team_to"] else r["team_from"]   # 아바타: 새 팀(이적)·원래 팀
     badge = team_logo(ak, "bdg") if logo_src(ak) else ""
     grp = ("감독" if r["role"] == "Head Coach" else "코치") if coach else pos
-    return (f'<li class="fa-row" data-page="{esc(r["page"])}" data-s="{r["status"]}" data-p="{grp}" data-t="{r["team_from"]}">'
+    dest = rm["team"] if rm and r["status"] == "fa" else (r["team_to"] if r["status"] == "move" else r["team_from"] if r["status"] == "stay" else "")
+    return (f'<li class="fa-row" data-page="{esc(r["page"])}" data-s="{r["status"]}" data-p="{grp}" data-t="{r["team_from"]}"'
+            f' data-nick="{esc(r["nick"])}" data-pos="{esc(pos)}" data-label="{lbl}" data-dest="{dest}">'
             f'<span class="av tc{" off" if r["status"] == "fa" else ""}" style="--tc:{team_color(ak)}">{esc(pos)}{badge}</span>'
             f'<div class="who"><p class="nm" role="button" tabindex="0" title="선수 프로필 보기"><span class="nk">{esc(r["nick"])}</span>{real}</p>'
             f'<div class="mv">{mv}</div></div>'
@@ -775,24 +791,24 @@ def moves_board(fa_rows, rms=None) -> str:
     for r in fa_rows:
         if r["status"] != "move":
             continue
-        pos = FA_POS.get(r["role"], r["role"])
+        pos = shown_pos(r["role"])
         seen.add(r["page"])
-        items.append((r["date"] or "", f'<li>{tm(r["team_from"])}<span class="ar" aria-label="에서">➔</span>{tm(r["team_to"], r["team_to_name"])}'
+        items.append((r["date"] or "", f'<li data-label="확정" data-dest="{r["team_to"]}">{tm(r["team_from"])}<span class="ar" aria-label="에서">➔</span>{tm(r["team_to"], r["team_to_name"])}'
                                        f'<span class="mv-who"><small>{pos}</small>{who(r, pos, r["team_to"] or "")}</span></li>'))
     for r in fa_rows:                       # 유력(뉴스 기준, 공식 확정 전): 점선으로 구분
         rm = (rms or {}).get(r["page"])
         if r["status"] != "fa" or not rm or rm["stay"]:
             continue
-        pos = FA_POS.get(r["role"], r["role"])
-        tag = "발표" if rm["official"] else "유력"
-        items.append((rm["published"][:10], f'<li class="rm">{tm(r["team_from"])}<span class="ar" aria-label="에서">➔</span>{tm(rm["team"])}'
+        pos = shown_pos(r["role"], rm)
+        tag = rm_label(rm)
+        items.append((rm["published"][:10], f'<li class="rm" data-label="{tag}" data-dest="{rm["team"]}">{tm(r["team_from"])}<span class="ar" aria-label="에서">➔</span>{tm(rm["team"])}'
                                             f'<span class="mv-who"><small>{pos}</small>{who(r, pos, rm["team"])}<em>{tag}</em></span></li>'))
     for r in roster_rows():                  # 계약이 남은 선수의 이적 유력
         lv = roster_leaving().get(r["page"])
         if not lv:
             continue
         pos = FA_POS.get(r["role"], r["role"])
-        items.append((lv["published"][:10], f'<li class="rm">{tm(r["team"])}<span class="ar" aria-label="에서">➔</span>{tm(lv["team"])}'
+        items.append((lv["published"][:10], f'<li class="rm" data-label="{"발표" if lv["official"] else "유력"}" data-dest="{lv["team"]}">{tm(r["team"])}<span class="ar" aria-label="에서">➔</span>{tm(lv["team"])}'
                                             f'<span class="mv-who"><small>{pos}</small>{who(r, pos, lv["team"])}<em>{"발표" if lv["official"] else "유력"}</em></span></li>'))
     for r in roster_rows():
         if r["joined"] and r["page"] not in seen:
@@ -965,7 +981,7 @@ def about_body() -> str:
 <li><b>로스터·이적</b>: 구단별 현재 로스터와 계약이 끝난 선수(FA)의 이적·잔류 현황을 정리해요.</li>
 <li><b>내맘대로 로스터</b>: 다음 시즌 10개 팀 로스터를 내 마음대로 짜서 이미지로 저장하거나 링크로 공유할 수 있어요.</li>
 <li><b>리그·구단 안내와 시즌 기록</b>: 리그 구조, 구단 이력, 지난 시즌 우승팀·로스터·이적을 볼 수 있어요.</li>
-<li><b>수다방·미니게임</b>: 로그인 없이 쓰는 대화방과 협곡 버섯 지뢰찾기가 있어요.</li>
+<li><b>밴들 광장·미니게임</b>: 로그인 없이 쓰는 대화방(밴들 광장)과 협곡 버섯 지뢰찾기가 있어요.</li>
 </ul>
 <h3>데이터 출처와 저작권</h3>
 <p>로스터·계약·경기 정보는 <a href="https://lol.fandom.com" target="_blank" rel="noopener">Leaguepedia</a>(CC BY-SA 3.0)를 바탕으로 자동으로 모아요. 뉴스는 구글 뉴스 RSS에서 제목과 링크만 보여 주며, 기사 본문의 저작권은 각 언론사에 있어요. 리그 오브 레전드 관련 명칭과 자산은 Riot Games, Inc.의 상표예요.</p>
@@ -978,12 +994,12 @@ def privacy_body() -> str:
 <p>티모의 버섯농장(이하 '사이트')은 이용자의 개인정보를 소중히 여기며 「개인정보 보호법」 등 관련 법령을 지켜요. 사이트는 회원가입이 없고, 이름·전화번호·이메일 같은 정보를 묻거나 모으지 않아요.</p>
 <h3>1. 서버에 저장되는 정보</h3>
 <ul>
-<li><b>수다방</b>: 이용자가 쓴 메시지, 닉네임, 작성 시각, 도배를 막기 위해 브라우저가 임의로 만든 번호. 최근 메시지 200개만 보관하고 그보다 오래된 것은 자동으로 지워져요.</li>
+<li><b>밴들 광장(대화방)</b>: 이용자가 쓴 메시지, 닉네임, 작성 시각, 도배를 막기 위해 브라우저가 임의로 만든 번호. 최근 메시지 200개만 보관하고 그보다 오래된 것은 자동으로 지워져요.</li>
 <li><b>로스터 공유</b>: '링크 공유하기'를 누른 경우 그 로스터 구성과 입력한 닉네임(선택). 공유 링크가 계속 열리도록 보관해요.</li>
 <li><b>접속 기록</b>: 사이트 서버는 IP 주소 등 접속 기록을 따로 남기지 않아요.</li>
 </ul>
 <h3>2. 이용자 브라우저에만 저장되는 정보</h3>
-<p>화면 테마, 스포 방지 설정, 읽은 기사, 찜한 선수, 작업 중인 로스터, 미니게임 기록, 수다방 닉네임은 이용자 브라우저의 저장 공간(localStorage)에만 남고 서버로 보내지 않아요. 브라우저의 사이트 데이터를 지우면 함께 지워져요.</p>
+<p>화면 테마, 스포 방지 설정, 읽은 기사, 찜한 선수, 작업 중인 로스터, 미니게임 기록, 밴들 광장 닉네임은 이용자 브라우저의 저장 공간(localStorage)에만 남고 서버로 보내지 않아요. 브라우저의 사이트 데이터를 지우면 함께 지워져요.</p>
 <h3>3. 쿠키와 광고</h3>
 <ul>
 <li>사이트는 운영비 마련을 위해 Google 애드센스 등 제3자 광고를 게재할 수 있어요.</li>
@@ -998,7 +1014,7 @@ def privacy_body() -> str:
 <li>사이트는 이용자 정보를 제3자에게 팔거나 제공하지 않아요.</li>
 </ul>
 <h3>5. 이용자의 권리</h3>
-<p>본인이 쓴 수다방 메시지나 공유한 로스터를 지우고 싶으면 아래 이메일로 알려 주세요. 확인 후 지체 없이 지워 드려요.</p>
+<p>본인이 쓴 밴들 광장 메시지나 공유한 로스터를 지우고 싶으면 아래 이메일로 알려 주세요. 확인 후 지체 없이 지워 드려요.</p>
 <h3>6. 개인정보 보호책임자 · 문의</h3>
 <p>운영자 이메일: {_mail()}</p>
 <h3>7. 시행일</h3>
@@ -1662,11 +1678,13 @@ def render_predict(league: str) -> str:
     order = lambda r: (keys.index(r["team_from"]) if r["team_from"] in keys else 99, r["role"])   # noqa: E731
 
     def row(r):
-        pos = FA_POS[r["role"]]
         rm = rms.get(r["page"])
-        hint = (f'<span class="vh-rm">{esc(team_short(rm["team"]))} {"잔류 " if rm["stay"] else ""}{"발표" if rm["official"] else "유력"}'
+        pos = shown_pos(r["role"], rm)
+        lab = rm_label(rm) if rm else ""
+        hint = (f'<span class="vh-rm">{esc(team_short(rm["team"]))} {lab}'
                 f'<small>{esc(rm["outlet"])}</small></span>' if rm else "")
-        return (f'<li class="vrow" data-page="{esc(r["page"])}" data-nick="{esc(r["nick"])}">'
+        return (f'<li class="vrow" data-page="{esc(r["page"])}" data-nick="{esc(r["nick"])}" data-pos="{pos}"'
+                f' data-label="{lab}" data-dest="{rm["team"] if rm else ""}">'
                 f'<span class="av tc" style="--tc:{team_color(r["team_from"])}">{esc(pos)}</span>'
                 f'<div class="vwho"><b>{esc(r["nick"])}</b><small>{team_logo(r["team_from"])}{esc(team_short(r["team_from"]))}에서</small></div>'
                 f'{hint}<span class="vtop"></span><button type="button" class="btn vpick">고르기</button></li>')

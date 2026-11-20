@@ -57,6 +57,9 @@ def init_db():
             cols = {r[1] for r in c.execute(f"PRAGMA table_info({table})")}
             if "league" not in cols:
                 c.execute(f"ALTER TABLE {table} ADD COLUMN league TEXT NOT NULL DEFAULT 'lck'")
+        # 같은 사람이 대소문자만 다른 문서로 두 줄 있던 FA 목록 정리('cvMax' 잔류 · 'CvMax' 미정 → 날짜가 나중인 한 줄만)
+        c.execute("""DELETE FROM fa WHERE EXISTS (SELECT 1 FROM fa b WHERE lower(b.nick)=lower(fa.nick) AND b.team_from=fa.team_from
+                     AND b.league=fa.league AND b.page != fa.page AND (b.date > fa.date OR (b.date = fa.date AND b.page < fa.page)))""")
         # 영어 기사는 소식 목록에 안 보이게 'news_en'으로(예전에 'news'로 모인 것도 한 번 옮김)
         en = [(r[0], r[1]) for r in c.execute("SELECT id, team, title FROM items WHERE source='news'")
               if not re.search(r"[가-힣]", r[2] or "")]

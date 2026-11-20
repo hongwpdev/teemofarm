@@ -125,6 +125,10 @@ class Handler(BaseHTTPRequestHandler):
                 msg = RATE_MSG if is_rate_limit(e) else "정보를 불러오지 못했어요. 잠시 뒤 다시 눌러 보세요"
                 body, code = json.dumps({"error": str(e)[:120], "msg": msg}, ensure_ascii=False), 502
             return self._send(code, body.encode(), "application/json; charset=utf-8")
+        if u.path == "/api/integrity":                    # 데이터 정합성(같은 사람이 화면마다 다르게 보이지 않는지)
+            from .. import integrity
+            return self._send(200, json.dumps({"problems": integrity.check()}, ensure_ascii=False).encode(),
+                              "application/json; charset=utf-8")
         if u.path == "/api/items":
             with db() as c:
                 rows = [dict(r) for r in c.execute("SELECT * FROM items WHERE source != 'news_en' ORDER BY published DESC LIMIT 300").fetchall()]
