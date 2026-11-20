@@ -94,6 +94,32 @@ class FarmTest(unittest.TestCase):
         err, _, bonus = farm.plant("rm:Zeus:t1:m", "o", "voter0010x")    # 다수 쪽은 아님
         self.assertFalse(bonus)
 
+    def test_season_matches(self):
+        # 1월 개막 대비: 일정 데이터에 다가오는 LCK 경기가 들어오면 같은 카드에 '경기' 판이 먼저 나오고,
+        # 시작 10분 전 마감, 끝나면 이긴 팀으로 판정(유력 판과 같은 심기·수확 흐름)
+        from tracker import schedule
+        now = datetime.now(timezone.utc)
+        fmt = lambda d: d.strftime("%Y-%m-%d %H:%M:%S")  # noqa: E731
+        old = schedule.DATA
+        schedule.DATA = {"lck": {"matches": [
+            {"id": "G1", "page": "LCK/2027 Season/Cup", "tour": "LCK 컵", "at": fmt(now + timedelta(hours=20)),
+             "t1": "T1", "k1": "t1", "t2": "Gen.G", "k2": "geng", "win": ""},
+            {"id": "G0", "page": "LCK/2027 Season/Cup", "tour": "LCK 컵", "at": fmt(now - timedelta(hours=3)),
+             "t1": "T1", "k1": "t1", "t2": "Dplus KIA", "k2": "dk", "win": "2"}]}}
+        try:
+            item("rm:Zeus:t1:m"); fa("Zeus", "fa")
+            farm.sync(force=True)
+            b = farm.board([])
+            self.assertEqual(b["open"][0]["id"], "m:G1")                    # 경기 판이 맨 앞
+            self.assertEqual((b["open"][0]["a_short"], b["open"][0]["b_short"]), ("T1", "GEN"))
+            self.assertTrue(b["open"][0]["lock_at"] < b["open"][0]["published"])
+            self.assertEqual(farm.plant("m:G1", "a", "seasonfan01")[0], "")
+            self.assertNotEqual(farm.plant("m:G1", "o", "seasonfan02")[0], "")    # 경기 판은 팀(a/b)만
+            self.assertEqual(result("m:G0"), "b")                              # 끝난 경기: 이긴 쪽
+            self.assertNotIn("m:G0", [x["id"] for x in b["open"]])
+        finally:
+            schedule.DATA = old
+
     def test_board_shows_mine_after_result(self):
         item("rm:Zeus:t1:m"); fa("Zeus", "move", "hle", "t1")
         farm.sync(force=True)
