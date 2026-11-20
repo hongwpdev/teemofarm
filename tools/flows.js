@@ -224,6 +224,20 @@ async function farm(p, seeded) {
     if (!li || !(await li.evaluate(e => e.classList.contains('tf-pend')))) bad('심었는데 "심음 · 기다리는 중"으로 안 바뀜');
     if (await p.$(`[data-plant="${id}"]`)) bad('심은 판에 아직 심기 버튼이 남아 있음');
   }
+  // 독버섯 판 '더 보기'로 펼치면 '접기'로 다시 접을 수 있어야 함
+  if (await p.$('.tf-card [data-panel="open"] [data-more]')) {
+    const count = () => p.$$eval('.tf-card [data-panel="open"] > ul > li', xs => xs.filter(x => x.offsetParent).length);
+    const before = await count();
+    await click(p, '.tf-card [data-more]', "독버섯 판 '더 보기'");
+    const all = await count();
+    if (!(all > before)) bad(`'더 보기'를 눌러도 판이 늘지 않음 (${before} → ${all})`);
+    if (!(await p.$('.tf-card [data-less]'))) bad("독버섯 판을 펼친 뒤 '접기' 버튼이 없음");
+    else {
+      await click(p, '.tf-card [data-less]', "독버섯 판 '접기'");
+      if (await count() !== before) bad(`'접기'를 눌러도 처음 개수(${before})로 안 돌아감 (${await count()})`);
+      if (!(await p.$('.tf-card [data-more]'))) bad("접은 뒤 '더 보기' 버튼이 다시 안 보임");
+    }
+  }
   const g = await p.$('.tf-goldspot');
   if (!g) bad('오늘의 황금 버섯이 화면에 없음');
   else {

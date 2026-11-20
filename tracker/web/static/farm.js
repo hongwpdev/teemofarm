@@ -255,8 +255,11 @@ ${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">$
     const season = board.open.some(it => it.kind === "match");
     const desc = season ? "경기 시작 10분 전까지 이길 팀 진영에 심어요. 맞히면 +1점, 30% 미만 소수 쪽이 맞으면 역배 +2점(10명 이상 참여한 판)."
       : "유력 기사가 맞을지 O·X 밭에 버섯을 심어요. 심으면 민심이 공개되고, 공식 확정되면 결과가 나와요. 맞히면 +1점, 30% 미만 소수 쪽이면 역배 +2점(10명 이상 참여한 판).";
-    const cut = more ? rows.length : phone() ? 2 : 4;          // 소식이 너무 밀리지 않게: 휴대폰 2개 · PC 4개, 나머지는 '더 보기'
-    const openPanel = rows.length ? `<ul>${rows.slice(0, cut).join("")}</ul>${rows.length > cut ? `<button type="button" class="tf-more" data-more="1">더 보기 · 전체 ${rows.length}개</button>` : ""}`
+    const base = phone() ? 2 : 4, cut = more ? rows.length : base;   // 소식이 너무 밀리지 않게: 휴대폰 2개 · PC 4개, 나머지는 '더 보기'(펼치면 '접기')
+    const fold = rows.length <= base ? "" : more
+      ? `<button type="button" class="tf-more" data-less="1" aria-expanded="true">접기 ▲</button>`
+      : `<button type="button" class="tf-more" data-more="1" aria-expanded="false">더 보기 · 전체 ${rows.length}개</button>`;
+    const openPanel = rows.length ? `<ul>${rows.slice(0, cut).join("")}</ul>${fold}`
       : board.quiz && !board.open.length ? quizBox(board.quiz) : `<p class="tf-emptymsg">지금 심을 판이 없어요. 새 유력 기사가 뜨면 생겨요.</p>`;
     const donePanel = done.length ? `<ul>${done.join("")}</ul>` : `<p class="tf-emptymsg">아직 결과가 난 판이 없어요.</p>`;
     return `<section class="card tf-card" aria-label="독버섯 심기"><div class="tf-head"><h3>독버섯 심기 <small>${season ? "오늘의 경기" : "스토브리그 편"}</small></h3>
@@ -409,6 +412,13 @@ ${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">$
       return;
     }
     if (e.target.closest("[data-more]")) { more = true; paint(); return; }
+    if (e.target.closest("[data-less]")) {                             // 접으면 독버섯 카드 머리가 화면 밖이면 거기로 올려 줌(아래에 덩그러니 남지 않게)
+      more = false; paint();
+      const c = box.querySelector(".tf-card");
+      if (c && c.getBoundingClientRect().top < 0) c.scrollIntoView({ block: "start" });
+      const b = box.querySelector("[data-more]"); if (b) b.focus({ preventScroll: true });
+      return;
+    }
     if (e.target.closest(".tf-share")) share();
   });
 

@@ -829,7 +829,7 @@ def farm_block(board=None) -> str:
         desc = ("경기 시작 10분 전까지 이길 팀 진영에 심어요. 맞히면 +1점, 30% 미만 소수 쪽이 맞으면 역배 +2점(10명 이상 참여한 판)." if season else
                 "유력 기사가 맞을지 O·X 밭에 버섯을 심어요. 심으면 민심이 공개되고, 공식 확정되면 결과가 나와요. 맞히면 +1점, 30% 미만 소수 쪽이면 역배 +2점(10명 이상 참여한 판).")
         # 휴대폰 2개 · PC 4개(나머지는 '더 보기'): 화면 폭은 서버가 모르니 4개를 그리고 휴대폰에선 CSS로 2개만(tf-ssr)
-        more = (f'<button type="button" class="tf-more{"" if len(opn) > 4 else " tf-mo"}" data-more="1">더 보기 · 전체 {len(opn)}개</button>'
+        more = (f'<button type="button" class="tf-more{"" if len(opn) > 4 else " tf-mo"}" data-more="1" aria-expanded="false">더 보기 · 전체 {len(opn)}개</button>'
                 if len(opn) > 2 else "")
         open_panel = (f'<ul>{"".join(_tf_open_row(it) for it in opn[:4])}</ul>{more}' if opn else
                       _tf_quiz(quiz) if quiz else '<p class="tf-emptymsg">지금 심을 판이 없어요. 새 유력 기사가 뜨면 생겨요.</p>')
