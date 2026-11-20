@@ -1384,11 +1384,12 @@ main .layout.is-loading #fbar:after{content:"";position:absolute;top:1rem;right:
 .tf-qz-opts button.tf-qz-no{border-color:var(--tf-purple);background:var(--tf-purple-bg);color:var(--tf-purple)}
 .tf-qz-msg{margin:1rem 0 0;font-size:1.25rem;color:var(--t8)}
 /* 수확 카드(1:1 그림) 창 */
-.tf-shot{width:min(42rem,calc(100% - 2.4rem));margin:auto;padding:1.4rem;border:1px solid var(--line);border-radius:1.4rem;background:var(--card);color:var(--t1)}
+/* 카드 그림이 늘 어두운 톤이라 창도 밝은 화면에서 같은 어두운 톤으로(흰 테두리에 갇힌 영수증처럼 보이지 않게) */
+.tf-shot{width:min(42rem,calc(100% - 2.4rem));margin:auto;padding:1.4rem;border:1px solid rgba(148,163,184,.22);border-radius:1.4rem;background:#0f172a;color:#f1f5f9;box-shadow:0 12px 28px rgba(2,6,23,.45)}
 .tf-shot::backdrop{background:rgba(0,0,0,.6)}
 .tf-shot img{display:block;width:100%;height:auto;aspect-ratio:1;border-radius:1rem}
 .tf-shot-acts{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-top:1.2rem}
-.tf-shot-acts button{min-height:4.4rem;border:1px solid var(--line);border-radius:.8rem;background:var(--card);color:var(--t1);font-size:1.4rem;font-weight:700;cursor:pointer}
-.tf-shot-acts button.tf-o{border-color:var(--tf-emerald);background:var(--tf-emerald);color:#fff}
+.tf-shot-acts button{min-height:4.4rem;border:1px solid rgba(148,163,184,.25);border-radius:.8rem;background:#1e293b;color:#f1f5f9;font-size:1.4rem;font-weight:700;cursor:pointer}
+.tf-shot-acts button.tf-o{border-color:#10b981;background:#10b981;color:#052e16}
 .tf-shot-acts button[hidden]{display:none}
 .tf-shot-acts:has([data-shot="share"][hidden]) [data-shot="close"]{grid-column:1/-1}

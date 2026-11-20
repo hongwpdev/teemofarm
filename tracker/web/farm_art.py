@@ -3,21 +3,23 @@
 from html import escape
 
 SPR = {
-    "shroom": ["....RRRR....", "..RRRRRRRR..", ".RRWWRRRRWR.", "RRWWRRRRRRRR", "RRRRRRRWWRRR", "RRRRRRRWWRRR", ".RRRRRRRRRR.",
-               "...SSSSSS...", "...SESSES...", "...SSSSSS...", "...SSMMSS...", "....SSSS...."],
+    # 실눈 웃음(^ ^) + 볼 + 갓 위 밝은 점. 수확 카드(farm.js shot)도 이 그림 그대로
+    "shroom": ["....RRRR....", "..RRLLRRRR..", ".RRWWRRRRWR.", "RRWWRRRRRRRR", "RRRRRRRWWRRR", "RRRRRRRWWRRR", ".RRRRRRRRRR.",
+               "..SSSSSSSS..", "..SSESSSES..", "..SESESESE..", "..PSSMMSSP..", "...SSSSSS..."],
     "happy": ["....RRRR....", "..RRRRRRRR..", ".RRWWRRRRWR.", "RRWWRRRRRRRR", "RRRRRRRWWRRR", "RRRRRRRWWRRR", ".RRRRRRRRRR.",
               "...SESSESS..", "...ESESESE..", "...SSSSSS...", "...SMMMMS...", "....SSSS...."],
-    "gold": ["....AAAA....", "..AAAAAAAA..", ".AAYYAAAAYA.", "AAYYAAAAAAAA", "AAAAAAAYYAAA", "AAAAAAAYYAAA", ".AAAAAAAAAA.",
-             "...SSSSSS...", "...SESSES...", "...SSSSSS...", "...SSMMSS...", "....SSSS...."],
+    "gold": ["....AAAA....", "..AAYYAAAA..", ".AAYYAAAAYA.", "AAYYAAAAAAAA", "AAAAAAAYYAAA", "AAAAAAAYYAAA", ".AAAAAAAAAA.",
+             "..SSSSSSSS..", "..SSESSSES..", "..SESESESE..", "..PSSMMSSP..", "...SSSSSS..."],
     "burnt": ["....CCCC....", "..CCCCCCCC..", ".CCqqCCCCqC.", "CCqqCCCCCCCC", "CCCCCCCqqCCC", "CCCCCCCqqCCC", ".CCCCCCCCCC.",
               "...TTTTTT...", "...TXTTXT...", "...TTTTTT...", "...TTMMTT...", "....TTTT...."],
     "tile": ["gGgGGgGGgGgG", "GGGgGGGgGGGG", "DdDDDdDDDDdD", "DDDDdDDdDDDD", "dDDDDDDDdDDD", "DDdDDDDDDDdD"],
     "hole": ["gGgGGgGGgGgG", "GGGgGGGgGGGG", "DdDDKKKKDDdD", "DDDKKKKKKDDD", "dDDDKKKKdDDD", "DDdDDDDDDDdD"],
 }
-# 글자 = 색: R 갓 · W 흰 점 · S 기둥 · E 눈 · M 입 · A/Y 황금 · C/q/X/T 독버섯(그을림) · g/G 잔디 · D/d 흙 · K 구멍
+# 글자 = 색: R 갓 · L 갓 위 밝은 점 · W 흰 점 · S 기둥 · E 눈 · M 입 · P 볼 · A/Y 황금 · C/q/X/T 독버섯(그을림) · g/G 잔디 · D/d 흙 · K 구멍
 COL = {"R": "var(--shroom)", "W": "#fff", "S": "var(--stem)", "E": "#1e2022", "M": "#7a2e2a", "A": "#f2b705", "Y": "#fff3b0",
        "C": "#4a3d55", "q": "#8b8296", "X": "#2a1f33", "T": "#9b8f86", "g": "#5fbf3f", "G": "#4c9a33", "D": "#8a5a3b",
-       "d": "#6f472d", "K": "#4e3220"}
+       "d": "#6f472d", "K": "#4e3220",
+       "P": "#fb7185", "L": "#ff9a8f"}
 
 
 def px(kind: str, w: float) -> str:

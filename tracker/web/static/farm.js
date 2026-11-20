@@ -330,25 +330,30 @@
       try { document.execCommand("copy") ? ok() : no(); } catch (err) { no(err); } finally { ta.remove(); }
     });
   }
-  // 수확 카드(1:1 그림): 화면 색(밝은/어두운)을 그대로 쓰고, 버섯은 농장과 같은 도트 그림
+  // 수확 카드(1:1 그림): 화면 밝기와 상관없이 늘 어두운 게임 카드(차분한 남색 + 에메랄드·골드). 버섯은 농장과 같은 도트 그림
+  const PUBLIC_URL = "teemofarm.com/lck";
   function shot() {
     const W = 1080, cv = document.createElement("canvas"); cv.width = W; cv.height = W;
-    const c = cv.getContext("2d"), cs = getComputedStyle(document.documentElement);
-    const v = (n, d) => (cs.getPropertyValue(n) || "").trim() || d;
-    const bg = v("--card", "#1e2533"), fg = v("--t1", "#f3f4f6"), sub = v("--t5", "#9aa5b1"), em = v("--tf-emerald", "#10b981"),
-          am = v("--tf-amber", "#d97706"), soft = v("--tf-emerald-bg", "rgba(16,185,129,.12)");
+    const c = cv.getContext("2d");
+    const fg = "#f8fafc", sub = "#94a3b8", em = "#34d399", am = "#fbbf24", cell = "rgba(15,23,42,.82)", cellLine = "rgba(148,163,184,.22)";
     const font = getComputedStyle(document.body).fontFamily || "sans-serif";
     const F = (w, size) => `${w} ${size}px ${font}`;
-    const bs = getComputedStyle(box);                 // 도트 색 중 var(--shroom) 같은 것은 지금 테마의 실제 색으로
-    const col = ch => { const k = ART.col[ch] || "#000", m = /^var\((--[\w-]+)\)$/.exec(k); return m ? (bs.getPropertyValue(m[1]).trim() || "#c0392b") : k; };
+    const DARK = { "--shroom": "#e8625a", "--stem": "#e9dcc2" };          // 어두운 화면의 버섯 색(base.css)
+    const col = ch => { const k = ART.col[ch] || "#000", m = /^var\((--[\w-]+)\)$/.exec(k); return m ? (DARK[m[1]] || "#e8625a") : k; };
     const sprite = (k, x, y, size) => {
-      const g = ART.spr[k] || [], H = g.length, Wd = (g[0] || "").length || 1, cell = size / Wd;
-      g.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== ".") { c.fillStyle = col(ch); c.fillRect(x + i * cell, y + j * cell, Math.ceil(cell), Math.ceil(cell)); } }));
-      return H * cell;
+      const g = ART.spr[k] || [], H = g.length, Wd = (g[0] || "").length || 1, cs = size / Wd;
+      g.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== ".") { c.fillStyle = col(ch); c.fillRect(x + i * cs, y + j * cs, Math.ceil(cs), Math.ceil(cs)); } }));
+      return H * cs;
     };
     const round = (x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
-    c.fillStyle = bg; c.fillRect(0, 0, W, W);
-    round(40, 40, W - 80, W - 80, 48); c.lineWidth = 6; c.strokeStyle = em; c.stroke();
+    const glow = (x, y, r, color) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, color); g.addColorStop(1, "rgba(0,0,0,0)"); c.fillStyle = g; c.fillRect(0, 0, W, W); };
+    c.fillStyle = "#0f172a"; c.fillRect(0, 0, W, W);
+    round(40, 40, W - 80, W - 80, 48); c.save(); c.clip();
+    c.fillStyle = "#131c2e"; c.fillRect(0, 0, W, W);
+    glow(W * .85, W * .12, 560, "rgba(16,185,129,.22)");                   // 오른쪽 위 에메랄드
+    glow(W * .15, W * .88, 500, "rgba(245,158,11,.14)");                   // 왼쪽 아래 골드
+    c.restore();
+    round(40, 40, W - 80, W - 80, 48); c.lineWidth = 5; c.strokeStyle = "rgba(52,211,153,.55)"; c.stroke();
     const t = tier(st.points), ms = Object.values(st.plantedMushrooms);
     const won = ms.filter(m => m.status === "won").length, lost = ms.filter(m => m.status === "lost").length;
     c.textBaseline = "alphabetic";
@@ -356,7 +361,7 @@
     c.fillStyle = sub; c.font = F(600, 30); c.fillText("LCK 독버섯 심기 · 내 농장 수확 카드", 96, 190);
     c.textAlign = "right"; c.fillText(today().replace(/-/g, "."), W - 96, 140);
     // 가운데: 큰 버섯 + 등급
-    c.fillStyle = soft; c.beginPath(); c.ellipse(W / 2, 480, 190, 40, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = "rgba(16,185,129,.16)"; c.beginPath(); c.ellipse(W / 2, 480, 190, 40, 0, 0, Math.PI * 2); c.fill();
     sprite(st.points >= 15 ? "gold" : "shroom", W / 2 - 120, 240, 240);
     c.textAlign = "center"; c.fillStyle = em; c.font = F(800, 64); c.fillText(t.label, W / 2, 600);
     // 숫자 네 칸
@@ -365,14 +370,14 @@
     const bw = (W - 192 - 3 * 24) / 4;
     cells.forEach(([label, val], i) => {
       const x = 96 + i * (bw + 24);
-      round(x, 650, bw, 170, 24); c.fillStyle = soft; c.fill();
+      round(x, 650, bw, 170, 24); c.fillStyle = cell; c.fill(); c.lineWidth = 2; c.strokeStyle = cellLine; c.stroke();
       c.fillStyle = am; c.font = F(800, 58); c.fillText(val, x + bw / 2, 740);
       c.fillStyle = sub; c.font = F(600, 26); c.fillText(label, x + bw / 2, 790);
     });
     // 내 밭 7칸
     const log = st.fieldLog.slice(-7), ps = 72, gap = 22, x0 = (W - (7 * ps + 6 * gap)) / 2;
     for (let i = 0; i < 7; i++) sprite(log[i] ? (log[i] === "g" ? "gold" : "shroom") : "hole", x0 + i * (ps + gap), 860, ps);
-    c.fillStyle = em; c.font = F(800, 34); c.fillText(location.host.replace(/^www\./, "") + "/lck", W / 2, 1000);
+    c.fillStyle = em; c.font = F(800, 34); c.fillText(PUBLIC_URL, W / 2, 1000);
     return cv;
   }
   function share() {
