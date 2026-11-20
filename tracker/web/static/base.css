@@ -1332,3 +1332,5 @@ li.tf-lost .tf-pst{color:var(--tf-purple);font-weight:800}
 .tf-jump:hover{filter:brightness(1.08)}
 @keyframes tfFlash{0%{box-shadow:0 0 0 0 var(--tf-emerald)}100%{box-shadow:0 0 0 1rem transparent}}
 .tf-card li.tf-flash{animation:tfFlash 1.1s ease-out 2}
+/* 격전지(10명 이상이 45~55%로 갈린 판, 심은 뒤·결과 내역에서만) */
+.tf-hot{padding:.05rem .4rem;border-radius:.3rem;background:var(--tf-amber-bg);color:var(--tf-amber);font-weight:800;font-size:1.05rem;white-space:nowrap}

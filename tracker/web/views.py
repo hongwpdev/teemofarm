@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from ..cargo import RATE_MSG, is_rate_limit
 from ..classify import article_kind, is_minor_wiki, news_teams, wiki_ko
 from ..cluster import group as cluster_group
-from ..rumor import movers, rumors
+from ..rumor import movers, read_title, rumors
 from .. import stove as stv, vote
 from ..config import (AUTO_MINUTES, DEFAULT_LEAGUE, KST, LEAGUES, NEW_HOURS, SITE_DESC, SITE_NAME, TEAM_COLORS,
                       TEAMS)
@@ -523,8 +523,8 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
 
     farm = league == "lck" and not q          # 독버섯 심기(서버가 골격·판 목록을 그리고 static/farm.js가 내 점수·심은 상태를 덮어씀)
     tf_board = _farm_board() if farm else None
-    # 열린 '유력' 판의 기사 제목 → 판 id: 그 기사 아래에 '이 소식 O/X 심기 ↑'(누르면 위 독버섯 심기 칸의 그 판으로)
-    tf_jump = {it["title"]: it["id"] for it in (tf_board or {}).get("open", []) if it["kind"] == "rumor" and it.get("title")}
+    # 열린 '유력' 판과 같은 소식인 기사 아래에 '이 소식 O/X 심기 ↑'(누르면 위 독버섯 심기 칸의 그 판으로)
+    tf_jump = _farm_jumper((tf_board or {}).get("open", []))
     now = datetime.now(timezone.utc)
     lis, last_day = [], None
     for r, kind, teams, rest in cluster_group(items):
@@ -557,7 +557,7 @@ def render_news(league: str, team: str, src: str, hot: int, frm: str = "", to: s
         ovs = overseas_tag(title, team_short) if r["source"] == "news" else ""
         if ovs:
             tit += f'<span class="ovs">{esc(ovs)}</span>'
-        jid = next((tf_jump[t] for t in [title] + [m["title"] for m, _, _ in rest] if t in tf_jump), "")
+        jid = next((j for j in (tf_jump(t, kind) for t in [title] + [m["title"] for m, _, _ in rest]) if j), "") if r["source"] == "news" else ""
         jump = (f'<div class="tf-jw"><a class="tf-jump" href="#tf" data-farm-jump="{esc(jid)}">🍄 이 소식 O/X 심기 ↑</a></div>'
                 if jid else "")
         cls = (f'item kd-{kind} lv-{lv}' + (" new" if new else "") + (" grp" if rest else "") + (" spo" if is_spoiler(title) else "")
@@ -693,10 +693,11 @@ def _tf_tug(it, show: bool) -> str:
     m = a + b
     if not m:
         return '<div class="tf-tug"><span class="tf-none">아직 아무도 안 심었어요</span></div>'
-    pa = round(100 * a / m)
-    segs = "".join(f'<i class="{"a" if i < round(pa * 20 / 100) else "b"}"></i>' for i in range(20))
+    pa = int(100 * a / m + .5)                 # JS Math.round와 같게(파이썬 round는 .5를 짝수로)
+    segs = "".join(f'<i class="{"a" if i < int(pa * 20 / 100 + .5) else "b"}"></i>' for i in range(20))
     lab = ("O", "X") if it["kind"] == "rumor" else (it["a_short"], it["b_short"])
-    return (f'<div class="tf-tug"><div class="tf-tl"><span class="tf-pa">{esc(lab[0])} {pa}%</span><span class="tf-n">민심 {m}명</span>'
+    hot = ' · <b class="tf-hot">🔥 격전지</b>' if m >= 10 and 45 <= pa <= 55 else ""     # farm.js tug()와 같은 규칙
+    return (f'<div class="tf-tug"><div class="tf-tl"><span class="tf-pa">{esc(lab[0])} {pa}%</span><span class="tf-n">민심 {m}명{hot}</span>'
             f'<span class="tf-pb">{esc(lab[1])} {100 - pa}%</span></div><span class="tf-gauge">{segs}</span></div>')
 
 
@@ -749,6 +750,29 @@ def _tf_done_row(it) -> str:
                '<span class="tf-act tf-verdict tf-v-minor">소수 적중</span>')
     return (f'<li class="tf-res" data-item="{esc(it["id"])}">{farm_art.plot("shroom", 40)}<div class="tf-q">{_tf_title(it)}'
             f'<span class="tf-src">결과 {out} · {day}</span></div>{_tf_tug(it, True)}{verdict}</li>')
+
+
+def _farm_jumper(open_items):
+    """열린 유력 판 목록 → jump(제목, 기사 종류) → 판 id 또는 ''.
+    판을 만든 기사 제목과 같거나(띄어쓰기·따옴표 차이는 무시), 판을 만드는 규칙(rumor.read_title)으로 읽었을 때
+    같은 선수·같은 행선지·같은 방향인 기사('제우스, T1 리턴 유력'과 '[단독] T1, 제우스 영입 근접'). 구글 뉴스 주소는 검색마다 달라서 안 씀"""
+    ko = ko_nicks()
+    rows = [it for it in open_items if it["kind"] == "rumor" and it.get("nick")]
+    by_title = {norm_title(it["title"]): it["id"] for it in rows if norm_title(it.get("title") or "")}
+
+    def jump(title, kind):
+        hit = by_title.get(norm_title(title) or "\0")
+        if hit or kind == "view":                # 전망·분석 기사는 판을 만들 때도 안 봄
+            return hit or ""
+        low = title.lower()
+        for it in rows:
+            nick = it["nick"]
+            if nick.lower() not in low and (ko.get(nick) or "\0") not in title:
+                continue
+            if read_title(title, nick, it["a"]) == (it["b"], it["id"].endswith(":s")):
+                return it["id"]
+        return ""
+    return jump
 
 
 def _farm_board() -> dict:

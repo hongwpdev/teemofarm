@@ -94,7 +94,9 @@
     let s = "";
     for (let i = 0; i < segs; i++) s += `<i class="${i < Math.round(pa * segs / 100) ? "a" : "b"}"></i>`;
     const minor = m >= 10 && (a / m < 0.3 ? p : b / m < 0.3 ? q : "");
-    return `<div class="tf-tug"><div class="tf-tl"><span class="tf-pa">${esc(sideName(it, p))} ${pa}%</span><span class="tf-n">민심 ${m}명${minor && !it.result ? ` · <b class="tf-bonus">${esc(sideName(it, minor))} 역배 +2</b>` : ""}</span><span class="tf-pb">${esc(sideName(it, q))} ${100 - pa}%</span></div><span class="tf-gauge">${s}</span></div>`;
+    // 격전지: 10명 이상이 45~55%로 갈린 판(심은 뒤·결과 내역에서만 보임 — 심기 전엔 비율 자체가 비공개). 쏠린 판은 '역배 +2'가 이미 알려 줌
+    const hot = m >= 10 && pa >= 45 && pa <= 55;
+    return `<div class="tf-tug"><div class="tf-tl"><span class="tf-pa">${esc(sideName(it, p))} ${pa}%</span><span class="tf-n">민심 ${m}명${minor && !it.result ? ` · <b class="tf-bonus">${esc(sideName(it, minor))} 역배 +2</b>` : hot ? ` · <b class="tf-hot">🔥 격전지</b>` : ""}</span><span class="tf-pb">${esc(sideName(it, q))} ${100 - pa}%</span></div><span class="tf-gauge">${s}</span></div>`;
   }
   // 사이트 전체 점검(tools/crawl.js)이 다른 화면과 상태·행선지를 비교할 수 있게
   const facts = it => it.kind === "rumor" && !it.result && !/무산/.test(it.tag || "") ? ` data-nick="${esc(it.nick)}" data-label="${esc(it.tag || "")}" data-dest="${esc(it.b)}"` : "";

@@ -175,3 +175,30 @@ class FarmTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FarmViewTest(unittest.TestCase):
+    """소식 목록 → 판 바로가기 · 격전지 표시(화면 쪽 규칙)."""
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def test_jump_matches_same_story_only(self):
+        from tracker.web.views import _farm_jumper
+        it = {"id": "rm:Zeus:t1:m", "kind": "rumor", "nick": "Zeus", "a": "hle", "b": "t1",
+              "title": "[단독] '제우스' 최우제, T1 복귀 유력"}
+        jump = _farm_jumper([it, {"id": "m:1", "kind": "match", "nick": "", "a": "t1", "b": "geng", "title": "LCK"}])
+        self.assertEqual(jump("[단독]  '제우스' 최우제,T1 복귀 유력", "rumor"), it["id"])         # 띄어쓰기만 다른 같은 제목
+        self.assertEqual(jump("[소식통] '제우스' 최우제, T1과 3년 계약 합의", "rumor"), it["id"])   # 다른 매체의 같은 소식
+        self.assertEqual(jump("한화생명, '제우스'와 재계약 임박", "rumor"), "")                    # 같은 선수라도 다른 방향
+        self.assertEqual(jump("T1, '제우스' 최우제 영입 무산", "rumor"), "")
+        self.assertEqual(jump("'제우스' T1 리턴하면 어떨까", "view"), "")                         # 전망·분석 기사
+        self.assertEqual(jump("젠지, '쵸비'와 재계약 임박", "rumor"), "")
+
+    def test_hot_badge_only_when_split_and_enough(self):
+        from tracker.web.views import _tf_tug
+        base = {"kind": "rumor", "a_short": "HLE", "b_short": "T1"}
+        self.assertIn("격전지", _tf_tug({**base, "tally": {"o": 5, "x": 5}, "n": 10}, True))
+        self.assertNotIn("격전지", _tf_tug({**base, "tally": {"o": 2, "x": 2}, "n": 4}, True))     # 10명 미만
+        self.assertNotIn("격전지", _tf_tug({**base, "tally": {"o": 8, "x": 2}, "n": 10}, True))
+        self.assertNotIn("격전지", _tf_tug({**base, "tally": {"o": 5, "x": 5}, "n": 10}, False))   # 심기 전엔 비율도 비공개
