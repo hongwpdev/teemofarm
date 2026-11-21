@@ -9,20 +9,28 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 
-from .classify import article_kind, title_has_team
+from .classify import _ALIAS_RE, article_kind, title_has_team
 from .cluster import EVENTS, persons
 from .config import TEAMS
 from .core import db
-from .filters import ko_nicks, people
+from .filters import KO_ALT, ko_nicks, people
 
 DAYS = 14             # 이 기간 안의 기사만 봄
 CACHE_SEC = 60
 RENEW = EVENTS["renew"]
 LEAVE = EVENTS["leave"] + ("마무리", "작별", "이별", "굿바이")   # '3년 동행 마침표', 'T1과 동행 마무리'처럼 재계약 단어가 있어도 떠나는 기사
-JOIN = EVENTS["join"] + ("이적", "합의", "손잡", "유니폼", "입성", "돌아오", "돌아가", "유력")   # '젠지, 탑 시우 유력'
+JOIN = EVENTS["join"] + ("이적", "합의", "손잡", "유니폼", "입성", "돌아오", "돌아가", "유력", "품었", "품에 안", "데려", "협상",
+                         "새 출발", "새 팀", "새 탑", "새 정글", "새 미드", "새 원딜", "새 바텀", "새 서포터", "새 서폿",
+                         "새 감독", "새 코치", "새 식구", "새 얼굴", "년 계약")
+# 재계약·잔류를 말하는 다른 말('농심, 미닛 붙잡았다')
+RENEW_MORE = ("붙잡", "지켰다", "남는다", "남기로")
+# 결론이 안 난 기사('재계약 협상 난항'): 잔류로도 이적으로도 안 읽음
+UNSURE = ("난항", "이견", "진통", "불투명", "안갯속", "미지수")   # '젠지, 탑 시우 유력'
 # 영어 기사(Sheep Esports 등): "Sources: Cuzz set to join DN SOOPers", "VicLa extends contract with BNK FEARX"
-EN_RENEW = ("re-sign", "resign", "extend", "renew", "stay with", "remain with", "stays with", "remains with")
-EN_JOIN = ("join", "sign", "add ", "adds ", "return to", "returns to", "move to", "moves to", "head to", "heads to")
+EN_RENEW = ("re-sign", "resign", "extend", "renew", "stay with", "remain with", "stays with", "remains with",
+            "stay at", "stays at", "remain at", "remains at")
+EN_JOIN = ("join", "sign", "add ", "adds ", "return to", "returns to", "move to", "moves to", "head to", "heads to",
+           "announce", "unveil", "welcome")
 EN_LEAVE = ("leave", "left", "part ways", "parts ways", "depart", "release", "won't continue", "will not continue")
 EN_NEG = ("not join", "won't join", "deal off", "rejected", "turned down", "fell through")
 EN_GUESS = ("sources", "source:", "set to", "expected", "reportedly", "rumor", "in talks", "likely", "close to", "nearing")
@@ -30,11 +38,11 @@ EN_UP = ("promoted",)
 # 'Hanwha Life Esports'의 Life를 코치 '라이프'로 읽지 않게: 사람 찾기 전에 팀 이름을 줄여 둠
 _EN_TEAM = re.compile(r"Hanwha Life(?: Esports)?", re.I)
 # 원소속 팀만 나오는 선임·승격('모글리' 코치 → 감독 승격)과 'OO과 2028년까지'는 잔류
-STAY_UP = ("승격", "선임")
+STAY_UP = ("승격", "선임", "감독으로", "사령탑으로")
 UNTIL = re.compile(r"20\d\d년까지|\d\d년까지")
 # 한 제목에 여러 소식이 '…'로 이어진 경우(예: "커즈·유칼, DN 수퍼스로 복귀…빈센조도 BNK 피어엑스행") 그 선수가 나온 토막만 봄
 _SPLIT = re.compile(r"…|⋯|\.{2,}|\|")
-NEG = ("불발", "결렬", "무산", "거절", "실패", "없던 일")   # '재계약 불발' 같은 기사는 행선지로 안 봄
+NEG = ("불발", "결렬", "무산", "거절", "실패", "없던 일", "사실무근", "사실 무근", "오보", "사실이 아니", "부인")   # '재계약 불발' 같은 기사는 행선지로 안 봄
 # 계약이 남은 선수는 이적 기사라는 표시가 제목에 있을 때만 봄('합류 후 100승' 같은 경기 기사 제외)
 GUESS = ("하나", "할까", "?", "복귀설", "이적설", "합류설", "영입설", "유력", "전망", "가능성", "임박", "근접", "예정")
 MOVE_MARK = ("단독", "소식통", "오피셜", "공식", "유력", "임박", "합의", "예정", "근접", "협상", "이적",
@@ -85,44 +93,92 @@ def _teams(text: str) -> list:
     return [k for k in TEAMS if k != "lck" and TEAMS[k].get("aliases") and title_has_team(text, k)]
 
 
+def _win(title: str, start: int, end: int) -> str:
+    """제목의 [start:end] 토막. 영문 단어 한가운데서 자르지 않음('DNS'를 잘라 'NS'(농심)로 읽던 문제)."""
+    start = max(0, start)
+    while 0 < start < len(title) and title[start - 1].isascii() and title[start - 1].isalnum() and title[start].isalnum():
+        start -= 1
+    return title[start:end]
+
+
+def _last_team(text: str):
+    """토막 안에서 가장 뒤(말에 가장 가까이)에 나온 팀. 'KT, T1 출신'의 출신 팀은 T1."""
+    best, pos = None, -1
+    for k in _teams(text):
+        rx = _ALIAS_RE.get(k)
+        for m in (rx.finditer(text) if rx else ()):
+            if m.end() > pos:
+                best, pos = k, m.end()
+    return best
+
+
 def _joined_team(title: str):
-    """'DNS 합류', 'DN 수퍼스로 복귀'처럼 합류하는 말 바로 앞(몇 글자 안)에 나온 팀."""
+    """'DNS 합류', 'DN 수퍼스로 복귀'처럼 합류하는 말 바로 앞(몇 글자 안)에 나온 팀.
+    떠나온 팀('DNS 출신 루스터 데려온다'의 DNS)은 빼고, 둘 이상이면 말에 가장 가까운 팀."""
+    left = _left_teams(title)
     for w in JOIN:
         i = title.find(w)
         if i <= 0:
             continue
-        hit = _teams(title[max(0, i - 10):i])
+        win = _win(title, i - 10, i)
+        hit = [k for k in _teams(win) if k not in left]
         if len(hit) == 1:
             return hit[0]
+        if hit:
+            k = _last_team(win)
+            if k in hit:
+                return k
     return None
+
+
+def _name_at(title: str, name: str) -> int:
+    """제목에서 그 이름(닉네임)이 처음 나오는 자리, 없으면 -1. 다른 이름 속 글자는 안 셈('빈센조' 속 '빈')."""
+    low = title.lower()
+    for m in re.finditer(re.escape(name.lower()), low):
+        before = low[m.start() - 1] if m.start() else " "
+        after = low[m.end()] if m.end() < len(low) else " "
+        if re.match(r"[a-z0-9가-힣]", before):
+            continue
+        if re.match(r"[a-z0-9]", after) or (len(name) == 1 and re.match(r"[가-힣]", after)):
+            continue
+        return m.start()
+    return -1
 
 
 def _vacancy_of(title: str, nick: str) -> bool:
     """제목이 이 선수가 '떠난 자리·빈자리·후임' 얘기인지(바로 앞 몇 글자 안에 이 선수 이름)."""
-    names = [nick.lower()] + [ko for en, ko in ko_nicks().items() if en.lower() == nick.lower() and ko]
+    names = _names(nick)
     for m in VACANCY.finditer(title):
-        before = title[max(0, m.start() - 14):m.start()].lower()
+        before = _win(title, m.start() - 14, m.start()).lower()
         if any(n in before for n in names):
             return True
     return False
 
 
 def _left_teams(title: str) -> set:
-    """떠나온 팀 모두: '한화생명 떠나'(떠나는 말 앞) + '젠지 FA 기인'·'T1 출신'(FA·출신 앞)."""
+    """떠나온 팀 모두: '한화생명 떠나'(떠나는 말 앞) + '젠지 FA 기인'·'T1 출신'(FA·출신 앞) + '전 DRX 감독'(전·前 뒤)."""
     out = set()
+    for k in _teams(title):
+        rx = _ALIAS_RE.get(k)
+        for m in (rx.finditer(title) if rx else ()):
+            if re.search(r"(?:^|[\s,'‘\"(])(?:전|前)\s*(?:[^\s,]+\s+)?$", title[:m.start()]):
+                out.add(k)
     for w in LEAVE + ("출신",):
         for m in re.finditer(re.escape(w), title):
             if re.match(r"\s*(?:빈\s?)?자리", title[m.end():]) or title[m.start():].startswith("떠나보내"):
                 continue                       # '카나비 떠난 자리에'·'도란 떠나보내고'의 팀은 그 자리를 채우는(데려오는) 팀
-            hit = _teams(title[max(0, m.start() - 12):m.start()])
+            win = _win(title, m.start() - 12, m.start())
+            hit = _teams(win)
             if len(hit) == 1:
                 out.add(hit[0])
+            elif hit and w == "출신":          # 'KT, T1 출신 사루': 출신 바로 앞 팀
+                out.add(_last_team(win))
     for m in _FA_FROM.finditer(title):
         if re.search(r"[,，:]\s*$", title[:m.start()]):     # '한화생명, FA 기인 영입'의 한화생명은 데려오는 팀
             continue
-        hit = _teams(title[max(0, m.start() - 8):m.start()])
-        if hit:
-            out.add(hit[-1])
+        k = _last_team(_win(title, m.start() - 8, m.start()))
+        if k:
+            out.add(k)
     return out
 
 
@@ -132,11 +188,60 @@ def _left_team(title: str):
         i = title.find(w)
         if i <= 0:
             continue
-        before = title[max(0, i - 12):i]
+        before = _win(title, i - 12, i)
         hit = _teams(before)
         if len(hit) == 1:
             return hit[0]
     return None
+
+
+_DEST = r"(?:\s?[가-힣A-Za-z]{1,6})?\s*(?:행(?![사보진복운렬])|(?:으)?로\s*(?:가나|갈까|향|이적|임대|간다|떠나))"
+
+
+def _names(nick: str) -> list:
+    """닉네임과 한글 표기들(소문자)."""
+    return ([nick.lower()] + [ko for en, ko in ko_nicks().items() if en.lower() == nick.lower() and ko]
+            + [ko for ko, en in KO_ALT.items() if en.lower() == nick.lower()])
+
+
+def _dest_after(title: str, nick: str):
+    """'[정리] 스펀지 DNS행·클리어 KT행', '구마유시, DK로 가나'처럼 그 선수 이름 뒤(다음 사람 이름 전)에 'OO행'·'OO로 가나'가 있으면 그 팀."""
+    at = [i for i in (_name_at(title, n) for n in _names(nick)) if i >= 0]
+    if not at:
+        return None
+    start, end = min(at), len(title)
+    for p in persons(title):
+        if p == nick.lower():
+            continue
+        for n in _names(p):
+            i = _name_at(title, n)
+            if start < i < end:
+                end = i
+    seg = title[start:end]
+    best, pos = None, len(seg)
+    for k in _teams(seg):
+        rx = _ALIAS_RE.get(k)
+        for m in (rx.finditer(seg) if rx else ()):
+            if re.match(_DEST, seg[m.end():]) and m.start() < pos:
+                best, pos = k, m.start()
+    return best
+
+
+def _leave_mine(title: str, nick: str) -> bool:
+    """떠나는 말(떠난·결별·계약 종료…)이 이 사람 얘기인지: 그 말 바로 앞에 나온 사람이 이 사람이거나 사람이 없을 때.
+    ("'옴므' 떠난 한화생명, '모글리' 감독 승격"의 '떠난'은 옴므 얘기라 모글리는 잔류(승격))"""
+    pos = {}
+    for p in persons(title):
+        at = [i for i in (_name_at(title, n) for n in _names(p)) if i >= 0]
+        if at:
+            pos[p] = min(at)
+    me = pos.get(nick.lower(), -1)
+    for w in LEAVE:
+        for m in re.finditer(re.escape(w), title):
+            # 이 사람 이름 뒤에 나온 떠나는 말('기인·캐니언과 동행 마침표')이거나, 앞에 아무도 없으면('T1 떠난 도란') 이 사람 얘기
+            if 0 <= me < m.start() or not any(i < m.start() for i in pos.values()):
+                return True
+    return False
 
 
 def read_title(title: str, nick: str, team_from: str):
@@ -159,22 +264,25 @@ def read_title(title: str, nick: str, team_from: str):
             if p in mine or follows or (not persons(p) and set(_teams(p)) <= my_teams):
                 keep.append(p)
         title = " ".join(keep)
-    if any(w in title for w in NEG) or _vacancy_of(title, nick):
+    if any(w in title for w in NEG + UNSURE) or _vacancy_of(title, nick):
         return None
     # '한화생명, 도란 떠나보내고 캐니언 영입': '떠나보내' 앞에 나온 선수는 그 팀을 떠나는 쪽(뒤 선수만 영입)
     sendoff = title.find("떠나보내")
     if sendoff >= 0:
-        names = [nick.lower()] + [ko for en, ko in ko_nicks().items() if en.lower() == nick.lower() and ko]
-        at = [title.lower().find(n) for n in names if n in title.lower()]
+        names = _names(nick)
+        at = [i for i in (_name_at(title, n) for n in names) if i >= 0]
         if at and min(at) < sendoff:
             return None
+    dest = _dest_after(title, nick)
+    if dest and dest != team_from:
+        return (dest, False)
     teams = _teams(title)
     left = _left_teams(title)
     # 원소속이 아닌 '떠난 팀'은 행선지가 아님('한화생명 떠나 DN 수퍼스 합류'는 이미 DNS 로스터인 블러핑에게 HLE행이 아님,
     # '젠지 FA 기인·캐니언 영입설'의 젠지는 그 사람들이 떠나온 팀)
     others = [k for k in teams if k != team_from and k not in left]
-    renew = any(w in title for w in RENEW) or UNTIL.search(title) or (team_from in teams and any(w in title for w in STAY_UP))
-    if renew and not any(w in title for w in LEAVE) and not others:
+    renew = any(w in title for w in RENEW + RENEW_MORE) or UNTIL.search(title) or (team_from in teams and any(w in title for w in STAY_UP))
+    if renew and not _leave_mine(title, nick) and not others:
         return (team_from, True) if team_from else None
     if team_from and _joined_team(title) == team_from:
         return None                           # '한화생명 출신 블러핑, DNS 합류': 이미 DNS 선수에겐 지금 팀 얘기

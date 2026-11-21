@@ -38,7 +38,10 @@ KO_NICKS = {
     "kkOma": "꼬마", "Viper": "바이퍼", "Bin": "빈", "Knight": "나이트", "Peanut": "피넛", "Deft": "데프트",
     "BeryL": "베릴", "Morgan": "모건", "Kael": "카엘", "Loke": "로케", "Rooster": "루스터",
     "Roach": "로치", "Umti": "엄티", "Nuguri": "너구리", "Gori": "고리", "Lazyfeel": "레이지필", "Dove": "도브", "Bengi": "벵기",
+    "Bon0": "보노", "Bluffing": "블러핑", "Thanatos": "타나토스",
 }
+# 같은 사람의 다른 한글 표기(기사마다 다르게 씀: '스매시'·'스매쉬'). 다른 표기 → 영문 닉네임
+KO_ALT = {"스매쉬": "Smash", "초비": "Chovy", "캐년": "Canyon", "페이즈": "Peyz", "보누": "Bon0"}
 _LEARN = {"at": 0.0, "map": {}}
 
 
@@ -90,7 +93,7 @@ def people():
             except Exception:  # noqa: BLE001  (표가 아직 없을 때)
                 pass
             en = sorted(n for n in nicks if len(n) >= 4)          # 짧은 영문(Sin·Tom 등)은 다른 뜻과 겹쳐서 뺌
-            ko = sorted({v.strip() for v in ko_nicks().values() if v.strip()})
+            ko = sorted({v.strip() for v in ko_nicks().values() if v.strip()} | set(KO_ALT))
             q = re.escape(QUOTES)
             _NAMES.update(at=time.time(), nick=_words(en) if en else None,
                           real=re.compile(rf"[{q}](?:{'|'.join(map(re.escape, ko))})[{q}]"))

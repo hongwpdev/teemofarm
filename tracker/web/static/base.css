@@ -1500,3 +1500,50 @@ main .layout.is-loading #fbar:after{content:"";position:absolute;top:1rem;right:
 @media (min-width:900px){.wgrid{grid-template-columns:repeat(2,1fr)}}
 /* 로스터 카드: 오피셜 기사로 확정된 잔류(리그피디아 반영 전) */
 .rc i.in.stay{background:var(--bg-gray);color:var(--t5)}
+/* 우승 카드(2026.11 A안 골드 배너): 금색 테두리가 천천히 흐르고 빛이 한 번씩 지나감 · 큰 로고 · 금색 팀 이름 · 트로피 */
+.card.champ{position:relative;overflow:hidden;display:block;padding:1.8rem 1.8rem 1.6rem;border:1px solid transparent;
+ background:linear-gradient(var(--card),var(--card)) padding-box,linear-gradient(120deg,#8a6a12,#ffe08a,#c9971c,#fff3c4,#8a6a12) border-box;
+ background-size:100% 100%,300% 100%;animation:chEdge 6s linear infinite}
+.card.champ::before{content:"";position:absolute;inset:0;pointer-events:none;
+ background:radial-gradient(120% 90% at 0% 0%,rgba(255,200,40,.22),transparent 55%),radial-gradient(60% 80% at 100% 100%,rgba(157,101,214,.16),transparent 60%)}
+.card.champ::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;pointer-events:none;
+ background:linear-gradient(100deg,transparent,rgba(255,240,190,.16),transparent);transform:skewX(-18deg);animation:chSweep 4.5s ease-in-out infinite}
+@keyframes chEdge{to{background-position:0 0,300% 0}}
+@keyframes chSweep{0%,55%{left:-60%}100%{left:130%}}
+@keyframes chBob{50%{transform:translateY(-.4rem) rotate(-4deg)}}
+.champ .ch-rib{position:relative;display:inline-flex;align-items:center;gap:.4rem;padding:.2rem 1rem;border-radius:2rem;
+ background:linear-gradient(90deg,#c9971c,#ffd765);color:#2a1d00;font-size:1.15rem;font-weight:800;letter-spacing:.05rem}
+.champ .ch-row{position:relative;display:flex;align-items:center;gap:1.4rem;margin-top:1.2rem;padding-right:6rem}
+.champ .ch-lg{flex:none;display:grid;place-items:center;width:6.4rem;height:6.4rem;border-radius:50%;background:#fff;
+ box-shadow:0 0 0 .3rem rgba(255,215,101,.6),0 0 2.4rem rgba(255,200,40,.55)}
+.champ .ch-lg .logo{width:5rem;height:5rem;border-radius:50%;object-fit:contain}
+.champ .ch-lg .logo.txt{display:grid;place-items:center;font-size:2.4rem;font-weight:900;color:#5a4a20;background:none}
+.champ small{display:block;font-size:1.25rem;color:#a07a12}
+.champ b{display:block;font-size:3.2rem;font-weight:900;line-height:1.15;margin:.1rem 0 0;
+ background:linear-gradient(180deg,#e0a800,#b07d00);-webkit-background-clip:text;background-clip:text;color:transparent}
+.champ .ch-tro{position:absolute;right:1.4rem;top:1.2rem;font-size:5.2rem;line-height:1;filter:drop-shadow(0 0 1.2rem rgba(255,200,40,.6));animation:chBob 3s ease-in-out infinite}
+.champ p{position:relative;margin-top:1.2rem;font-size:1.35rem;color:var(--t5);display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5rem}
+.champ p em{font-style:normal;font-weight:800;font-size:1.5rem;color:#b07d00}
+:root[data-theme="dark"] .champ small{color:#e9d8a6}
+:root[data-theme="dark"] .champ b{background-image:linear-gradient(180deg,#fff6d6,#ffcf4a 55%,#c9971c)}
+:root[data-theme="dark"] .champ p em{color:#ffd765}
+.champ>div{padding-left:0}
+[data-spoiler="on"] .sch-champ:not(.lit) .ch-lg{filter:blur(6px);cursor:pointer}
+@media (max-width:420px){.champ .ch-tro{font-size:4.2rem}.champ b{font-size:2.8rem}.champ .ch-lg{width:5.6rem;height:5.6rem}.champ .ch-lg .logo{width:4.4rem;height:4.4rem}}
+@media (prefers-reduced-motion:reduce){.card.champ,.card.champ::after,.champ .ch-tro{animation:none!important}}
+/* 그룹이 나뉜 대회 순위표(레전드·라이즈): 그룹마다 작은 제목 */
+.stand h4.grp{font-size:1.25rem;font-weight:700;color:var(--t5);margin:1rem 0 .2rem}
+.stand h4.grp:first-of-type{margin-top:.2rem}
+/* 우승팀 표시는 어디서나 우승 카드와 같은 금색(대회 일정의 'OO 우승' · 국제전 단계 요약 · 진출팀 카드) */
+.twin.win{width:fit-content;align-self:flex-start;padding:.1rem .8rem .1rem .3rem;border-radius:2rem;background:linear-gradient(90deg,#c9971c,#ffd765);color:#2a1d00;font-weight:800;
+ box-shadow:0 0 1rem -.2rem rgba(255,200,40,.6)}
+.twin.win::before{content:"🏆";font-size:1.1rem;margin-right:-.1rem}
+.twin.win .logo{background:#fff;border-radius:50%}
+.wres.twin.win{padding:.2rem .9rem}
+.wres.twin.win::before{content:none}
+.rc.wteam.wchamp{border:1px solid transparent;
+ background:linear-gradient(var(--card),var(--card)) padding-box,linear-gradient(120deg,#8a6a12,#ffe08a,#c9971c,#fff3c4,#8a6a12) border-box;
+ background-size:100% 100%,300% 100%;animation:chEdge 6s linear infinite;box-shadow:0 0 2rem -.6rem rgba(255,200,40,.55)}
+@media (prefers-reduced-motion:reduce){.rc.wteam.wchamp{animation:none!important}}
+/* 시즌 고르기: 2012년부터 모든 시즌(목록이 길어서 스크롤) */
+.ssel ul{max-height:min(60vh,44rem);overflow-y:auto;overscroll-behavior:contain}

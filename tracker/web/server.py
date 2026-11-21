@@ -10,7 +10,7 @@ import urllib.parse
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from .. import archive, champs, chat, diag, farm, feed, jobs, maint, matchinfo, player_extra, riot, schedule, share, teamlogos, vote
+from .. import archive, champs, chat, diag, farm, feed, intl_hist, jobs, maint, matchinfo, player_extra, riot, schedule, share, teamlogos, vote
 from ..cargo import RATE_MSG, is_rate_limit
 from ..config import DEFAULT_LEAGUE, FA_INTERVAL, FEATURES, KST, LEAGUES, NEWS_INTERVAL, PORT, WIKI_INTERVAL, log
 from ..core import db, init_db
@@ -369,6 +369,7 @@ def main():
     riot.start()
     # 지난 시즌 기록이 없으면 한 번 모아 둠(있으면 파일만 읽음). 켜자마자 몰리는 수집과 겹치지 않게 2분 뒤
     archive.start()
+    intl_hist.start()                    # 국제전 지난 기록(월즈 2011~ · MSI 2015~): 한 대회씩 천천히
     teamlogos.start()                    # 해외 팀 로고(일정·선수 커리어). 처음 보는 팀은 뒤에서 2분마다 몇 팀씩
     schedule.start()                     # 일정·결과: 저장해 둔 것부터 보여 주고 1분 뒤부터 새로 받음
     load_static()

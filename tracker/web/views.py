@@ -8,15 +8,15 @@ from datetime import datetime, timedelta, timezone
 from ..cargo import RATE_MSG, is_rate_limit
 from ..classify import article_kind, is_minor_wiki, is_stove, news_teams, wiki_ko
 from ..cluster import group as cluster_group
-from ..rumor import movers, read_title, rumors
-from .. import stove as stv, vote
+from ..rumor import read_title
+from .. import state, stove as stv, vote
 from ..config import (AUTO_MINUTES, DEFAULT_LEAGUE, FEATURES, KST, LEAGUES, NEW_HOURS, SITE_DESC, SITE_NAME, TEAM_COLORS,
                       TEAMS)
 from ..core import STATUS, STATUS_LOCK, WEEKDAYS, db, kst_day_start_utc, norm_title, parse_day, rel_time
 from ..fa import FA_ROLES, fa_since
 from ..filters import is_lol_news, ko_nicks, lck_topic
 from ..insight import is_spoiler, overseas_tag, search_terms, trust
-from ..archive import archive_years, current_season
+from ..archive import archive_years, current_season, recent_years
 from .. import archive, farm as farmd, schedule, teamlogos
 from . import farm_art
 from ..logos import TEAM_LOGOS
@@ -61,6 +61,21 @@ def team_logo(k: str, cls: str = "logo") -> str:
     if src:
         return f'<img class="{cls}" src="{esc(src)}" alt="" width="20" height="20" loading="lazy">'
     return f'<span class="logo txt" aria-hidden="true">{esc(team_short(k)[:1])}</span>'
+
+
+GROUP_KO = {"Legend": "레전드", "Rise": "라이즈", "A": "A", "B": "B"}
+
+
+def champ_banner(event: str, logo: str, name: str, score: str, loser: str, when: str = "", spoil: bool = False) -> str:
+    """우승 카드(금테두리 배너): 리본 · 큰 로고 · 금색 팀 이름 · 트로피 · 결승 점수. spoil=True면 '스포 방지'로 가림(일정·결과 화면).
+    logo·loser는 이미 만든 HTML, 나머지는 글자."""
+    ws, _, ls = (score or "").partition(":")
+    sc = f'<em>{esc(ws)} : {esc(ls)}</em>' if ls else esc(score)
+    tail = f" · {esc(when)}" if when else ""                  # (날짜가 없으면 '· ' 꼬리를 남기지 않음)
+    return (f'<section class="card champ{" sch-champ" if spoil else ""}"><span class="ch-rib">🏆 CHAMPION</span>'
+            f'<div class="ch-row"><span class="ch-lg">{logo}</span><div><small>{esc(event)}</small><b>{esc(name)}</b></div></div>'
+            f'<span class="ch-tro" aria-hidden="true">🏆</span>'
+            f'<p class="sc-hide">결승 {sc} · 상대 {loser}{tail}</p></section>')
 
 
 def team_color(k: str) -> str:
@@ -262,18 +277,26 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
 
 
 def fa_counts():
-    with db() as c:
-        rows = c.execute("SELECT status, COUNT(*) n FROM fa GROUP BY status").fetchall()
-    return {r["status"]: r["n"] for r in rows}
+    """이적 확정·잔류·미정 숫자: 이적 시장 화면과 같은 계산(스냅숏 + 오피셜 기사 반영). 화면마다 숫자가 다르던 문제."""
+    snap = state.get()
+    rms = snap["rumors"]
+    out = {}
+    for r in snap["fa"]:
+        s_ = fa_effective(r, rms.get(r["page"]) if r["status"] == "fa" else None)
+        out[s_] = out.get(s_, 0) + 1
+    return out
 
 
 def roster_rows():
-    with db() as c:
-        return c.execute("SELECT * FROM roster WHERE league='lck'").fetchall()
+    return state.get()["roster"]                  # (모든 화면이 같은 시점의 스냅숏: tracker/state.py)
+
+
+def fa_rows():
+    return state.get()["fa"]
 
 
 ROSTER_SLOTS = ("Top", "Jungle", "Mid", "Bot", "Support", "Head Coach")
-_RM_SLOTS = {"at": 0.0, "val": {}, "out": {}}
+_RM_SLOTS = {"key": None, "val": {}, "out": {}}
 
 
 def roster_leaving() -> dict:
@@ -283,22 +306,19 @@ def roster_leaving() -> dict:
 
 
 def rumor_slots() -> dict:
-    """로스터 카드용 '유력'(뉴스 기준, 공식 확정 전): {팀: {자리: [FA·로스터 행 + 유력 정보]}}. 30초 캐시.
+    """로스터 카드용 '유력'(뉴스 기준): {팀: {자리: [FA·로스터 행 + 유력 정보]}}. 스냅숏(state.get)이 같으면 다시 계산하지 않음.
     FA(계약 만료) 선수 + 계약이 남은 선수의 이적 유력(단독·소식통·오피셜만)."""
-    import time as _t
-    if _t.time() - _RM_SLOTS["at"] < 30:
+    snap = state.get()
+    if _RM_SLOTS["key"] == snap["key"]:
         return _RM_SLOTS["val"]
     out, leaving = {}, {}
     try:
-        with db() as c:
-            fa_rows = c.execute("SELECT * FROM fa WHERE league='lck'").fetchall()
-        rms = rumors(fa_rows)
-        ros = roster_rows()
+        fa_rows, rms, ros = snap["fa"], snap["rumors"], snap["roster"]
         # 리그피디아 로스터에 다른 팀으로 이미 오른 선수는 FA 표가 늦어도 'FA 유력'으로 안 띄움
         # (원래 팀에 계약 끝날 때까지 남아 있는 선수는 그대로: 'DK 로스터에 있는 루시드 → DRX 유력')
         signed = {r["page"]: r["team"] for r in ros}
         people = [(r, rms.get(r["page"])) for r in fa_rows if signed.get(r["page"], r["team_from"]) == r["team_from"]]
-        leaving = movers(ros)
+        leaving = snap["leaving"]
         people += [({**dict(r), "team_from": r["team"]}, leaving.get(r["page"])) for r in ros]
         for r, rm in people:
             if not rm or not rm["team"]:
@@ -309,7 +329,7 @@ def rumor_slots() -> dict:
             out.setdefault(rm["team"], {}).setdefault(slot, []).append({**dict(r), "until": "", "rm": rm, "pos": pos})
     except Exception:  # noqa: BLE001  참고 표시라 실패해도 로스터는 그대로
         out, leaving = {}, {}
-    _RM_SLOTS.update(at=_t.time(), val=out, out=leaving)
+    _RM_SLOTS.update(key=snap["key"], val=out, out=leaving)
     return out
 
 
@@ -902,8 +922,9 @@ def farm_block(board=None) -> str:
 
 
 def render_fa(league: str) -> str:
+    snap = state.get()
+    rows = snap["fa"]
     with db() as c:
-        rows = c.execute("SELECT * FROM fa").fetchall()
         upd = c.execute("SELECT v FROM meta WHERE k='fa_updated'").fetchone()
     today = datetime.now(KST).date()
     keys = team_keys()
@@ -912,7 +933,7 @@ def render_fa(league: str) -> str:
     rows = sorted(rows, key=lambda r: (["move", "stay", "fa"].index(r["status"]) if r["status"] in FA_ST else 9,
                                        korder.get(r["team_from"], 99),
                                        porder.index(r["role"]) if r["role"] in porder else 99, r["nick"].lower()))
-    rms = rumors(rows)
+    rms = snap["rumors"]
     eff = {r["page"]: fa_effective(r, rms.get(r["page"]) if r["status"] == "fa" else None) for r in rows}
     cnt = {s_: sum(1 for r in rows if eff[r["page"]] == s_) for s_ in FA_ST}
     n_rm = sum(1 for r in rows if eff[r["page"]] == "fa" and rms.get(r["page"]) and not rms[r["page"]]["official"])
@@ -1066,13 +1087,12 @@ def people_list():
         out.append({"page": r["page"], "nick": r["nick"], "ko": kmap.get(r["nick"], ""), "real": r["real"] or "",
                     "team": r["team"], "role": r["role"], "st": "roster"})
         seen.add(r["page"])
-    with db() as c:
-        for r in c.execute("SELECT * FROM fa"):
-            if r["page"] in seen:
-                continue
-            out.append({"page": r["page"], "nick": r["nick"], "ko": kmap.get(r["nick"], ""), "real": r["real"] or "",
-                        "team": r["team_to"] or (r["team_from"] if r["status"] == "stay" else ""), "role": r["role"],
-                        "st": r["status"]})
+    for r in fa_rows():
+        if r["page"] in seen:
+            continue
+        out.append({"page": r["page"], "nick": r["nick"], "ko": kmap.get(r["nick"], ""), "real": r["real"] or "",
+                    "team": r["team_to"] or (r["team_from"] if r["status"] == "stay" else ""), "role": r["role"],
+                    "st": r["status"]})
     return out
 
 
@@ -1106,7 +1126,7 @@ def render_builder(league: str, season=None, shared: str = "", by: str = "", cod
 <h2>내맘대로 로스터 <small>{current_season()} 시즌 10개 팀 주전을 직접 골라 보세요</small></h2>
 <p class="src">선수를 고른 뒤 빈칸을 누르세요. PC에서는 끌어다 놓아도 돼요. 짠 로스터는 이 브라우저에 저장되고, 이미지나 링크로 자랑할 수 있어요.</p>
 <div class="bld-act"><button class="btn primary" type="button" id="bsave">이미지로 저장</button><button class="btn" type="button" id="bshare">링크로 공유</button>
-<button class="btn" type="button" id="breset">지금 로스터로 되돌리기</button>{"".join(f'<button class="btn" type="button" data-arch="{y}">{y} 로스터 불러오기</button>' for y in archive_years())}<button class="btn" type="button" id="bclear">모두 비우기</button></div>
+<button class="btn" type="button" id="breset">지금 로스터로 되돌리기</button>{"".join(f'<button class="btn" type="button" data-arch="{y}">{y} 로스터 불러오기</button>' for y in recent_years())}<button class="btn" type="button" id="bclear">모두 비우기</button></div>
 </section>
 <div class="shared-bar" id="bshared" hidden></div>
 <div class="bld">
@@ -1356,9 +1376,14 @@ def league_guide(league: str, opened: bool = False) -> str:
 
 
 # ── 지난 시즌 기록(아카이브) ───────────────────────────────────────────
-def _tname(key, name):
-    return (f'<span class="tm">{team_logo(key)}{esc(team_short(key))}</span>' if key
-            else f'<span class="tm ext">{esc(name or "LCK 밖")}</span>')
+def _tname(key, name, shorts=None):
+    """지난 시즌 팀 이름: 지금 팀이면 로고 + 약칭. 그 당시 이름이 지금과 다르면('SK Telecom T1') 그 당시 약칭(SKT)과 지금 팀 로고."""
+    if key:
+        then = (shorts or {}).get(name)
+        if then and name and name.lower() != (TEAMS.get(key, {}).get("wiki") or "").lower() and then != team_short(key):
+            return f'<span class="tm" title="{esc(name)} (지금 {esc(team_name(key))})">{team_logo(key)}{esc(then)}</span>'
+        return f'<span class="tm">{team_logo(key)}{esc(team_short(key))}</span>'
+    return f'<span class="tm ext" title="{esc(name or "")}">{esc((shorts or {}).get(name) or name or "LCK 밖")}</span>'
 
 
 def render_archive(league: str, sec: str, year: int, t_sel: str = "", inline: bool = False) -> str:
@@ -1367,31 +1392,83 @@ def render_archive(league: str, sec: str, year: int, t_sel: str = "", inline: bo
     d = archive.get(year)
     active = {"": "news", "roster": "roster", "fa": "fa", "schedule": "schedule", "results": "results"}.get(sec, "news")
     title = f"{year} 시즌 기록"
-    if not d:
+    if not d or not (d.get("stages") or d.get("champions") or d.get("tours") or d.get("rosters")):   # 아직 하나도 못 받음
         main = (f'<div class="card soon"><h2>{year} 시즌 기록을 모으는 중이에요</h2>'
-                f'<p>리그피디아에서 순위·로스터·이적 기록을 한 번 받아 저장해 둬요(처음 한 번만, 1~2분).<br>잠시 뒤 새로고침해 주세요.</p></div>')
+                f'<p>리그피디아에서 우승·순위·로스터·이적 기록을 한 해씩 차례로 받아 저장해 둬요(처음 한 번만).<br>'
+                f'방금 이 시즌을 맨 앞으로 옮겼어요. 몇 분 뒤 새로고침해 주세요.</p></div>')
         return shell(league, active, title, (team_toggle(league, "final") if inline else "") + main, (), today,
                      season=None if inline else year)
     stages, champ = d.get("stages") or [], d.get("champion") or {}
     roster, moves = d.get("roster") or [], d.get("moves") or []
+    shorts = d.get("shorts") or {}
+    lg = "LCK" if year >= 2016 else "챔피언스"          # 2015년까지는 OGN 챔피언스
+
+    def _tname(key, name):                           # (그 시즌 약칭으로)
+        return globals()["_tname"](key, name, shorts)
     note = ('<p class="src">일부 기록은 아직 못 받았어요(리그피디아 요청 한도). 30분 뒤 다시 받아요.</p>' if d.get("missing") else "")
 
     def champ_card():
-        if not champ:
-            return ""
-        return (f'<section class="card champ"><div><small>{esc(champ["name"])} 우승</small>'
-                f'<b>{_tname(champ["wkey"], champ["winner"])}</b><p>결승 {esc(champ["score"])} · 상대 {_tname(champ["lkey"], champ["loser"])} · {esc(champ["date"])}</p></div></section>')
+        """우승컵이 걸린 대회마다 우승 카드(최근 대회부터): 2016~2024는 스프링·서머, 2025~ 컵·시즌 플레이오프."""
+        cs_ = d.get("champions") or ([champ] if champ else [])
+        out = ""
+        for c in reversed(cs_):
+            wk = c["wkey"]
+            logo = team_logo(wk) if wk else f'<span class="logo txt" aria-hidden="true">{esc((c["winner"] or "?")[:1])}</span>'
+            name = shorts.get(c["winner"]) if wk and shorts.get(c["winner"]) and c["winner"].lower() != (TEAMS.get(wk, {}).get("wiki") or "").lower() \
+                else (team_short(wk) if wk else shorts.get(c["winner"]) or c["winner"])
+            ev = (f"{year} {lg} " + tour_ko(c["page"], lg).replace(f"{lg} ", "")) if c.get("page") else c["name"]
+            if "Season Playoffs" in c.get("name", "") and not c.get("page"):
+                ev = f"{year} LCK 플레이오프"
+            out += champ_banner(f'{ev} 우승', logo, name, c["score"], _tname(c["lkey"], c["loser"]),
+                                (c.get("date") or "").replace("-", "."))
+        return out
 
     def standings(limit=None):
         out = ""
         for st in reversed(stages):          # 최근 대회부터
-            rows = st["table"][:limit] if limit else st["table"]
-            trs = "".join(
-                f'<tr><td class="pl">{esc(str(r["place"]))}</td><td>{_tname(r["key"], r["team"])}</td>'
-                f'<td>{esc(r["w"])}승 {esc(r["l"])}패</td><td class="gd">{esc(r["gw"])}–{esc(r["gl"])}</td></tr>' for r in rows)
-            out += (f'<section class="card stand"><h3>{esc(st["name"])}</h3><table><thead><tr><th>순위</th><th>팀</th><th>경기</th><th>세트</th></tr></thead>'
-                    f'<tbody>{trs}</tbody></table></section>')
+            def tr(r):
+                return (f'<tr><td class="pl">{esc(str(r["place"]))}</td><td>{_tname(r["key"], r["team"])}</td>'
+                        f'<td>{esc(r["w"])}승 {esc(r["l"])}패</td><td class="gd">{esc(r["gw"])}–{esc(r["gl"])}</td></tr>')
+            head = '<thead><tr><th>순위</th><th>팀</th><th>경기</th><th>세트</th></tr></thead>'
+            groups = st.get("groups") or []
+            if groups:   # 그룹별 순위(레전드·라이즈처럼 나뉜 대회): 그룹마다 1위가 있으니 따로 표
+                body = ""
+                for g in groups:
+                    rows = [r for r in st["table"] if r.get("group") == g]
+                    rows = rows[:limit] if limit else rows
+                    if rows:
+                        body += f'<h4 class="grp">{esc(GROUP_KO.get(g, g))} 그룹</h4><table>{head}<tbody>{"".join(map(tr, rows))}</tbody></table>'
+            else:
+                rows = st["table"][:limit] if limit else st["table"]
+                body = f'<table>{head}<tbody>{"".join(map(tr, rows))}</tbody></table>'
+            out += f'<section class="card stand"><h3>{esc(st["name"])}</h3>{body}</section>'
         return out or '<p class="note">순위표 기록이 없어요.</p>'
+
+    def tours_card_archive():
+        tours = d.get("tours") or []
+        if not tours:
+            return ('<p class="note">대회 일정 기록을 받는 중이에요. 잠시 뒤 새로고침해 주세요. '
+                    f'<a href="/{league}/results?season={year}">결과·순위 보기 →</a></p>')
+        gof = {r["team"]: r.get("group") or "" for st in stages for r in st["table"]}
+
+        def md(x):
+            return f"{x[5:7]}.{x[8:10]}" if len(x or "") >= 10 else "미정"
+
+        lis = ""
+        for t in tours:
+            ws = t.get("winners") or []
+            rounds = not t["title"] if "title" in t else "Rounds" in t["page"]     # 우승컵 대회는 '우승', 정규 대회는 '1위'
+            wins = "".join(
+                f'<small class="twin{"" if rounds else " win"}" title="스포 방지 중이면 눌러서 보기">'
+                f'{esc(GROUP_KO.get(gof.get(w["team"], ""), gof.get(w["team"], "")) + " " if len(ws) > 1 and gof.get(w["team"]) else "")}'
+                f'{_tname(w["key"], w["team"])} {"1위" if rounds else "우승"}</small>'
+                for w in ws)
+            major = t.get("playoff") and "Play-In" not in t["page"]
+            inner = (f'<i class="tdot" aria-hidden="true"></i><span class="tnm"><b>{esc(tour_ko(t["page"], lg))}</b>{wins}</span>'
+                     f'<time>{md(t.get("start"))} ~ {md(t.get("end"))}</time><span class="tst">종료</span>')
+            lis += (f'<li class="done{" major" if major else ""}"><a class="trow" href="/{league}/results?season={year}" '
+                    f'title="결과·순위 보기">{inner}<i class="tgo" aria-hidden="true">›</i></a></li>')
+        return f'<section class="card tours"><h3>{year} {lg} 대회 일정</h3><ul>{lis}</ul></section>'
 
     def moves_list(limit=None):
         items = moves[-limit:] if limit else moves
@@ -1430,7 +1507,10 @@ def render_archive(league: str, sec: str, year: int, t_sel: str = "", inline: bo
     elif active == "fa":
         main = f'{squad_toggle(league, "fa", year)}{note}{moves_list()}'
         scripts = ()
-    elif active in ("schedule", "results"):           # 경기 기록이 없는 지난 시즌: 일정·결과 모두 우승·순위표 기록
+    elif active == "schedule":                        # 경기 기록이 없는 지난 시즌 일정: 그 시즌 대회 일정(기간 · 대회별 1위)
+        main = f'{sched_toggle(league, active, year)}{note}{tours_card_archive()}'
+        scripts = ()
+    elif active == "results":                         # 결과·순위: 우승 · 대회별 순위표
         main = f'{sched_toggle(league, active, year)}{champ_card()}{note}<div class="stands">{standings()}</div>'
         scripts = ()
     else:
@@ -1530,7 +1610,7 @@ def tab_ko(tab: str) -> str:
         if unit:
             return " ".join(words[:-2] + [n + unit])
     return {"Finals": "결승", "Final": "결승", "Semifinals": "준결승", "Quarterfinals": "8강", "Tiebreakers": "타이브레이커",
-            "Third-Place Match": "3·4위전"}.get(t, t)
+            "Third-Place Match": "3·4위전", "5th Place": "5위 결정전"}.get(t, t)
 
 
 def _sch_at(m):
@@ -1718,7 +1798,7 @@ def tours_card(d, year: str, lg_name: str, today, league: str = "") -> str:
             return ""
         m = fin[-1]
         k, n = (m["k1"], m["t1"]) if m["win"] == "1" else (m["k2"], m["t2"])
-        return f'<small class="twin" title="스포 방지 중이면 눌러서 보기">{T.logo(k, n)}{esc(T.short(k, n))} 우승</small>'
+        return f'<small class="twin win" title="스포 방지 중이면 눌러서 보기">{T.logo(k, n)}{esc(T.short(k, n))} 우승</small>'
 
     now = datetime.now(timezone.utc)
     played = {m.get("page") for m in d.get("matches") or [] if _sch_at(m) and _sch_state(m, now) == "done"}
@@ -1838,14 +1918,16 @@ def render_schedule(league: str, pick=None, mode: str = "plan", stage: str = "")
         done_s = [m for m in done_s if m["page"] == st_page]
         season_over = not any(m["page"] == st_page for m in up + live)
     champ = ""
-    fin = [m for m in done_s if (m["playoff"] or st_page) and m["tab"] in ("Finals", "Final") and m["win"] in ("1", "2")]
-    if fin and season_over:
-        m = fin[-1]
+    # 우승 카드: 결승이 끝나고 남은 경기가 없는 대회 중 가장 최근 것(모든 리그 · 컵·스플릿·플레이오프 · 고른 대회)
+    pend = {m["page"] for m in up + live}
+    fin = [m for m in done_s if m["tab"] in ("Finals", "Final") and m["win"] in ("1", "2") and m["page"] not in pend]
+    if fin:
+        m = max(fin, key=_sch_at)
         a, b = ((m["k1"], m["t1"], m["s1"]), (m["k2"], m["t2"], m["s2"]))
         win, lose = (a, b) if m["win"] == "1" else (b, a)
-        champ = (f'<section class="card champ sch-champ"><div><small>{esc(_with_lg(tour_ko(m["page"], lg_name), lg_name))} 우승 · {show}</small>'
-                 f'<b>{T.tname(win[0], win[1])}</b><p class="sc-hide">결승 {esc(win[2])}:{esc(lose[2])} · 상대 {T.tname(lose[0], lose[1])} · '
-                 f'{_sch_at(m).astimezone(KST):%Y.%m.%d}</p></div></section>')
+        champ = champ_banner(f'{_with_lg(tour_ko(m["page"], lg_name), lg_name)} 우승 · {show}', T.logo(win[0], win[1]),
+                           T.short(win[0], win[1]), f"{win[2]}:{lose[2]}", T.tname(lose[0], lose[1]),
+                           f"{_sch_at(m).astimezone(KST):%Y.%m.%d}", spoil=True)
     why = ""
     if not has_pick and show != year:
         why = f'<small>{year} 시즌은 아직 경기 전이라 가장 최근 시즌 결과를 보여 줘요</small>'
@@ -1934,12 +2016,11 @@ def render_summary(league: str) -> str:
     """팀마다 이번 겨울 영입·이탈·재계약(리그피디아 확정)·이적설(기사 제목)·미정. 라벨은 모두 명사(화면 용어)."""
     today = datetime.now(KST).date()
     keys = team_keys()
-    sm = stv.team_summary(keys)
+    snap = state.get()
+    sm = stv.team_summary(keys, snap["fa"], snap["roster"])
     rms = rumor_slots()
     # 리그피디아엔 아직 미정이어도 오피셜 기사가 나온 사람은 이적 시장과 같이 확정으로(잔류 → 재계약 줄, 이적 → 이탈·영입 줄)
-    with db() as c:
-        fa_rows = c.execute("SELECT * FROM fa WHERE league='lck'").fetchall()
-    official = {pg: rm for pg, rm in rumors(fa_rows).items() if rm["official"]}
+    official = {pg: rm for pg, rm in snap["rumors"].items() if rm["official"]}
     for k in keys:
         for p in list(sm[k]["open"]):
             rm = official.get(p["page"])
@@ -2035,9 +2116,8 @@ def render_preview(league: str) -> str:
 def render_predict(league: str) -> str:
     today = datetime.now(KST).date()
     keys = team_keys()
-    with db() as c:
-        fa = [dict(r) for r in c.execute("SELECT * FROM fa WHERE league='lck'").fetchall()]
-    rms = rumors(fa)
+    snap = state.get()
+    fa, rms = snap["fa"], snap["rumors"]
     tal = vote.tally()
     order = lambda r: (keys.index(r["team_from"]) if r["team_from"] in keys else 99, r["role"])   # noqa: E731
 

@@ -81,7 +81,15 @@ class IntegrityTest(unittest.TestCase):
         save([{"id": "news:dj1", "team": "lck", "source": "news", "title": "[단독] '도란' 최현준, 한화생명 합류 유력",
                "url": "https://example.com/dj", "outlet": "OSEN", "published": datetime.now(timezone.utc).isoformat()}])
         try:
-            self.assertTrue(any("로스터엔 dk인데 FA 'hle 유력'" in p for p in integrity.check()))
+            # 로스터 > FA 목록: 스냅숏에서 DK 이적 확정이라 'FA 유력(한화생명)'이 아예 안 생김(모든 화면 같은 말), 운영 알림만 남음
+            from tracker import state
+            state.reset()
+            snap = state.get()
+            self.assertEqual([(r["status"], r["team_to"]) for r in snap["fa"] if r["page"] == "Doran"], [("move", "dk")])
+            self.assertNotIn("Doran", snap["rumors"])
+            probs = integrity.check()
+            self.assertFalse(any("FA 'hle 유력'" in p for p in probs))
+            self.assertTrue(any("FA 목록은 미정인데 로스터엔 dk" in p for p in probs))
         finally:
             with db() as c:
                 c.execute("DELETE FROM items WHERE id='news:dj1'")

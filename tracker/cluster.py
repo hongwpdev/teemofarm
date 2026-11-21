@@ -6,7 +6,7 @@ import time
 from datetime import datetime, timezone
 
 from .core import db
-from .filters import ko_nicks
+from .filters import KO_ALT, ko_nicks
 
 EVENTS = {   # 앞에 있는 것부터 봄
     "renew": ("재계약", "계약 연장", "연장 계약", "동행", "잔류"),
@@ -18,7 +18,7 @@ _QUOTED = re.compile(r"['‘’\"“”]([^'‘’\"“”]{1,30})['‘’\"“�
 
 
 def _ko2en() -> dict:
-    return {v: k.lower() for k, v in ko_nicks().items()}
+    return {**{v: k.lower() for k, v in ko_nicks().items()}, **{ko: en.lower() for ko, en in KO_ALT.items()}}
 _PEOPLE = {"at": 0.0, "real": {}, "en": {}}
 _LOCK = threading.Lock()
 

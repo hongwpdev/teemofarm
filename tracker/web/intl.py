@@ -18,9 +18,10 @@ EVENTS = {
     "ewc": {"name": "EWC", "sub": "e스포츠 월드컵", "full": "e스포츠 월드컵", "news": ("EWC", "e스포츠 월드컵", "E스포츠 월드컵", "이스포츠 월드컵", "Esports World Cup")},
     "worlds": {"name": "WORLDS", "sub": "월드 챔피언십", "full": "월드 챔피언십", "news": ("롤드컵", "월즈", "Worlds", "월드 챔피언십", "World Championship")},
 }
-STAGE_NAME = {"playin": "플레이-인 스테이지", "group": "그룹 스테이지", "swiss": "스위스 스테이지",
+STAGE_NAME = {"playin": "플레이-인 스테이지", "group": "그룹 스테이지", "rumble": "럼블 스테이지", "swiss": "스위스 스테이지",
               "bracket": "브래킷 스테이지", "ko": "녹아웃 스테이지", "main": "본선"}
-ROUND_NAME = {"Finals": "결승", "Final": "결승", "Third-Place Match": "3·4위전", "Semifinals": "4강", "Quarterfinals": "8강"}
+ROUND_NAME = {"Finals": "결승", "Final": "결승", "Third-Place Match": "3·4위전", "Semifinals": "4강", "Quarterfinals": "8강",
+              "5th Place": "5위 결정전"}
 KO_TABS = ("Finals", "Final", "Third-Place Match", "Semifinals", "Quarterfinals")
 # 리그피디아 TournamentRosters의 권역 → 화면 이름(모르는 값은 그대로, 대소문자 무시)
 REGION = {"KR": "LCK", "CN": "LPL", "EMEA": "LEC", "EUW": "LEC", "EU": "LEC", "NA": "LCS", "APAC": "LCP", "PCS": "LCP",
@@ -31,7 +32,9 @@ SPOIL = 'title="스포 방지 중이면 눌러서 보기"'
 
 
 def data() -> dict:
-    return schedule.get(schedule.INTL)
+    """지금 수집(지난해·올해) + 저장해 둔 지난 대회(intl_hist: 월즈 2011~ · MSI 2015~ …)."""
+    from .. import intl_hist
+    return intl_hist.merged(schedule.get(schedule.INTL))
 
 
 def _ev(page: str):
@@ -75,14 +78,19 @@ def kind(m) -> str:
     tab, page = m.get("tab") or "", m.get("page") or ""
     if page.endswith("/Play-In") or tab.startswith("Play-In"):
         return "playin"
-    if tab.startswith("Group"):
+    if tab.startswith("Rumble"):                 # 2021·2022 MSI 럼블 스테이지
+        return "rumble"
+    # 그룹(예전 대회는 'Day 3'·'Tiebreakers'처럼 날짜·동률전 탭)
+    if tab.startswith("Group") or re.fullmatch(r"Day \d+", tab) or tab.startswith("Tiebreaker"):
         return "group"
     if tab.startswith("Bracket") or tab.startswith("Upper") or tab.startswith("Lower"):
         return "bracket"
     if tab in KO_TABS or tab.startswith("Playoffs") or tab.startswith("Knockout"):
         return "ko"
-    if re.fullmatch(r"Round \d+", tab):
-        return "swiss"
+    if re.fullmatch(r"Round \d+", tab):         # 스위스는 2023 월즈부터. 그 전(2011 월즈)의 'Round 1'은 토너먼트
+        return "swiss" if (_ev(page)[1] or "9999") >= "2023" else "ko"
+    if re.fullmatch(r"\d+(?:st|nd|rd|th) Place(?: Match)?", tab):     # '5th Place'(2011 월즈)
+        return "ko"
     return "main"
 
 
@@ -281,8 +289,9 @@ def finish(d, ev, year, today) -> dict:
                 out[k] = {"Semifinals": "4강", "Quarterfinals": "8강"}.get(tab) or V_tab(tab) + " 탈락"
             elif s["key"] == "bracket" and lo and k == lo[0] and s["status"] == "done":   # 더블 엘리미네이션: 끝난 뒤 마지막 패배
                 out[k] = V_tab(tab) + " 탈락"
-            elif s["key"] in ("playin", "group", "swiss", "main") and s["status"] == "done" and k not in later:
-                out[k] = {"playin": "플레이-인 탈락", "group": "그룹 스테이지 탈락", "swiss": "스위스 탈락"}.get(s["key"], "탈락")
+            elif s["key"] in ("playin", "group", "rumble", "swiss", "main") and s["status"] == "done" and k not in later:
+                out[k] = {"playin": "플레이-인 탈락", "group": "그룹 스테이지 탈락", "rumble": "럼블 스테이지 탈락",
+                          "swiss": "스위스 탈락"}.get(s["key"], "탈락")
     return out
 
 
@@ -300,8 +309,8 @@ def timeline(d, ev, year, today, T) -> str:
         summary = ""
         if s["key"] in ("ko", "bracket") and champion(s["ms"]):
             c = champion(s["ms"])
-            summary = f'<small class="twin" {SPOIL}>{T.logo(*c)}{T.short(*c)} 우승</small>'
-        elif s["key"] in ("playin", "group", "swiss") and s["status"] == "done":
+            summary = f'<small class="twin win" {SPOIL}>{T.logo(*c)}{T.short(*c)} 우승</small>'
+        elif s["key"] in ("playin", "group", "rumble", "swiss") and s["status"] == "done":
             up = sorted(_later_teams(ss, i) & {k for m in s["ms"] for k in (m["k1"], m["k2"])})
             names = {m[f"k{j}"]: m[f"t{j}"] for m in s["ms"] for j in (1, 2)}
             if up:
@@ -408,8 +417,8 @@ def render(ev: str, sec: str, pick=None) -> str:
         fin = [m for m in ms if m.get("tab") in ("Finals", "Final") and _winner(m)][-1]
         lo = _loser(fin)
         ws, ls = (fin["s1"], fin["s2"]) if fin["win"] == "1" else (fin["s2"], fin["s1"])
-        out += (f'<section class="card champ sch-champ"><div><small>{year} {E["full"]} 우승</small><b>{T.tname(*c)}</b>'
-                f'<p class="sc-hide">결승 {ws}:{ls} · 상대 {T.tname(*lo)} · {_at(fin).astimezone(KST):%Y.%m.%d}</p></div></section>')
+        out += V.champ_banner(f'{year} {E["full"]} 우승', T.logo(*c), T.short(*c), f"{ws}:{ls}", T.tname(*lo),
+                            f"{_at(fin).astimezone(KST):%Y.%m.%d}", spoil=True)
     ss = stages(d, ev, year, today)
     for i in range(len(ss) - 1, -1, -1):
         s = ss[i]
@@ -476,9 +485,10 @@ def teams(ev, year, d, T, V, today) -> str:
                             for role, link in r["players"] if role in ROLE_KO)
             coach = ", ".join(_pname(link) for role, link in r["players"] if role not in ROLE_KO)
             tc = V.team_color(k) if k in V.TEAMS else "var(--line)"
-            badge = f'<span class="fill wres twin" {SPOIL}>{res}</span>' if res else ""
+            won = res == "우승"                                     # 우승팀 카드는 금색(우승 카드와 같은 색)
+            badge = f'<span class="fill wres twin{" win" if won else ""}" {SPOIL}>{"🏆 " if won else ""}{res}</span>' if res else ""
             coach_p = f'<p class="wcoach">코치 {V.esc(coach)}</p>' if coach else ""
-            cards += (f'<article class="rc wteam" style="--tc:{tc}"><header>{T.logo(k, r["team"])}'
+            cards += (f'<article class="rc wteam{" wchamp" if won else ""}" style="--tc:{tc}"><header>{T.logo(k, r["team"])}'
                       f'<div><b>{V.esc(T.short(k, r["team"]))}</b><small>{V.esc(T.full(k, r["team"]))}</small></div>{badge}</header>'
                       f'<ul>{cells}</ul>{coach_p}</article>')
         out += f'<section class="wreg"><h3 class="wreg-h">{V.esc(rg)} <small>{len(by[rg])}팀</small></h3><div class="rgrid wgrid">{cards}</div></section>'

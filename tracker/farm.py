@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from . import schedule
 from .config import KST, TEAMS
 from .core import db
-from .rumor import called_off, movers, rumors
+from . import state
 
 LOCK_MIN = 10            # 경기 시작 몇 분 전까지 심을 수 있나
 BONUS_UNDER = 0.30       # 이 비율 미만 쪽에 심어서 맞히면 역배
@@ -43,10 +43,11 @@ def sync(force=False):
     _SYNC["at"] = time.time()
     now = _now().isoformat()
     with db() as c:
-        fa = [dict(r) for r in c.execute("SELECT * FROM fa WHERE league='lck'")]
+        snap = state.get()                      # 화면과 같은 시점의 스냅숏(tracker/state.py)
+        fa = snap["fa"]
         st = {r["page"]: r for r in fa}
         # 1) 유력 기사 → 판(같은 선수·같은 팀·같은 방향은 한 판)
-        for page, rm in rumors(fa).items():
+        for page, rm in snap["rumors"].items():
             r = st.get(page)
             if not r or r["status"] != "fa" or not rm.get("team"):
                 continue
@@ -55,8 +56,8 @@ def sync(force=False):
                 continue                               # 같은 사람·같은 행선지 판이 이미 있음(로스터에 있을 때 만든 판)
             _put(c, iid, page, r["nick"], r["team_from"], rm, now)
         # 1-2) 계약이 남은 선수의 이적 유력('커리어 DK → 한화생명') → 판
-        roster = [dict(r) for r in c.execute("SELECT * FROM roster WHERE league='lck'")]
-        for page, rm in movers(roster).items():
+        roster = snap["roster"]
+        for page, rm in snap["leaving"].items():
             r = next((x for x in roster if x["page"] == page), None)
             if not r or not rm.get("team") or rm["team"] == r["team"]:
                 continue
@@ -64,7 +65,7 @@ def sync(force=False):
                 continue
             _put(c, f"mv:{page}:{rm['team']}", page, r["nick"], r["team"], rm, now)
         # 1-3) 더 새 기사가 그 행선지를 '무산·결렬'이라 하면 새로 심기는 마감(결과는 계속 리그피디아 기준)
-        off = called_off(fa, roster)
+        off = snap["off"]
         for it in [dict(r) for r in c.execute("SELECT id, page, b, tag FROM farm_items WHERE result IS NULL AND kind='rumor'")]:
             tag = it["tag"] or ""
             if "발표" in tag or "무산" in tag:

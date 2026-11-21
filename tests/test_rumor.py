@@ -244,5 +244,70 @@ class RumorTest(unittest.TestCase):
         self.assertIsNone(read_title("[단독] 한화생명, '기인' 김기인 영입", "Canyon", "geng"))
 
 
+class FuzzFoundTest(unittest.TestCase):
+    """무작위 대량 시험(tools/fuzz_data.py)에서 찾은 오류들."""
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+        from tracker.core import db
+        from tracker.filters import KO_NICKS
+        from tracker import cluster, filters
+        with db() as c:
+            c.executemany("INSERT OR IGNORE INTO fa(page,nick,real,team_from,role,status,team_to,team_to_name,until,date,memo) "
+                          "VALUES(?,?,'','hle','Top','fa','','','','','')", [(n, n) for n in KO_NICKS])
+        filters._NAMES["at"] = cluster._PEOPLE["at"] = 0.0
+
+    def test_cut_team_name(self):
+        # 'DNS'를 잘라 'NS'(농심)로 읽어서 농심 출신 선수의 DNS 영입을 놓치던 문제
+        self.assertEqual(read_title("[오피셜] DNS, '스매시' 영입", "Smash", "ns"), ("dns", False))
+
+    def test_denial_is_not_rumor(self):
+        self.assertIsNone(read_title("브리온 \"'빈' 영입설 사실무근\"", "Bin", "t1"))
+        self.assertIsNone(read_title("T1 '테디' 재계약 협상 난항", "Teddy", "t1"))
+
+    def test_dest_after_name(self):
+        t = "[스토브리그 정리] '스펀지' DN 수퍼스행·'클리어' kt 롤스터행"
+        self.assertEqual(read_title(t, "Sponge", "ns"), ("dns", False))
+        self.assertEqual(read_title(t, "Clear", "ns"), ("kt", False))
+        self.assertEqual(read_title("‘구마유시’, 디플러스 기아로 가나", "Gumayusi", "hle"), ("dk", False))
+        self.assertIsNone(read_title("'구마유시' T1 행사 참석", "Gumayusi", "hle"))     # '행사'는 행선지가 아님
+
+    def test_origin_team_is_not_destination(self):
+        self.assertEqual(read_title("KT, T1 출신 사루 데려온다", "Saroo", "t1"), ("kt", False))
+        self.assertEqual(read_title("한화생명e스포츠, DNS 출신 루스터 데려온다", "Rooster", "dns"), ("hle", False))
+        self.assertEqual(read_title("DK, 전 DRX 감독 '사루' 선임", "Saroo", "drx"), ("dk", False))
+
+    def test_name_inside_other_name(self):
+        # '빈센조' 속 '빈'을 빈으로 보던 문제
+        self.assertEqual(read_title("디플러스 기아, ‘빈센조’ 떠나보내고 '빈' 영입", "Bin", "drx"), ("dk", False))
+
+    def test_leave_word_of_other_person(self):
+        # '옴므 떠난'은 옴므 얘기, 모글리는 승격(잔류)
+        self.assertEqual(read_title("[오피셜] '옴므' 떠난 한화생명, '모글리' 이재하 감독 승격", "Mowgli", "hle"), ("hle", True))
+        self.assertIsNone(read_title("[오피셜] 젠지, '기인' 김기인·'캐니언' 김건부와 3년 동행 마침표", "Kiin", "geng"))
+
+    def test_more_words(self):
+        self.assertEqual(read_title("디플러스 기아, FA ‘꿍’ 품었다", "Ggoong", "t1"), ("dk", False))
+        self.assertEqual(read_title("농심, ‘미닛’ 붙잡았다", "Minit", "ns"), ("ns", True))
+        self.assertEqual(read_title("제우스 T1과 3년 계약 소식에 팬들 관심", "Zeus", "hle"), ("t1", False))
+        self.assertEqual(read_title("DK, '쇼메이커' 허수 재계약…'스매쉬'·김대호 감독도 잔류 [공식]", "Smash", "dk"), ("dk", True))
+        self.assertEqual(read_title("Diable to stay at Nongshim RedForce", "Diable", "ns"), ("ns", True))
+        self.assertEqual(read_title("OKSavingsBank BRION announce Daystar as new mid laner", "Daystar", "kt"), ("bro", False))
+
+    def test_real_headlines(self):
+        # 실제 기사 68건(사람이 정답을 매김): 엉뚱한 팀·헛유력은 0, 놓침은 2건까지(특이한 말투 2개)
+        import json
+        path = os.path.join(os.path.dirname(__file__), "fixtures", "real_titles_2026.json")
+        bad = {"wrong": [], "false+": [], "miss": []}
+        for x in json.load(open(path, encoding="utf-8")):
+            want = tuple(x["want"]) if x["want"] else None
+            got = read_title(x["title"], x["nick"], x["from"])
+            if got != want:
+                bad["wrong" if got and want else "false+" if got else "miss"].append((x["title"], x["nick"], got))
+        self.assertEqual(bad["wrong"], [])
+        self.assertEqual(bad["false+"], [])
+        self.assertLessEqual(len(bad["miss"]), 2, bad["miss"])
+
+
 if __name__ == "__main__":
     unittest.main()

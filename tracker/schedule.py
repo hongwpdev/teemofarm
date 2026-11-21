@@ -31,10 +31,10 @@ INTL = "intl"        # 국제전(퍼스트 스탠드·MSI·EWC·월즈): LCK 팀
 INTL_LEAGUES = ("First Stand", "Mid-Season Invitational", "World Championship", "Esports World Cup")
 # 국제전 메뉴 하나 = 리그피디아 대회 문서 이름 규칙 하나(연도는 문서 이름에서 읽음. 쇼매치 같은 곁가지 문서는 뺌)
 INTL_EVENTS = {
-    "fst": re.compile(r"^(\d{4}) First Stand(?:/|$)"),
+    "fst": re.compile(r"^(\d{4}) First Stand(?:/|:|$)"),        # ('2027 First Stand: All In'처럼 부제가 붙기도)
     "msi": re.compile(r"^(\d{4}) Mid-Season Invitational(?:/|$)"),
     "ewc": re.compile(r"^Esports World Cup (\d{4})(?:/|$)"),
-    "worlds": re.compile(r"^(\d{4}) Season World Championship(?:/|$)"),
+    "worlds": re.compile(r"^(?:(\d{4}) Season|Season (\d)) World Championship(?:/|$)"),   # 2013년까지는 'Season 3 World Championship'
 }
 
 
@@ -45,7 +45,8 @@ def intl_event(page: str):
     for k, rx in INTL_EVENTS.items():
         m = rx.match(page or "")
         if m:
-            return k, m.group(1)
+            y = next(g for g in m.groups() if g)
+            return k, (str(2010 + int(y)) if len(y) == 1 else y)       # 'Season 1' → 2011
     return None, ""
 
 

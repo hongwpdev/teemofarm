@@ -150,7 +150,7 @@ class ScheduleTest(unittest.TestCase):
              "matches": [{**_m("Gen.G", "BNK FEARX", "2026-03-01 08:00:00", "1", "3", "0", page="LCK/2026 Season/Cup", tab="Finals"),
                           "k1": "geng", "k2": "bfx"}]}
         html = views.tours_card(d, "2026", "LCK", today)
-        self.assertRegex(html, r'<li class="done">.*?LCK 컵.*?class="twin".*?GEN 우승.*?01\.14 ~ 03\.01.*?종료')
+        self.assertRegex(html, r'<li class="done">.*?LCK 컵.*?class="twin win".*?GEN 우승.*?01\.14 ~ 03\.01.*?종료')
         self.assertIn('<li class="now"><div class="trow"><i class="tdot"', html)  # 플레이-인은 큰 무대 아님, 끝난 경기 없으면 링크 없음
         self.assertRegex(html, r'<li class="up major">.*?플레이오프.*?D-2<')
         self.assertEqual(html.count("우승"), 1)                                # 결승이 없는(아직 안 끝난) 대회엔 우승팀 없음
@@ -178,6 +178,27 @@ class ScheduleTest(unittest.TestCase):
         self.assertIn('data-t="c-team"', res)
         self.assertIn('class="mt done"', res)
         self.assertNotIn('class="mt up"', res)
+
+    def test_every_finished_tournament_gets_banner(self):
+        # 모든 리그: 시즌이 안 끝났어도 결승이 끝난 대회(스플릿 1)의 우승자는 금색 우승 카드로. 진행 중인 대회엔 없음
+        now = datetime.now(timezone.utc)
+        s1, s2 = "LPL/2027 Season/Split 1 Playoffs", "LPL/2027 Season/Split 2"
+        fin = _m("A Team", "B Team", _f(now - timedelta(days=20)), "1", "3", "1", page=s1, tab="Finals")
+        fin.update(k1="a-team", k2="b-team", playoff=True)
+        ms = [fin, _m("C", "D", _f(now - timedelta(days=1)), "2", "0", "2", page=s2), _m("E", "F", _f(now + timedelta(days=1)), page=s2)]
+        old = dict(schedule.DATA)
+        try:
+            schedule.DATA = {"lpl": {"season": 2027, "current": True, "at": now.isoformat(), "standings": {}, "matches": ms,
+                                     "teams": {"a-team": {"name": "A Team", "short": "AT"}, "b-team": {"name": "B Team", "short": "BT"}}}}
+            res = views.render_schedule("lpl", None, "results")
+            card = res[res.index('class="card champ sch-champ"'):].split("</section>")[0]
+            self.assertIn("🏆 CHAMPION", card)
+            self.assertIn("<b>AT</b>", card)
+            self.assertIn("<em>3 : 1</em>", card)
+            ms[0] = {**fin, "tab": "Semifinals"}                       # 결승 전이면 우승 카드 없음
+            self.assertNotIn("CHAMPION", views.render_schedule("lpl", None, "results"))
+        finally:
+            schedule.DATA = old
 
 
 if __name__ == "__main__":

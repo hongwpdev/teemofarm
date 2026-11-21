@@ -225,6 +225,17 @@ def fill_from_fa(rows, fa_rows, teams) -> list:
     (재계약한 쇼메이커·스매쉬·킹겐·칼릭스가 로스터엔 빈자리로 보이던 문제. FA 목록과 로스터가 같은 말을 하게)
     rows: roster 행 튜플(league, team, role, page, nick, real, until, joined), fa_rows: fa 행 튜플."""
     rows = list(rows)
+    # 이적 확정(FA 목록)인데 리그피디아 로스터엔 아직 옛 팀에 남아 있는 사람: 옛 팀 계약이 끝났으면(계약 기간이 없거나 이적 확정일 이전)
+    # 이적이 더 새 소식이라 옛 팀 줄을 뺌(두 팀 카드에 한꺼번에 보이던 문제). 옛 팀 계약이 남아 있으면 로스터가 우선이라 그대로 둠
+    moved = {r[0]: r for r in fa_rows if r[5] == "move" and r[6] in teams}
+    keep = []
+    for r in rows:
+        m = moved.get(r[3])
+        if m and r[1] != m[6] and r[1] == m[3] and (r[6] or "") <= (m[9] or "")[:10]:
+            continue
+        keep.append(r)
+    rows = keep
+    on_other = {r[3]: r[1] for r in rows}
     have = {(r[1], r[3]) for r in rows} | {(r[1], r[4].lower()) for r in rows}
     has_coach = {r[1] for r in rows if r[2] == "Head Coach"}
     for r in fa_rows:
@@ -232,6 +243,8 @@ def fill_from_fa(rows, fa_rows, teams) -> list:
             continue
         team = r[6] if r[5] == "move" else r[3]
         if team not in teams or (team, r[0]) in have or (team, (r[1] or "").lower()) in have:
+            continue
+        if on_other.get(r[0]) and on_other[r[0]] != team:     # 다른 팀 계약이 남아 있음(로스터 우선): 두 팀에 넣지 않음
             continue
         if r[4] == "Head Coach":              # 감독: 그 팀에 감독이 없을 때만
             if team in has_coach:

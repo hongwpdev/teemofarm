@@ -1,0 +1,551 @@
+[
+ {
+  "title": "[오피셜] 젠지 떠난 ‘린’ 김다빈 코치, 농심 합류",
+  "nick": "Lyn",
+  "from": "geng",
+  "want": [
+   "ns",
+   false
+  ]
+ },
+ {
+  "title": "[오피셜] T1 떠난 ‘도란’ 최현준, DK 유니폼 입는다… ‘카나비’와 함께 상체 구축",
+  "nick": "Doran",
+  "from": "t1",
+  "want": [
+   "dk",
+   false
+  ]
+ },
+ {
+  "title": "[오피셜] 디플러스 기아, '도란-카나비' 영입으로 막강한 상체 구축",
+  "nick": "Doran",
+  "from": "t1",
+  "want": [
+   "dk",
+   false
+  ]
+ },
+ {
+  "title": "[오피셜] 디플러스 기아, '도란-카나비' 영입으로 막강한 상체 구축",
+  "nick": "Kanavi",
+  "from": "hle",
+  "want": [
+   "dk",
+   false
+  ]
+ },
+ {
+  "title": "[단독] '딜라이트', 새로운 파트너는 '스매쉬'?...DK행 유력",
+  "nick": "Delight",
+  "from": "hle",
+  "want": [
+   "dk",
+   false
+  ]
+ },
+ {
+  "title": "[단독] ‘카나비’ 서진혁, ‘씨맥’ 품으로 가나… DK행 유력, 최종 협상 진행 중",
+  "nick": "Kanavi",
+  "from": "hle",
+  "want": [
+   "dk",
+   false
+  ]
+ },
+ {
+  "title": "[단독] ‘카나비’ 서진혁, ‘씨맥’ 품으로 가나… DK 행 유력, 최종 협상 진행 중",
+  "nick": "Kanavi",
+  "from": "hle",
+  "want": [
+   "dk",
+   false
+  ]
+ },
+ {
+  "title": "[단독] '루시드' 최용혁, 친정팀 떠나 키움 DRX행 유력",
+  "nick": "Lucid",
+  "from": "dk",
+  "want": [
+   "drx",
+   false
+  ]
+ },
+ {
+  "title": "[단독] T1 떠난 '도란' 최현준, 차기 행선지는 디플러스 기아 유력",
+  "nick": "Doran",
+  "from": "t1",
+  "want": [
+   "dk",
+   false
+  ]
+ },
+ {
+  "title": "[소식통] ‘루시드’ 최용혁, 2027 시즌에 키움 DRX에 합류 예정",
+  "nick": "Lucid",
+  "from": "dk",
+  "want": [
+   "drx",
+   false
+  ]
+ },
+ {
+  "title": "[단독] ‘듀로’ 주민규, DRX 전격 이적… 전면 리빌딩 가닥 잡은 젠지 벗어나 새 출발",
+  "nick": "Duro",
+  "from": "geng",
+  "want": [
+   "drx",
+   false
+  ]
+ },
+ {
+  "title": "DK, '쇼메이커' 허수 재계약…'스매쉬'·김대호 감독도 잔류 [공식]",
+  "nick": "ShowMaker",
+  "from": "dk",
+  "want": [
+   "dk",
+   true
+  ]
+ },
+ {
+  "title": "DK, '쇼메이커' 허수 재계약…'스매쉬'·김대호 감독도 잔류 [공식]",
+  "nick": "Smash",
+  "from": "dk",
+  "want": [
+   "dk",
+   true
+  ]
+ },
+ {
+  "title": "[오피셜] 농심, '표식-안딜' 영입 발표...주전 5인 완성",
+  "nick": "Pyosik",
+  "from": "dns",
+  "want": [
+   "ns",
+   false
+  ]
+ },
+ {
+  "title": "[오피셜] 농심, '표식-안딜' 영입 발표...주전 5인 완성",
+  "nick": "Andil",
+  "from": "",
+  "want": [
+   "ns",
+   false
+  ]
+ },
+ {
+  "title": "[단독] '커리어' 오형석, DK 떠나 한화생명 서포터로",
+  "nick": "Career",
+  "from": "dk",
+  "want": [
+   "hle",
+   false
+  ]
+ },
+ {
+  "title": "[오피셜] kt 롤스터, '랩터' 전어진 영입",
+  "nick": "Raptor",
+  "from": "bfx",
+  "want": [
+   "kt",
+   false
+  ]
+ },
+ {
+  "title": "[오피셜] 돌아온 '데프트', 농심에서 LCK 복귀",
+  "nick": "Deft",
+  "from": "",
+  "want": [
+   "ns",
+   false
+  ]
+ },
+ {
+  "title": "[오피셜] '도란' 최현준, T1과 동행 마무리",
+  "nick": "Doran",
+  "from": "t1",
+  "want": null
+ },
+ {
+  "title": "농심 ‘칼릭스’ 이어 ‘킹겐’도 잡았다…2028년까지 계약, 2027시즌 로스터 재편 시작",
+  "nick": "Calix",
+  "from": "ns",
+  "want": [
+   "ns",
+   true
+  ]
+ },
+ {
+  "title": "농심 ‘칼릭스’ 이어 ‘킹겐’도 잡았다…2028년까지 계약, 2027시즌 로스터 재편 시작",
+  "nick": "Kingen",
+  "from": "ns",
+  "want": [
+   "ns",
+   true
+  ]
+ },
+ {
+  "title": "[단독] ‘기인’ ‘캐니언’ 빠진 젠지, 탑 ‘시우’ 유력…정글 ‘샤벨’-‘카나비’ 두고 고심",
+  "nick": "Siwoo",
+  "from": "dk",
+  "want": [
+   "geng",
+   false
+  ]
+ },
+ {
+  "title": "[단독] ‘기인’ ‘캐니언’ 빠진 젠지, 탑 ‘시우’ 유력…정글 ‘샤벨’-‘카나비’ 두고 고심",
+  "nick": "Kiin",
+  "from": "geng",
+  "want": null
+ },
+ {
+  "title": "[단독] ‘기인’ ‘캐니언’ 빠진 젠지, 탑 ‘시우’ 유력…정글 ‘샤벨’-‘카나비’ 두고 고심",
+  "nick": "Canyon",
+  "from": "geng",
+  "want": null
+ },
+ {
+  "title": "[단독] ‘기인’ ‘캐니언’ 빠진 젠지, 탑 ‘시우’ 유력…정글 ‘샤벨’-‘카나비’ 두고 고심",
+  "nick": "Kanavi",
+  "from": "hle",
+  "want": null
+ },
+ {
+  "title": "[단독] ‘기인’ ‘캐니언’ 빠진 젠지, 탑 ‘시우’ 유력…정글 ‘샤벨’-‘카나비’ 두고 고심",
+  "nick": "Sharvel",
+  "from": "dns",
+  "want": null
+ },
+ {
+  "title": "Thank You! 리그 오브 레전드 HLE 탑 Zeus 계약 만료로 퇴단, 친정팀 T1과 3년 계약 합의 보도",
+  "nick": "Zeus",
+  "from": "hle",
+  "want": [
+   "t1",
+   false
+  ]
+ },
+ {
+  "title": "[소식통] '시우' 전시우, 2027 LCK 시즌 젠지 합류 예정",
+  "nick": "Siwoo",
+  "from": "dk",
+  "want": [
+   "geng",
+   false
+  ]
+ },
+ {
+  "title": "[오피셜] 한화생명, '카나비' 서진혁도 계약 종료",
+  "nick": "Kanavi",
+  "from": "hle",
+  "want": null
+ },
+ {
+  "title": "[오피셜] '제우스' 최우제, 한화생명과 계약 종료, T1 리턴하나",
+  "nick": "Zeus",
+  "from": "hle",
+  "want": [
+   "t1",
+   false
+  ]
+ },
+ {
+  "title": "제우스 T1과 3년 계약 소식에 팬들 관심",
+  "nick": "Zeus",
+  "from": "hle",
+  "want": [
+   "t1",
+   false
+  ]
+ },
+ {
+  "title": "‘디아블’ 남대근 “농심 트레이드? 어쩌면 롤드컵 갈 수 있는 유일한 수” [쿠키인터뷰]",
+  "nick": "Diable",
+  "from": "bfx",
+  "want": null
+ },
+ {
+  "title": "[소식통] '제우스' 최우제, T1과 3년 계약 합의",
+  "nick": "Zeus",
+  "from": "hle",
+  "want": [
+   "t1",
+   false
+  ]
+ },
+ {
+  "title": "[소식통] '루스터' 신윤환, 2027 LEC 시즌 G2 이스포츠 합류 예정",
+  "nick": "Rooster",
+  "from": "hle",
+  "want": null
+ },
+ {
+  "title": "[단독] 한화생명, ‘기인’ 김기인·'캐니언' 김건부 영입",
+  "nick": "Kiin",
+  "from": "geng",
+  "want": [
+   "hle",
+   false
+  ]
+ },
+ {
+  "title": "[단독] 한화생명, ‘기인’ 김기인·'캐니언' 김건부 영입",
+  "nick": "Canyon",
+  "from": "geng",
+  "want": [
+   "hle",
+   false
+  ]
+ },
+ {
+  "title": "친정 T1 울린 제우스·구마유시…한화생명, LCK 3연속 결승 진출 [쿠키 현장]",
+  "nick": "Zeus",
+  "from": "hle",
+  "want": null
+ },
+ {
+  "title": "친정 T1 울린 제우스·구마유시…한화생명, LCK 3연속 결승 진출 [쿠키 현장]",
+  "nick": "Gumayusi",
+  "from": "hle",
+  "want": null
+ },
+ {
+  "title": "젠지 3년째 '땡큐 캐니언'...올해는 기인도 함께",
+  "nick": "Canyon",
+  "from": "geng",
+  "want": null
+ },
+ {
+  "title": "[오피셜] '킹겐' 황성훈, 농심과 재계약",
+  "nick": "Kingen",
+  "from": "ns",
+  "want": [
+   "ns",
+   true
+  ]
+ },
+ {
+  "title": "[오피셜] 정글러 '빈센조' 하승민, BFX 합류",
+  "nick": "Vincenzo",
+  "from": "dns",
+  "want": [
+   "bfx",
+   false
+  ]
+ },
+ {
+  "title": "[오피셜] 농심, '칼릭스' 선현빈과 2028년까지",
+  "nick": "Calix",
+  "from": "ns",
+  "want": [
+   "ns",
+   true
+  ]
+ },
+ {
+  "title": "[오피셜] 한진 브리온, 미드 '세탭' 송경진 영입",
+  "nick": "SeTab",
+  "from": "drx",
+  "want": [
+   "bro",
+   false
+  ]
+ },
+ {
+  "title": "한화생명e스포츠, ‘모글리’ 이재하를 2027시즌 감독으로",
+  "nick": "Mowgli",
+  "from": "hle",
+  "want": [
+   "hle",
+   true
+  ]
+ },
+ {
+  "title": "[오피셜] '옴므' 떠난 한화생명, '모글리' 이재하 감독 승격",
+  "nick": "Homme",
+  "from": "hle",
+  "want": null
+ },
+ {
+  "title": "[오피셜] '옴므' 떠난 한화생명, '모글리' 이재하 감독 승격",
+  "nick": "Mowgli",
+  "from": "hle",
+  "want": [
+   "hle",
+   true
+  ]
+ },
+ {
+  "title": "'모글리' 이재하, 코치에서 한화생명 감독으로 승격 [공식]",
+  "nick": "Mowgli",
+  "from": "hle",
+  "want": [
+   "hle",
+   true
+  ]
+ },
+ {
+  "title": "[단독] 한화생명e스포츠, '손스타·라이프' 코치 합류 유력",
+  "nick": "Sonstar",
+  "from": "kt",
+  "want": [
+   "hle",
+   false
+  ]
+ },
+ {
+  "title": "[단독] 한화생명e스포츠, '손스타·라이프' 코치 합류 유력",
+  "nick": "Life",
+  "from": "dns",
+  "want": [
+   "hle",
+   false
+  ]
+ },
+ {
+  "title": "'커즈' 문우찬의 2027 LCK는 'DN 수퍼스'",
+  "nick": "Cuzz",
+  "from": "kt",
+  "want": [
+   "dns",
+   false
+  ]
+ },
+ {
+  "title": "[오피셜] '커즈' 문우찬, kt 롤스터 떠났다",
+  "nick": "Cuzz",
+  "from": "kt",
+  "want": null
+ },
+ {
+  "title": "[소식통] '커즈' 문우찬, 2027 시즌 DN 수퍼스에 합류 예정",
+  "nick": "Cuzz",
+  "from": "kt",
+  "want": [
+   "dns",
+   false
+  ]
+ },
+ {
+  "title": "[단독] '엄티' 엄성현, 2027 시즌 T1 코치진 합류 유력",
+  "nick": "Umti",
+  "from": "",
+  "want": [
+   "t1",
+   false
+  ]
+ },
+ {
+  "title": "[단독] '너구리' 장하권, 4년 만의 현역 복귀 타진",
+  "nick": "Nuguri",
+  "from": "",
+  "want": null
+ },
+ {
+  "title": "DN 수퍼스, ‘꿍’ 유병준 감독과 ‘미닛’ 양현민 코치와 재계약",
+  "nick": "Ggoong",
+  "from": "dns",
+  "want": [
+   "dns",
+   true
+  ]
+ },
+ {
+  "title": "DN 수퍼스, ‘꿍’ 유병준 감독과 ‘미닛’ 양현민 코치와 재계약",
+  "nick": "Minit",
+  "from": "dns",
+  "want": [
+   "dns",
+   true
+  ]
+ },
+ {
+  "title": "[단독] '로치' 김강희, 친정팀 T1 감독으로 복귀 가닥",
+  "nick": "Roach",
+  "from": "hle",
+  "want": [
+   "t1",
+   false
+  ]
+ },
+ {
+  "title": "[단독] e스포츠 ‘제우스’ 최우제, T1 복귀설…해외서 2+1년 계약 보도",
+  "nick": "Zeus",
+  "from": "hle",
+  "want": [
+   "t1",
+   false
+  ]
+ },
+ {
+  "title": "[오피셜] '두두' 이동주, DN 수퍼스와 28년까지 동행… \"보답하고 싶다\"",
+  "nick": "DuDu",
+  "from": "dns",
+  "want": [
+   "dns",
+   true
+  ]
+ },
+ {
+  "title": "2027 LCK에도 DK의 심장 '쇼메이커 허수'",
+  "nick": "ShowMaker",
+  "from": "dk",
+  "want": [
+   "dk",
+   true
+  ]
+ },
+ {
+  "title": "‘스카웃’ 이예찬이 11년 동안 깨달은 것 [쿠키인터뷰]",
+  "nick": "Scout",
+  "from": "ns",
+  "want": null
+ },
+ {
+  "title": "농심 레드포스, '리헨즈' 손시우ㆍ'스카웃' 이예찬 등 선수 6명과 계약 종료 [공식]",
+  "nick": "Lehends",
+  "from": "ns",
+  "want": null
+ },
+ {
+  "title": "농심 레드포스, '리헨즈' 손시우ㆍ'스카웃' 이예찬 등 선수 6명과 계약 종료 [공식]",
+  "nick": "Scout",
+  "from": "ns",
+  "want": null
+ },
+ {
+  "title": "키움 DRX, '에이밍' 김하람ㆍ'유칼' 손우현 등 선수 8명과 계약 종료 [공식]",
+  "nick": "Aiming",
+  "from": "drx",
+  "want": null
+ },
+ {
+  "title": "[오피셜] BNK 피어엑스, '클리어·랩터·태윤·켈린'과 계약 종료",
+  "nick": "Clear",
+  "from": "bfx",
+  "want": null
+ },
+ {
+  "title": "[오피셜] BNK 피어엑스, '클리어·랩터·태윤·켈린'과 계약 종료",
+  "nick": "Raptor",
+  "from": "bfx",
+  "want": null
+ },
+ {
+  "title": "롤드컵 끝나자 LCK 스토브리그…한화 ‘모글리’, DK 해체설 진화",
+  "nick": "Mowgli",
+  "from": "hle",
+  "want": null
+ },
+ {
+  "title": "Sources: Canyon set to join HLE alongside former Gen.G teammate Kiin",
+  "nick": "Canyon",
+  "from": "geng",
+  "want": [
+   "hle",
+   false
+  ]
+ }
+]

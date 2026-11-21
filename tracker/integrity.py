@@ -6,7 +6,8 @@
 from collections import defaultdict
 
 from .core import db
-from .rumor import _settled, movers, rumors
+from . import state
+from .rumor import _settled
 
 POS = {"Top": "탑", "Jungle": "정글", "Mid": "미드", "Bot": "원딜", "Support": "서폿", "Head Coach": "감독", "Coach": "코치"}
 
@@ -17,8 +18,8 @@ def _rows(sql):
 
 
 def check() -> list:
-    fa = _rows("SELECT * FROM fa WHERE league='lck'")
-    roster = _rows("SELECT * FROM roster WHERE league='lck'")
+    snap = state.get()                    # 화면과 같은 시점의 스냅숏(운영 알림은 리그피디아 원래 FA 목록 기준)
+    fa, roster = snap.get("fa_raw", snap["fa"]), snap["roster"]
     bad = []
 
     # 1) 한 사람은 FA 목록에 한 줄(원소속 기준)
@@ -67,13 +68,13 @@ def check() -> list:
             bad.append(f"{r['nick']}({r['team_from']}): FA 목록은 {'잔류' if r['status'] == 'stay' else team + ' 이적 확정'}인데 로스터에 없음")
 
     # 5) '유력'은 아직 미정인 사람에게만, 그리고 지금 팀이 행선지가 되면 안 됨
-    rm = rumors(fa)
+    rm = snap["rumors"]
     for r in fa:
         x = rm.get(r["page"])
         if x and r["status"] != "fa":
             bad.append(f"{r['nick']}: 이미 {r['status']}인데 '유력' 표시")
     settled = _settled({r["page"]: r["team"] for r in roster})
-    for page, x in movers(roster).items():
+    for page, x in snap["leaving"].items():
         r = next((y for y in roster if y["page"] == page), None)
         if r and x["team"] == r["team"]:
             bad.append(f"{r['nick']}: 지금 {r['team']} 선수인데 '{r['team']} 이적 유력'으로 읽음 ({x['title']})")

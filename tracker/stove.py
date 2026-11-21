@@ -20,11 +20,11 @@ def _rows(table, where="league='lck'"):
 
 
 # ── 1. 팀별 이적 요약 ───────────────────────────────────────────────────
-def team_summary(team_keys) -> dict:
+def team_summary(team_keys, fa=None, roster=None) -> dict:
     """{팀: {"in": [...], "out": [...], "stay": [...], "open": [...], "updated": "YYYY-MM-DD"}}
     in: 이적 확정으로 들어온 사람 + LCK 밖에서 온 영입 · out: 다른 팀으로 간 사람 · stay: 재계약 · open: 계약 끝나고 미정."""
-    fa = _rows("fa")
-    roster = _rows("roster")
+    fa = [dict(r) for r in fa] if fa is not None else _rows("fa")          # (화면은 state 스냅숏을 넘겨 같은 시점으로)
+    roster = [dict(r) for r in roster] if roster is not None else _rows("roster")
     out = {k: {"in": [], "out": [], "stay": [], "open": [], "updated": ""} for k in team_keys}
 
     def bump(k, d):

@@ -83,6 +83,11 @@ class IntlTest(unittest.TestCase):
                 res = intl.render(ev, "results")
                 self.assertIn("우승</small>", res)
                 self.assertIn('sch-champ', res)
+                self.assertIn("🏆 CHAMPION", res)                          # 금색 우승 카드
+                self.assertIn('class="twin win"', sch)                      # 대회 일정의 'OO 우승'도 금색
+                tm = intl.render(ev, "teams")
+                if "wteam" in tm:
+                    self.assertEqual(tm.count("wteam wchamp"), 1)           # 진출팀 카드: 우승팀 하나만 금색
                 self.assertIn(">Faker<", intl.render(ev, "teams") if ev != "fst" else ">Faker<")
         self.assertIn("A조", intl.render("fst", "results"))
         self.assertIn("브래킷 4라운드", intl.render("msi", "results"))

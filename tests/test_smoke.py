@@ -87,7 +87,8 @@ class SmokeTest(unittest.TestCase):
                                       "published": "2026-11-18T01:00:00+00:00"}
         fake = {"BonX": rm("ns", True, True), "MovX": rm("hle", False, True), "GusX": rm("geng", False, False)}
         try:
-            with mock.patch.object(views, "rumors", return_value=fake):
+            real = views.state.get()
+            with mock.patch.object(views.state, "get", return_value={**real, "rumors": fake, "key": "fake"}):
                 html = views.render_fa("lck")
                 row = lambda pg: html.split(f'class="fa-row" data-page="{pg}"')[1].split("</li>")[0]
                 self.assertIn('data-s="stay"', row("BonX"))
