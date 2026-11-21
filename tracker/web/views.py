@@ -294,8 +294,10 @@ def rumor_slots() -> dict:
             fa_rows = c.execute("SELECT * FROM fa WHERE league='lck'").fetchall()
         rms = rumors(fa_rows)
         ros = roster_rows()
-        signed = {r["page"] for r in ros}           # 리그피디아 로스터에 이미 오른 선수는 FA 표가 늦어도 'FA 유력'으로 안 띄움
-        people = [(r, rms.get(r["page"])) for r in fa_rows if r["page"] not in signed]
+        # 리그피디아 로스터에 다른 팀으로 이미 오른 선수는 FA 표가 늦어도 'FA 유력'으로 안 띄움
+        # (원래 팀에 계약 끝날 때까지 남아 있는 선수는 그대로: 'DK 로스터에 있는 루시드 → DRX 유력')
+        signed = {r["page"]: r["team"] for r in ros}
+        people = [(r, rms.get(r["page"])) for r in fa_rows if signed.get(r["page"], r["team_from"]) == r["team_from"]]
         leaving = movers(ros)
         people += [({**dict(r), "team_from": r["team"]}, leaving.get(r["page"])) for r in ros]
         for r, rm in people:
@@ -312,8 +314,18 @@ def rumor_slots() -> dict:
 
 
 def rm_label(rm) -> str:
-    """'유력' 표시 글자(이적 시장·로스터·이동 보드·행선지 맞히기 공통): 발표 · 유력 · 잔류 발표 · 잔류 유력."""
-    return ("잔류 " if rm["stay"] else "") + ("발표" if rm["official"] else "유력")
+    """기사 기준 표시 글자(이적 시장·로스터·이동 보드 공통). 오피셜 기사면 확정으로 봄(리그피디아 반영 전이라도):
+    잔류 · 확정 / 기사 추측이면 잔류 유력 · 유력."""
+    if rm["official"]:
+        return "잔류" if rm["stay"] else "확정"
+    return "잔류 유력" if rm["stay"] else "유력"
+
+
+def fa_effective(r, rm) -> str:
+    """화면에 쓸 상태: 리그피디아 상태, 단 아직 '미정'인데 오피셜 기사가 있으면 그 기사대로(잔류·이적 확정)."""
+    if r["status"] == "fa" and rm and rm["official"]:
+        return "stay" if rm["stay"] else "move"
+    return r["status"]
 
 
 def _coach_news(rm) -> bool:
@@ -331,9 +343,9 @@ def shown_pos(role: str, rm=None) -> str:
 DONE_MARK = '<span class="fill done" title="주전 5명과 감독이 모두 정해졌어요(리그피디아 계약 기준)">로스터 완성 ✓</span>'
 
 
-def roster_complete(k: str, rows) -> bool:
-    """지금 로스터에 주전 5자리(탑·정글·미드·원딜·서폿)와 감독이 모두 있는지. 유력(기사)은 세지 않음."""
-    have = {r["role"] for r in rows if r["team"] == k}
+def roster_complete(k: str, rows, news_slots=()) -> bool:
+    """지금 로스터에 주전 5자리(탑·정글·미드·원딜·서폿)와 감독이 모두 있는지. 오피셜 기사로 확정된 자리(news_slots)는 셈, 유력은 안 셈."""
+    have = {r["role"] for r in rows if r["team"] == k} | set(news_slots)
     return all(p in have for p in ROSTER_SLOTS)
 
 
@@ -345,11 +357,14 @@ def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True, name_then: s
             by.setdefault(r["role"], []).append(r)
     rmk = rumor_slots().get(k, {}) if rm else {}
     leave = roster_leaving() if rm else {}
-    filled = sum(1 for p in FA_ROLES if by.get(p))
+    # 오피셜 기사로 확정된 사람(리그피디아 반영 전)은 이 팀 사람으로 채워 보여 줌(빗금·점선 아님), 기사 추측만 '유력'
+    news_in = {p: [x for x in rmk.get(p, []) if x["rm"]["official"]] for p in ROSTER_SLOTS}
+    filled = sum(1 for p in FA_ROLES if by.get(p) or news_in.get(p))
     cells = []
     for p in ROSTER_SLOTS:
         rs = by.get(p, [])
-        rmp = rmk.get(p, [])
+        rmp = [x for x in rmk.get(p, []) if not x["rm"]["official"]]
+        newp = news_in.get(p, [])
         def pn(r, cls="pn"):
             until = f'~{r["until"][:7].replace("-", ".")}' if r["until"] else ""
             return (f'<span class="{cls}" role="button" tabindex="0" title="선수 프로필 보기" data-page="{esc(r["page"])}" data-nick="{esc(r["nick"])}"'
@@ -358,6 +373,13 @@ def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True, name_then: s
         def rtag(x, small=False):
             t = rm_label(x["rm"])
             return f'<i class="in{" s" if small else ""} rm" title="{esc(x["rm"]["outlet"] + " · " + x["rm"]["title"])}">{t}</i>'
+
+        def ntag(x, small=False):              # 오피셜 기사 확정: 다른 팀에서 오면 '영입', 원래 팀이면 '잔류'
+            t = "잔류" if x["rm"]["stay"] else "영입"
+            return (f'<i class="in{" s" if small else ""}{" stay" if x["rm"]["stay"] else ""}" '
+                    f'title="오피셜 기사 기준 · 리그피디아 반영 전 · {esc(x["rm"]["outlet"] + " · " + x["rm"]["title"])}">{t}</i>')
+        if not rs and newp:                    # 빈자리를 오피셜 기사로 확정된 사람이 채움
+            rs = [None]
         if not rs:
             if rmp:      # 빈자리에 들어올 것 같은 선수(유력)
                 more = "".join(f'<span class="subl">{pn(x, "pn sub")}{rtag(x, True)}</span>' for x in rmp[1:])
@@ -365,19 +387,26 @@ def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True, name_then: s
             else:
                 cells.append(f'<li class="vac"><span class="pk">{FA_POS[p]}</span><span class="pn">미정</span></li>')
             continue
+        if rs[0] is None:                      # 리그피디아엔 빈자리, 오피셜 기사로 채움
+            x, extra = newp[0], newp[1:]
+            subs = "".join(f'<span class="subl">{pn(y, "pn sub")}{ntag(y, True)}</span>' for y in extra)
+            subs += "".join(f'<span class="subl rml">{pn(y, "pn sub")}{rtag(y, True)}</span>' for y in rmp)
+            cells.append(f'<li><span class="pk">{FA_POS[p]}</span>{pn(x)}{subs}{ntag(x)}</li>')
+            continue
         r = rs[0]
         IN_S = '<i class="in s">영입</i>'
         subs = "".join(f'<span class="subl">{pn(x, "pn sub")}{IN_S if x["joined"] else ""}</span>'
                        for x in rs[1:])      # 같은 포지션 선수가 더 있으면(후보 등) 이름을 모두 보여 줌
+        subs += "".join(f'<span class="subl">{pn(x, "pn sub")}{ntag(x, True)}</span>' for x in newp)
         subs += "".join(f'<span class="subl rml">{pn(x, "pn sub")}{rtag(x, True)}</span>' for x in rmp)
         lv = leave.get(r["page"])        # 이 선수가 다른 팀으로 갈 것 같다는 기사(계약은 남아 있음)
         out = (f'<span class="rmo" title="{esc(lv["outlet"] + " · " + lv["title"])}">➔ {team_logo(lv["team"])}{esc(team_short(lv["team"]))} '
-               f'{"발표" if lv["official"] else "이적 유력"}</span>' if lv else "")
+               f'{"이적 확정" if lv["official"] else "이적 유력"}</span>' if lv else "")
         cells.append(f'<li><span class="pk">{FA_POS[p]}</span>{pn(r)}{out}{subs}'
                      f'{"<i class=in>영입</i>" if r["joined"] else ""}</li>')
     anchor = "" if extra_cls else f' id="t-{k}"'              # 팀 안내의 '로스터 →'가 이 카드로
     return (f'<article class="rc{extra_cls}"{anchor} data-team="{k}" style="--tc:{team_color(k)}"><header>{team_logo(k, "logo big")}'
-            f'<div>{_rc_title(k, name_then)}</div>{DONE_MARK if rm and roster_complete(k, rows) else f"<span class=fill>{filled}/5</span>"}</header>'
+            f'<div>{_rc_title(k, name_then)}</div>{DONE_MARK if rm and roster_complete(k, rows, [p for p in ROSTER_SLOTS if news_in.get(p)]) else f"<span class=fill>{filled}/5</span>"}</header>'
             f'<ul>{"".join(cells)}</ul></article>')
 
 
@@ -659,19 +688,21 @@ def fa_row_html(r, rm=None) -> str:
         return f'<span class="tm" title="{esc(team_name(k))}">{team_logo(k)}{esc(team_short(k))}</span>'
     pos = shown_pos(r["role"], rm if r["status"] == "fa" else None)
     coach = r["role"] not in FA_ROLES or pos in ("코치", "감독")
-    if r["status"] == "stay":
+    rm = rm if r["status"] == "fa" else None
+    eff = fa_effective(r, rm)                          # 오피셜 기사가 있으면 리그피디아 반영 전이라도 확정으로
+    guess = bool(rm) and not rm["official"]            # 기사 추측(유력)만 점선·물음표
+    if eff == "stay":
         mv = f'{tm(r["team_from"])}<span class="und">잔류</span>'
+    elif rm and rm["official"]:
+        mv = f'{tm(r["team_from"])}<i class="arr" aria-hidden="true"></i>{tm(rm["team"])}'
     else:
         dest = (tm(r["team_to"]) if r["team_to"] else
                 f'<span class="ext">{esc(r["team_to_name"])}</span>' if r["team_to_name"] else
                 '<span class="und">미정</span>')
-        if rm and r["status"] == "fa":
+        if guess:
             dest = (f'<span class="rm-dest">{tm(rm["team"])}<span class="und">잔류?</span></span>' if rm["stay"] else
                     f'<span class="rm-dest">{tm(rm["team"])}</span>')
-            if rm["stay"]:
-                mv = dest
-        if not (rm and r["status"] == "fa" and rm["stay"]):
-            mv = f'{tm(r["team_from"])}<i class="arr" aria-hidden="true"></i>{dest}'
+        mv = dest if guess and rm["stay"] else f'{tm(r["team_from"])}<i class="arr" aria-hidden="true"></i>{dest}'
     sub = []
     if r["until"]:
         sub.append("~" + r["until"][:7].replace("-", "."))
@@ -680,23 +711,25 @@ def fa_row_html(r, rm=None) -> str:
     if not sub and r["date"]:
         d = parse_day(r["date"])
         sub.append((f"{d.month}/{d.day}" if d else r["date"]) + (" 합류 발표" if r["status"] == "move" else " 결별"))
-    lbl, cls = FA_ST.get(r["status"], ("?", "s-fa"))
-    if rm and r["status"] == "fa":
-        lbl, cls = rm_label(rm), ("s-ann" if rm["official"] else "s-rm")
+    lbl, cls = FA_ST.get(eff, ("?", "s-fa"))
+    if rm:
+        if guess:
+            lbl, cls = rm_label(rm), "s-rm"
         d = rel_day(rm["published"])
         src = f'{rm["outlet"]}{" " + d if d else ""}'
-        sub = [f'<a class="rm-src" href="{esc(rm["url"])}" target="_blank" rel="noopener" title="{esc(rm["title"])}">{esc(src)} 기사 ↗</a>']
+        note = "오피셜 기사 기준 · 리그피디아 반영 전" if rm["official"] else "기사 제목 기준 추측"
+        sub = [f'<a class="rm-src" href="{esc(rm["url"])}" target="_blank" rel="noopener" title="{esc(note + " · " + rm["title"])}">{esc(src)} 기사 ↗</a>']
     real = f'<small>{esc(r["real"])}</small>' if r["real"] else ""
-    ak = r["team_to"] if r["status"] == "move" and r["team_to"] else r["team_from"]   # 아바타: 새 팀(이적)·원래 팀
+    ak = (r["team_to"] if r["status"] == "move" and r["team_to"] else rm["team"] if eff == "move" and rm else r["team_from"])   # 아바타: 새 팀(이적)·원래 팀
     badge = team_logo(ak, "bdg") if logo_src(ak) else ""
     grp = ("감독" if r["role"] == "Head Coach" else "코치") if coach else pos
-    dest = rm["team"] if rm and r["status"] == "fa" else (r["team_to"] if r["status"] == "move" else r["team_from"] if r["status"] == "stay" else "")
-    return (f'<li class="fa-row" data-page="{esc(r["page"])}" data-s="{r["status"]}" data-p="{grp}" data-t="{r["team_from"]}"'
+    dest = rm["team"] if rm else (r["team_to"] if r["status"] == "move" else r["team_from"] if r["status"] == "stay" else "")
+    return (f'<li class="fa-row" data-page="{esc(r["page"])}" data-s="{eff}"{" data-rm=1" if guess else ""} data-p="{grp}" data-t="{r["team_from"]}"'
             f' data-nick="{esc(r["nick"])}" data-pos="{esc(pos)}" data-label="{lbl}" data-dest="{dest}">'
-            f'<span class="av tc{" off" if r["status"] == "fa" else ""}" style="--tc:{team_color(ak)}">{esc(pos)}{badge}</span>'
+            f'<span class="av tc{" off" if eff == "fa" else ""}" style="--tc:{team_color(ak)}">{esc(pos)}{badge}</span>'
             f'<div class="who"><p class="nm" role="button" tabindex="0" title="선수 프로필 보기"><span class="nk">{esc(r["nick"])}</span>{real}</p>'
             f'<div class="mv">{mv}</div></div>'
-            f'<div class="rt"><span class="st2 {cls}">{lbl}</span><span class="sub">{sub[0] if rm and r["status"] == "fa" else esc(" · ".join(sub))}</span></div></li>')
+            f'<div class="rt"><span class="st2 {cls}">{lbl}</span><span class="sub">{sub[0] if rm else esc(" · ".join(sub))}</span></div></li>')
 
 
 def rel_day(iso: str) -> str:
@@ -869,11 +902,15 @@ def render_fa(league: str) -> str:
     rows = sorted(rows, key=lambda r: (["move", "stay", "fa"].index(r["status"]) if r["status"] in FA_ST else 9,
                                        korder.get(r["team_from"], 99),
                                        porder.index(r["role"]) if r["role"] in porder else 99, r["nick"].lower()))
-    cnt = {s_: sum(1 for r in rows if r["status"] == s_) for s_ in FA_ST}
+    rms = rumors(rows)
+    eff = {r["page"]: fa_effective(r, rms.get(r["page"]) if r["status"] == "fa" else None) for r in rows}
+    cnt = {s_: sum(1 for r in rows if eff[r["page"]] == s_) for s_ in FA_ST}
+    n_rm = sum(1 for r in rows if eff[r["page"]] == "fa" and rms.get(r["page"]) and not rms[r["page"]]["official"])
     summ = (f'<button data-s="all"><b>{len(rows)}</b>FA 전체</button>'
             f'<button class="c-move" data-s="move"><b>{cnt["move"]}</b>이적 확정</button>'
             f'<button class="c-stay" data-s="stay"><b>{cnt["stay"]}</b>잔류</button>'
-            f'<button class="c-fa" data-s="fa"><b>{cnt["fa"]}</b>미정</button>')
+            f'<button class="c-fa" data-s="fa"><b>{cnt["fa"]}</b>미정</button>'
+            f'<button class="c-rm" data-s="rm"><b>{n_rm}</b>유력<small>미정 중</small></button>')
     nav = '<a href="#" data-t="all">전체</a>' + "".join(
         f'<a href="#" data-t="{k}" title="{esc(team_name(k))}">{team_logo(k)}<span>{esc(team_short(k))}</span></a>' for k in keys)
     heads = {k: f'<span class="gh">{team_logo(k)}{esc(team_short(k))}</span>' for k in keys}
@@ -884,7 +921,6 @@ def render_fa(league: str) -> str:
     else:
         faupd = "아직 수집 전"
     since = parse_day(fa_since())
-    rms = rumors(rows)
     board = moves_board(rows, rms)
     main = f"""{squad_toggle(league, "fa")}{page_head("이적 시장", "계약이 끝난 선수와 코치가 어디로 가는지 모았어요.")}{stove_dates(today)}{board}<section class="card panel fa" aria-label="조회와 필터">
 <div class="ptop"><nav class="view_tab" id="grp" aria-label="묶어 보기"><a href="#" data-g="p">포지션별</a><a href="#" data-g="t">팀별</a><a href="#" data-g="s">상태별</a></nav>{ACT}</div>{MSG}
@@ -892,7 +928,7 @@ def render_fa(league: str) -> str:
 <div class="chips" id="pos">
 <button data-p="all">전체 포지션</button><button data-p="탑">탑</button><button data-p="정글">정글</button><button data-p="미드">미드</button><button data-p="원딜">원딜</button><button data-p="서폿">서폿</button><button data-p="감독">감독</button><button data-p="코치">코치</button>
 </div>
-<p class="src">팀은 원래 소속 기준이에요. 상태는 리그피디아에 공식 발표가 올라오면 바뀌고, <b class="st2 s-rm">유력</b>은 기사 제목을 보고 붙여요. {faupd}</p>
+<p class="src">팀은 원래 소속 기준이에요. 상태는 리그피디아 기준이고, 리그피디아에 반영되기 전이라도 오피셜 기사가 나오면 바로 확정으로 보여요(기사 링크 함께). <b class="st2 s-rm">유력</b>은 기사 제목을 보고 붙인 추측이에요. {faupd}</p>
 </section>
 <section class="card">
 <div class="tabs-wrap"><nav class="tabs" id="tabs" aria-label="원소속 팀">{nav}</nav></div>
@@ -989,15 +1025,16 @@ def moves_board(fa_rows, rms=None) -> str:
             continue
         pos = shown_pos(r["role"], rm)
         tag = rm_label(rm)
-        items.append((rm["published"][:10], f'<li class="rm" data-label="{tag}" data-dest="{rm["team"]}">{tm(r["team_from"])}<span class="ar" aria-label="에서">➔</span>{tm(rm["team"])}'
+        items.append((rm["published"][:10], f'<li{"" if rm["official"] else " class=rm"} data-label="{tag}" data-dest="{rm["team"]}">{tm(r["team_from"])}<span class="ar" aria-label="에서">➔</span>{tm(rm["team"])}'
                                             f'<span class="mv-who"><small>{pos}</small>{who(r, pos, rm["team"])}<em>{tag}</em></span></li>'))
     for r in roster_rows():                  # 계약이 남은 선수의 이적 유력
         lv = roster_leaving().get(r["page"])
         if not lv:
             continue
         pos = FA_POS.get(r["role"], r["role"])
-        items.append((lv["published"][:10], f'<li class="rm" data-label="{"발표" if lv["official"] else "유력"}" data-dest="{lv["team"]}">{tm(r["team"])}<span class="ar" aria-label="에서">➔</span>{tm(lv["team"])}'
-                                            f'<span class="mv-who"><small>{pos}</small>{who(r, pos, lv["team"])}<em>{"발표" if lv["official"] else "유력"}</em></span></li>'))
+        tag = rm_label(lv)
+        items.append((lv["published"][:10], f'<li{"" if lv["official"] else " class=rm"} data-label="{tag}" data-dest="{lv["team"]}">{tm(r["team"])}<span class="ar" aria-label="에서">➔</span>{tm(lv["team"])}'
+                                            f'<span class="mv-who"><small>{pos}</small>{who(r, pos, lv["team"])}<em>{tag}</em></span></li>'))
     for r in roster_rows():
         if r["joined"] and r["page"] not in seen:
             outside += 1
@@ -1889,11 +1926,27 @@ def render_summary(league: str) -> str:
     keys = team_keys()
     sm = stv.team_summary(keys)
     rms = rumor_slots()
+    # 리그피디아엔 아직 미정이어도 오피셜 기사가 나온 사람은 이적 시장과 같이 확정으로(잔류 → 재계약 줄, 이적 → 이탈·영입 줄)
+    with db() as c:
+        fa_rows = c.execute("SELECT * FROM fa WHERE league='lck'").fetchall()
+    official = {pg: rm for pg, rm in rumors(fa_rows).items() if rm["official"]}
+    for k in keys:
+        for p in list(sm[k]["open"]):
+            rm = official.get(p["page"])
+            if not rm:
+                continue
+            sm[k]["open"].remove(p)
+            if rm["stay"]:
+                sm[k]["stay"].append(p)
+            else:
+                sm[k]["out"].append({**p, "to": rm["team"]})
+                if rm["team"] in sm:
+                    sm[rm["team"]]["in"].append({**p, "from": k})
     cards, tot = [], {"in": 0, "stay": 0, "open": 0}
     ros = roster_rows()
     for k in keys:
         v = sm[k]
-        rumor = [x for xs in rms.get(k, {}).values() for x in xs if not x["rm"]["stay"]]
+        rumor = [x for xs in rms.get(k, {}).values() for x in xs if not x["rm"]["stay"] and not x["rm"].get("official")]
         # 한 카드 안에서 같은 선수가 두 줄에 나오지 않게: 확정·이적설에 있는 선수는 '미정'에서 뺌
         seen = {p["page"] for p in v["in"] + v["out"] + v["stay"]} | {x["page"] for x in rumor}
         open_ = [p for p in v["open"] if p["page"] not in seen]

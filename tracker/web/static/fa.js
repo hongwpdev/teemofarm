@@ -19,8 +19,10 @@
     G = mark("#grp a", "g", G); St = mark(".sum button", "s", St); P = mark("#pos button", "p", P); T = mark("#tabs a", "t", T);
     // 숫자 칸은 고른 팀·포지션 기준으로 다시 셈
     const base = rows.filter(r => (T === "all" || r.dataset.t === T) && (P === "all" || r.dataset.p === P));
-    sumBtns.forEach(b => { b.querySelector("b").textContent = b.dataset.s === "all" ? base.length : base.filter(r => r.dataset.s === b.dataset.s).length; });
-    const vis = base.filter(r => St === "all" || r.dataset.s === St);
+    // '유력'(data-rm)은 미정 중 기사 추측이 있는 선수: 칸 숫자·거르기 모두 미정과 겹쳐서 셈
+    const hit = (r, s) => s === "all" || (s === "rm" ? r.dataset.rm === "1" : r.dataset.s === s);
+    sumBtns.forEach(b => { b.querySelector("b").textContent = base.filter(r => hit(r, b.dataset.s)).length; });
+    const vis = base.filter(r => hit(r, St));
     const key = { p: r => r.dataset.p, t: r => r.dataset.t, s: r => r.dataset.s }[G];
     const order = { p: POSO, t: TEAMO, s: STO }[G], head = { p: k => k, t: k => TH[k], s: k => STN[k] }[G];
     list.innerHTML = "";

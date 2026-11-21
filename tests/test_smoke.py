@@ -71,6 +71,57 @@ class SmokeTest(unittest.TestCase):
         code, _ = self.get(f"/lck/predict?season={y}")
         self.assertIn(code, (200, 301, 302, 303))
 
+    def test_fa_official_news_is_confirmed(self):
+        # 리그피디아엔 아직 미정인데 오피셜 기사가 나온 사람: '잔류 발표'·'잔류?'가 아니라 그냥 잔류(이적이면 이적 확정)로,
+        # 위 숫자 칸·팀별 화면도 같게. 기사 추측(유력)은 '유력' 칸(미정 중)에 따로
+        from unittest import mock
+        from tracker.core import db
+        from tracker.web import views
+        rows = [("BonX", "BonX", "김기범", "ns", "Coach", "fa"), ("MovX", "MovX", "", "t1", "Mid", "fa"),
+                ("GusX", "GusX", "", "kt", "Bot", "fa"), ("NoX", "NoX", "", "dk", "Top", "fa")]
+        with db() as c:
+            for r in rows:
+                c.execute("INSERT OR REPLACE INTO fa(page,nick,real,team_from,role,status,team_to,team_to_name,until,date,memo) "
+                          "VALUES(?,?,?,?,?,?,'','','','2026-11-18','')", r)
+        rm = lambda team, stay, off: {"team": team, "stay": stay, "official": off, "title": "t", "url": "https://e.com", "outlet": "인벤",
+                                      "published": "2026-11-18T01:00:00+00:00"}
+        fake = {"BonX": rm("ns", True, True), "MovX": rm("hle", False, True), "GusX": rm("geng", False, False)}
+        try:
+            with mock.patch.object(views, "rumors", return_value=fake):
+                html = views.render_fa("lck")
+                row = lambda pg: html.split(f'class="fa-row" data-page="{pg}"')[1].split("</li>")[0]
+                self.assertIn('data-s="stay"', row("BonX"))
+                self.assertIn('<span class="st2 s-stay">잔류</span>', row("BonX"))
+                self.assertNotIn("잔류?", row("BonX"))
+                self.assertNotIn("발표", html.split('id="falist"')[1])
+                self.assertIn('data-s="move"', row("MovX"))
+                self.assertIn('data-s="fa" data-rm=1', row("GusX"))
+                self.assertIn('<span class="st2 s-rm">유력</span>', row("GusX"))
+                self.assertIn('data-s="fa" data-p', row("NoX"))
+                self.assertRegex(html, r'data-s="rm"><b>1</b>유력')
+        finally:
+            with db() as c:
+                c.execute("DELETE FROM fa WHERE page IN ('BonX','MovX','GusX','NoX')")
+
+    def test_roster_card_official_news_fills_slot(self):
+        # 리그피디아엔 빈자리지만 오피셜 기사로 잔류가 확정된 감독(bon0): 빗금·'잔류 발표'가 아니라 채운 칸 + '잔류'
+        from unittest import mock
+        from tracker.web import views
+        rm = {"team": "ns", "stay": True, "official": True, "title": "[오피셜] 농심, 본 감독 재계약", "url": "u", "outlet": "인벤",
+              "published": "2026-11-18T01:00:00+00:00"}
+        guess = {**rm, "official": False, "stay": False, "team": "ns", "title": "농심행 유력"}
+        x = {"page": "Bon0", "nick": "bon0", "real": "", "role": "Head Coach", "until": "", "joined": 0, "rm": rm, "pos": "감독"}
+        g = {"page": "Gx", "nick": "Gx", "real": "", "role": "Top", "until": "", "joined": 0, "rm": guess, "pos": "탑"}
+        with mock.patch.object(views, "rumor_slots", return_value={"ns": {"Head Coach": [x], "Top": [g]}}), \
+             mock.patch.object(views, "roster_leaving", return_value={}):
+            card = views.roster_card("ns", [])
+        coach = card.split('data-page="Bon0"')[0].rsplit("<li", 1)[1]
+        self.assertNotIn("vac", coach)
+        self.assertIn('class="in stay"', card)
+        self.assertNotIn("발표", card)
+        self.assertIn('<li class="vac rmv"><span class="pk">탑</span>', card)        # 기사 추측은 그대로 빈자리 + 유력
+        self.assertIn(">0/5<", card)
+
     def test_roster_complete_mark(self):
         # 주전 5명 + 감독이 다 있으면 'n/5' 대신 '로스터 완성 ✓', 한 자리라도 비면 그대로 n/5
         from tracker.web import views

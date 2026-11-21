@@ -157,7 +157,7 @@ async function crawl(base, opts = {}) {
     const pos = [...new Set(fs.map(f => f.pos).filter(Boolean))];
     if (pos.length > 1) fails.push(`정합성: ${fs[0].nick}의 자리가 화면마다 다름: ` + pos.map(x => `${x}(${fs.find(f => f.pos === x).url})`).join(' / '));
     // 상태·행선지: 이적 시장 목록 · 이동 보드 · 행선지 맞히기 · 로스터가 같은 말을 하는지(같은 원본에서 나오므로 달라선 안 됨)
-    const norm = x => ({ '이적 확정': '확정', '잔류': '잔류', '잔류 유력': '잔류 유력' }[x] || x);
+    const norm = x => ({ '이적 확정': '확정', '발표': '확정', '잔류 발표': '잔류', '잔류': '잔류', '잔류 유력': '잔류 유력' }[x] || x);   // (독버섯 판은 오피셜 기사를 '발표'로 적어 둠)
     const say = {};
     for (const f of fs) {
       if (!f.label || f.label === '미정') continue;
