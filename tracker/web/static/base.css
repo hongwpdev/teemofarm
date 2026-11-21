@@ -1547,3 +1547,7 @@ main .layout.is-loading #fbar:after{content:"";position:absolute;top:1rem;right:
 @media (prefers-reduced-motion:reduce){.rc.wteam.wchamp{animation:none!important}}
 /* 시즌 고르기: 2012년부터 모든 시즌(목록이 길어서 스크롤) */
 .ssel ul{max-height:min(60vh,44rem);overflow-y:auto;overscroll-behavior:contain}
+/* 상태 칸은 서로 겹치지 않음(이적 확정 · 잔류 · 미정 · 유력): 요약 칸이 4개 */
+.mini,.stove-now .mini{grid-template-columns:repeat(4,1fr)}
+.mini a.r b,.stove a.r em{color:#f59e0b}
+.grp .bd i.r{background:rgba(245,158,11,.14);color:#f59e0b}

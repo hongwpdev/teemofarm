@@ -300,11 +300,20 @@ def part_b(n, rnd):
         probs = integrity.check()
         # 숫자: 이적 시장 버튼 숫자 = 소식 화면·오른쪽 요약 숫자(fa_counts)
         fa_html = views.render_fa("lck")
-        btn = {k: int(v) for v, k in re.findall(r'<b>(\d+)</b>(이적 확정|잔류|미정)</button>', fa_html)}
+        btn = {k: int(v) for v, k in re.findall(r'<b>(\d+)</b>(FA 전체|이적 확정|잔류|미정|유력)', fa_html)}
         cnt = views.fa_counts()
         checks["숫자 일치(이적 시장=요약)"] += 1
-        if btn != {"이적 확정": cnt.get("move", 0), "잔류": cnt.get("stay", 0), "미정": cnt.get("fa", 0)}:
+        if {k: v for k, v in btn.items() if k != "FA 전체"} != {"이적 확정": cnt.get("move", 0), "잔류": cnt.get("stay", 0),
+                                                              "미정": cnt.get("fa", 0), "유력": cnt.get("rm", 0)}:
             fails["숫자 일치(이적 시장=요약)"] += 1
+        checks["네 칸 합 = FA 전체"] += 1
+        if btn.get("FA 전체") != sum(v for k, v in btn.items() if k != "FA 전체"):
+            fails["네 칸 합 = FA 전체"] += 1
+        sm_html = views.render_summary("lck")
+        st = {k: int(v) for v, k in re.findall(r'<span><b>(\d+)</b>(영입|재계약|미정|유력)</span>', sm_html)}
+        checks["숫자 일치(이적 시장=팀별)"] += 1
+        if (st.get("미정"), st.get("유력")) != (btn.get("미정"), btn.get("유력")):
+            fails["숫자 일치(이적 시장=팀별)"] += 1
         # 독버섯 판: 이미 확정된 사람의 판이 '열린 판'으로 남지 않음(만들고 → 결과 매기기)
         farm.sync(force=True)
         farm.sync(force=True)
@@ -343,9 +352,12 @@ def part_b(n, rnd):
                     ok = s == want
                 elif exp_status == "stay":
                     ok = s == {(frm, "stay")}
-                else:   # 미정: 원소속 카드 '미정' + (기사가 있으면) 행선지 카드 '이적설'
-                    rms_ = {x for x in s if x[1] == "rm"}
-                    ok = (frm, "open") in s and len(rms_) <= 1 and s - rms_ == {(frm, "open")}
+                else:   # 미정: 기사 추측이 없으면 원소속 카드 '미정'만, 있으면 원소속 카드 '이적설' + (이적 유력이면) 행선지 카드 '이적설'
+                    g = rms.get(nick)
+                    if g and not g["official"]:
+                        ok = s == ({(frm, "rm")} | ({(g["team"], "rm")} if not g["stay"] and g["team"] in KEYS else set()))
+                    else:
+                        ok = s == {(frm, "open")}
                 if not ok:
                     bad("팀별 줄", nick, sorted(s))
                 # 이적설 팀 = 이적 시장의 유력 팀

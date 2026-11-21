@@ -116,6 +116,45 @@ class PrecedenceTest(unittest.TestCase):
         self.assertEqual(cnt.get("move"), 1)
 
 
+class RumorBucketTest(unittest.TestCase):
+    """'유력인데 왜 미정이야': 이적 시장 네 칸(이적 확정·잔류·미정·유력)은 서로 겹치지 않고, 팀별·요약 숫자도 같음."""
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def setUp(self):
+        state.reset()
+
+    def tearDown(self):
+        put()
+        with db() as c:
+            c.execute("DELETE FROM items WHERE id LIKE 'bk%'")
+        state.reset()
+
+    def test_buckets(self):
+        import re
+        from datetime import datetime, timezone
+        put([("BkA", "Zeus", "", "hle", "Top", "fa", "", "", "", "2026-11-17", ""),
+             ("BkB", "Clear", "", "bfx", "Top", "fa", "", "", "", "2026-11-17", ""),
+             ("BkC", "Kingen", "", "ns", "Top", "stay", "ns", "", "", "2026-11-17", "")])
+        now = datetime.now(timezone.utc).isoformat()
+        with db() as c:
+            c.execute("INSERT INTO items(id,team,source,title,url,outlet,published,first_seen,league) VALUES(?,?,?,?,?,?,?,?,'lck')",
+                      ("bk1", "", "news", "한화생명 떠난 '제우스', 친정 T1 복귀 유력", "https://e.com/bk1", "위키트리", now, now))
+        state.reset()
+        html = views.render_fa("lck")
+        btn = {k: int(v) for v, k in re.findall(r'<b>(\d+)</b>(FA 전체|이적 확정|잔류|미정|유력)', html)}
+        self.assertEqual(btn, {"FA 전체": 3, "이적 확정": 0, "잔류": 1, "미정": 1, "유력": 1})
+        self.assertEqual(views.fa_counts(), {"stay": 1, "fa": 1, "rm": 1})
+        sm = views.render_summary("lck")
+        self.assertIn("<span><b>1</b>미정</span><span><b>1</b>유력</span>", sm)
+        hle = sm[sm.index('id="m-hle"'):].split("</article>")[0]
+        self.assertNotIn('<div class="sl open">', hle)                    # 제우스는 HLE 카드에서 '미정'이 아니라
+        self.assertIn("→ T1 유력", hle)                                    # '이적설 → T1 유력'
+        t1 = sm[sm.index('id="m-t1"'):].split("</article>")[0]
+        self.assertIn(">Zeus<", t1)
+
+
 class FillRosterLagTest(unittest.TestCase):
     def test_moved_player_not_on_two_teams(self):
         # 이적 확정(FA 목록)인데 리그피디아 로스터엔 옛 팀에 남아 있으면(계약 끝남) 옛 팀 줄을 빼고 새 팀에만

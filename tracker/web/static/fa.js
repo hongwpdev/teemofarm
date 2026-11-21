@@ -2,8 +2,10 @@
 (function () {
   const S = window.SPS; if (!S) return;
   const TH = JSON.parse(document.getElementById("th").textContent);
-  const POSO = ["탑", "정글", "미드", "원딜", "서폿", "감독", "코치"], TEAMO = Object.keys(TH), STO = ["move", "stay", "fa"];
-  const STN = { move: "이적 확정", stay: "잔류 · 재계약", fa: "미정 (FA)" };
+  const POSO = ["탑", "정글", "미드", "원딜", "서폿", "감독", "코치"], TEAMO = Object.keys(TH), STO = ["move", "stay", "rm", "fa"];
+  const STN = { move: "이적 확정", stay: "잔류 · 재계약", rm: "유력 (기사 추측)", fa: "미정 (FA)" };
+  // 상태 칸은 서로 겹치지 않음: 미정 중 기사 추측이 있는 사람(data-rm)은 '유력', 나머지 미정은 '미정'
+  const stOf = r => (r.dataset.s === "fa" && r.dataset.rm === "1") ? "rm" : r.dataset.s;
   const list = document.getElementById("falist"), rows = [...list.querySelectorAll(".fa-row")];
   const qs = new URLSearchParams(location.search);
   // 팀: 주소에 있으면 그것, 없으면 내 팀
@@ -19,19 +21,19 @@
     G = mark("#grp a", "g", G); St = mark(".sum button", "s", St); P = mark("#pos button", "p", P); T = mark("#tabs a", "t", T);
     // 숫자 칸은 고른 팀·포지션 기준으로 다시 셈
     const base = rows.filter(r => (T === "all" || r.dataset.t === T) && (P === "all" || r.dataset.p === P));
-    // '유력'(data-rm)은 미정 중 기사 추측이 있는 선수: 칸 숫자·거르기 모두 미정과 겹쳐서 셈
-    const hit = (r, s) => s === "all" || (s === "rm" ? r.dataset.rm === "1" : r.dataset.s === s);
+    const hit = (r, s) => s === "all" || stOf(r) === s;
     sumBtns.forEach(b => { b.querySelector("b").textContent = base.filter(r => hit(r, b.dataset.s)).length; });
     const vis = base.filter(r => hit(r, St));
-    const key = { p: r => r.dataset.p, t: r => r.dataset.t, s: r => r.dataset.s }[G];
+    const key = { p: r => r.dataset.p, t: r => r.dataset.t, s: stOf }[G];
     const order = { p: POSO, t: TEAMO, s: STO }[G], head = { p: k => k, t: k => TH[k], s: k => STN[k] }[G];
     list.innerHTML = "";
     for (const k of order) {
       const rs = vis.filter(r => key(r) === k);
       if (!rs.length) continue;
-      const c = st => rs.filter(r => r.dataset.s === st).length;
+      const c = st => rs.filter(r => stOf(r) === st).length;
       const bd = G === "s" ? "" : '<span class="bd">' + (c("move") ? '<i class="m">이적 ' + c("move") + "</i>" : "")
-        + (c("stay") ? '<i class="s">잔류 ' + c("stay") + "</i>" : "") + (c("fa") ? '<i class="f">미정 ' + c("fa") + "</i>" : "") + "</span>";
+        + (c("stay") ? '<i class="s">잔류 ' + c("stay") + "</i>" : "") + (c("rm") ? '<i class="r">유력 ' + c("rm") + "</i>" : "")
+        + (c("fa") ? '<i class="f">미정 ' + c("fa") + "</i>" : "") + "</span>";
       const li = document.createElement("li");
       li.className = "day grp";
       li.innerHTML = "<span>" + head(k) + bd + '</span><span class="cnt">' + rs.length + "명</span>";

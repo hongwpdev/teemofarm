@@ -282,7 +282,10 @@ def fa_counts():
     rms = snap["rumors"]
     out = {}
     for r in snap["fa"]:
-        s_ = fa_effective(r, rms.get(r["page"]) if r["status"] == "fa" else None)
+        rm = rms.get(r["page"]) if r["status"] == "fa" else None
+        s_ = fa_effective(r, rm)
+        if s_ == "fa" and rm:                    # 미정 중 기사 추측이 있는 사람은 '유력'(미정과 겹쳐 세지 않음)
+            s_ = "rm"
         out[s_] = out.get(s_, 0) + 1
     return out
 
@@ -460,7 +463,8 @@ def stove_strip(league: str) -> str:
     return (f'<nav class="stove" aria-label="스토브리그 현황"><b>스토브리그</b>'
             f'<a class="m" href="/{league}/fa?s=move"><em>{cnt.get("move", 0)}</em>이적 확정</a>'
             f'<a href="/{league}/fa?s=stay"><em>{cnt.get("stay", 0)}</em>잔류</a>'
-            f'<a href="/{league}/fa?s=fa"><em>{cnt.get("fa", 0)}</em>미정</a></nav>')
+            f'<a href="/{league}/fa?s=fa"><em>{cnt.get("fa", 0)}</em>미정</a>'
+            f'<a class="r" href="/{league}/fa?s=rm"><em>{cnt.get("rm", 0)}</em>유력</a></nav>')
 
 
 def rail(league: str, team: str) -> str:
@@ -468,7 +472,8 @@ def rail(league: str, team: str) -> str:
     box = (f'<section class="card rail-stove"><h3>스토브리그 현황 <a href="/{league}/fa">이적·FA →</a></h3>'
            f'<div class="mini"><a class="m" href="/{league}/fa?s=move"><b>{cnt.get("move", 0)}</b>이적 확정</a>'
            f'<a href="/{league}/fa?s=stay"><b>{cnt.get("stay", 0)}</b>잔류</a>'
-           f'<a href="/{league}/fa?s=fa"><b>{cnt.get("fa", 0)}</b>미정</a></div></section>')
+           f'<a href="/{league}/fa?s=fa"><b>{cnt.get("fa", 0)}</b>미정</a>'
+           f'<a class="r" href="/{league}/fa?s=rm"><b>{cnt.get("rm", 0)}</b>유력</a></div></section>')
     if team in team_keys():
         box += team_profile(team)
         card = roster_card(team, roster_rows(), " rc-side")
@@ -935,13 +940,15 @@ def render_fa(league: str) -> str:
                                        porder.index(r["role"]) if r["role"] in porder else 99, r["nick"].lower()))
     rms = snap["rumors"]
     eff = {r["page"]: fa_effective(r, rms.get(r["page"]) if r["status"] == "fa" else None) for r in rows}
-    cnt = {s_: sum(1 for r in rows if eff[r["page"]] == s_) for s_ in FA_ST}
     n_rm = sum(1 for r in rows if eff[r["page"]] == "fa" and rms.get(r["page"]) and not rms[r["page"]]["official"])
+    # 네 칸은 서로 겹치지 않음: 이적 확정 + 잔류 + 미정 + 유력 = FA 전체('유력이 왜 미정에도 있어'를 없앰)
+    cnt = {s_: sum(1 for r in rows if eff[r["page"]] == s_) for s_ in FA_ST}
+    cnt["fa"] -= n_rm
     summ = (f'<button data-s="all"><b>{len(rows)}</b>FA 전체</button>'
             f'<button class="c-move" data-s="move"><b>{cnt["move"]}</b>이적 확정</button>'
             f'<button class="c-stay" data-s="stay"><b>{cnt["stay"]}</b>잔류</button>'
             f'<button class="c-fa" data-s="fa"><b>{cnt["fa"]}</b>미정</button>'
-            f'<button class="c-rm" data-s="rm"><b>{n_rm}</b>유력<small>미정 중</small></button>')
+            f'<button class="c-rm" data-s="rm"><b>{n_rm}</b>유력<small>기사 추측</small></button>')
     nav = '<a href="#" data-t="all">전체</a>' + "".join(
         f'<a href="#" data-t="{k}" title="{esc(team_name(k))}">{team_logo(k)}<span>{esc(team_short(k))}</span></a>' for k in keys)
     heads = {k: f'<span class="gh">{team_logo(k)}{esc(team_short(k))}</span>' for k in keys}
@@ -1746,7 +1753,8 @@ def render_stove(league: str) -> str:
     nums = (f'<section class="card stove-now"><h3>지금 스토브리그 <a href="/{league}/fa">이적·FA 보기 →</a></h3>'
             f'<div class="mini"><a class="m" href="/{league}/fa?s=move"><b>{cnt.get("move", 0)}</b>이적 확정</a>'
             f'<a href="/{league}/fa?s=stay"><b>{cnt.get("stay", 0)}</b>잔류</a>'
-            f'<a href="/{league}/fa?s=fa"><b>{cnt.get("fa", 0)}</b>미정</a></div></section>')
+            f'<a href="/{league}/fa?s=fa"><b>{cnt.get("fa", 0)}</b>미정</a>'
+           f'<a class="r" href="/{league}/fa?s=rm"><b>{cnt.get("rm", 0)}</b>유력</a></div></section>')
     main = (f'{stove_toggle(league, "stove")}{stove_card(today)}{nums}'
             f'<p class="note"><a href="/{league}/schedule">새 시즌 대회 일정·경기는 \'시즌\'에서 볼 수 있어요 →</a></p>')
     return shell(league, "stove", "스토브리그 일정", main, (), today)
@@ -2033,15 +2041,18 @@ def render_summary(league: str) -> str:
                 sm[k]["out"].append({**p, "to": rm["team"]})
                 if rm["team"] in sm:
                     sm[rm["team"]]["in"].append({**p, "from": k})
-    cards, tot = [], {"in": 0, "stay": 0, "open": 0}
+    cards, tot = [], {"in": 0, "stay": 0, "open": 0, "rm": 0}
     ros = roster_rows()
+    guess = {pg: rm for pg, rm in snap["rumors"].items() if not rm["official"]}    # 이적 시장의 '유력'과 같은 사람들
     for k in keys:
         v = sm[k]
         rumor = [x for xs in rms.get(k, {}).values() for x in xs if not x["rm"]["stay"] and not x["rm"].get("official")]
+        # 이 팀 FA 중 기사 추측이 있는 사람은 '미정'이 아니라 '이적설'(→ 행선지 유력 · 잔류 유력). 이적 시장의 미정·유력과 같게
+        mine = [p for p in v["open"] if p["page"] in guess]
         # 한 카드 안에서 같은 선수가 두 줄에 나오지 않게: 확정·이적설에 있는 선수는 '미정'에서 뺌
-        seen = {p["page"] for p in v["in"] + v["out"] + v["stay"]} | {x["page"] for x in rumor}
+        seen = {p["page"] for p in v["in"] + v["out"] + v["stay"] + mine} | {x["page"] for x in rumor}
         open_ = [p for p in v["open"] if p["page"] not in seen]
-        for key, n in (("in", len(v["in"])), ("stay", len(v["stay"])), ("open", len(open_))):
+        for key, n in (("in", len(v["in"])), ("stay", len(v["stay"])), ("open", len(open_)), ("rm", len(mine))):
             tot[key] += n
         lines = []
 
@@ -2051,7 +2062,10 @@ def render_summary(league: str) -> str:
         line("영입", "in", "".join(_chip(p, "in", f'{team_short(p["from"])}에서' if p.get("from") else "LCK 밖에서") for p in v["in"]))
         line("이탈", "out", "".join(_chip(p, "out", "→ " + (team_short(p["to"]) if p.get("to") else (p.get("to_name") or "LCK 밖"))) for p in v["out"]))
         line("재계약", "stay", "".join(_chip(p, "stay") for p in v["stay"]))
-        line("이적설", "rm", "".join(_chip(x, "rm", f'{x["rm"]["outlet"]}: {x["rm"]["title"]}', x.get("pos")) for x in rumor))
+        out_rm = [p for p in mine if p["page"] not in {x["page"] for x in rumor}]
+        line("이적설", "rm", "".join(_chip(x, "rm", f'{x["rm"]["outlet"]}: {x["rm"]["title"]}', x.get("pos")) for x in rumor)
+             + "".join(_chip(p, "rm", f'{guess[p["page"]]["outlet"]}: {guess[p["page"]]["title"]}',
+                             "잔류 유력" if guess[p["page"]]["stay"] else f'→ {team_short(guess[p["page"]]["team"])} 유력') for p in out_rm))
         line("미정", "open", "".join(_chip(p, "open") for p in open_))
         moved = len(v["in"]) + len(v["out"]) + len(v["stay"])
         d = parse_day(v["updated"]) if v["updated"] else None
@@ -2061,7 +2075,7 @@ def render_summary(league: str) -> str:
                       f'<b>{esc(team_name(k))}</b>{DONE_MARK if roster_complete(k, ros) else ""}<small>{meta}</small></header>{"".join(lines) or "<p class=sl-empty>아직 변동이 없어요</p>"}</article>'))
     cards.sort()
     stats = (f'<span><b>{tot["in"]}</b>영입</span><span><b>{tot["stay"]}</b>재계약</span>'      # 아래 카드들을 더한 수(카드와 숫자가 맞게)
-             f'<span><b>{tot["open"]}</b>미정</span>')
+             f'<span><b>{tot["open"]}</b>미정</span><span><b>{tot["rm"]}</b>유력</span>')
     main = (f'{stove_toggle(league, "summary")}<div class="stack">'
             + page_head("팀별", "이번 겨울 팀별 로스터 변동을 모았어요. 영입·이탈·재계약은 리그피디아 확정 기록, 이적설은 기사 제목 기준이에요.", stats)
             + f'<div class="sgrid">{"".join(c[3] for c in cards)}</div>'
