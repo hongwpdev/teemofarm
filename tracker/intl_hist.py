@@ -160,6 +160,31 @@ def _run_once():
         time.sleep(GAP_BETWEEN)
 
 
+def status() -> list:
+    """/api/history: 지난 국제전마다 받아 둔 정도(대회 목록은 저장본만 봄 — 리그피디아에 묻지 않음)."""
+    idx = _STATE["index"]
+    if idx is None:
+        try:
+            with open(_index_path(), encoding="utf-8") as f:
+                rows = json.load(f)["rows"]
+            idx = {}
+            for t in rows:
+                ev, y = schedule.intl_event(t["OverviewPage"])
+                if ev:
+                    idx.setdefault((ev, y), []).append(t)
+        except (OSError, ValueError, KeyError):
+            idx = {}
+    live = _live_years()
+    out = []
+    for (ev, y), tours in sorted(idx.items(), key=lambda x: (x[0][1], x[0][0]), reverse=True):
+        if not any(t.get("DateStart") for t in tours):
+            continue
+        d = load(ev, y) or {}
+        out.append({"ev": ev, "year": y, "live": (ev, y) in live, "complete": bool(d.get("complete")) or (ev, y) in live,
+                    "matches": len(d.get("matches") or []), "rosters": len(d.get("rosters") or {}), "at": d.get("at") or 0})
+    return out
+
+
 def start():
     """켠 지 4분 뒤부터(지금 시즌 수집이 먼저) 30분마다: 빠진 지난 국제전을 한 대회씩 받음."""
     def loop():

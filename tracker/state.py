@@ -60,6 +60,11 @@ def get() -> dict:
                "off": rumor.called_off(fa, ro), "key": key, "at": time.time()}
         with _LOCK:
             _S.update(key=key, at=val["at"], val=val)
+        try:                                       # 못 읽은 기사 모으기(뒤에서, 5분에 한 번까지)
+            from . import rumor_audit
+            rumor_audit.record_async(fa, ro)
+        except Exception:  # noqa: BLE001  (참고용 기록이라 실패해도 화면은 그대로)
+            pass
         return val
 
 

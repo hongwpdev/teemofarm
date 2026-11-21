@@ -129,6 +129,12 @@ class Handler(BaseHTTPRequestHandler):
             from .. import integrity
             return self._send(200, json.dumps({"problems": integrity.check()}, ensure_ascii=False).encode(),
                               "application/json; charset=utf-8")
+        if u.path == "/api/history":                      # 지난 기록 진행 상황(LCK 2012~ · 국제전): 저장본만 봄
+            return self._send(200, json.dumps({"lck": archive.status(), "intl": intl_hist.status()}, ensure_ascii=False).encode(),
+                              "application/json; charset=utf-8")
+        if u.path == "/api/rumor-audit":                  # 못 읽은 기사(확인 후보)와 읽음률
+            from .. import rumor_audit
+            return self._send(200, json.dumps(rumor_audit.report(), ensure_ascii=False).encode(), "application/json; charset=utf-8")
         if u.path == "/api/items":
             with db() as c:
                 rows = [dict(r) for r in c.execute("SELECT * FROM items WHERE source != 'news_en' ORDER BY published DESC LIMIT 300").fetchall()]

@@ -107,6 +107,30 @@ def _old_format(d) -> bool:
     return _no_groups(d) or "tours" not in d or "champions" not in d
 
 
+def status() -> list:
+    """/api/history: 해마다 받아 둔 정도(리그피디아에 묻지 않고 저장본만 봄)."""
+    out = []
+    for y in archive_years():
+        with _LOCK:
+            d = _CACHE.get(y)
+            busy = y in _BUSY
+            pos = _QUEUE.index(y) + 1 if y in _QUEUE else 0
+        if d is None and os.path.exists(_path(y)):
+            try:
+                with open(_path(y), encoding="utf-8") as f:
+                    d = json.load(f)
+            except (OSError, ValueError):
+                d = None
+        d = d or {}
+        ready = bool(d.get("stages") or d.get("champions") or d.get("tours"))
+        out.append({"year": y, "ready": ready, "champions": len(d.get("champions") or []),
+                    "stages": len(d.get("stages") or []), "tours": len(d.get("tours") or []),
+                    "rosters": len(d.get("rosters") or []), "moves": len(d.get("moves") or []),
+                    "missing": d.get("missing") or [], "errors": d.get("errors") or {},
+                    "at": d.get("at") or 0, "queued": pos, "busy": busy})
+    return out
+
+
 def start():
     """켠 지 2분 뒤부터 10분마다: 지난 시즌 기록이 없거나 일부 빠졌으면 다시 받아 봄."""
     def loop():
