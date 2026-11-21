@@ -36,6 +36,32 @@ class RumorAuditTest(unittest.TestCase):
         self.assertEqual(rep["read_rate"], 0.5)
         self.assertEqual([x["title"] for x in rep["unread_list"]], ["'기인', 새 시즌 거취 결정 임박"])
 
+    def test_skips_noise(self):
+        # 실제 운영에서 '못 읽음'으로 잘못 잡히던 것: 이미 확정된 사람 · 원소속 팀만 나오는 기사 · 'Hanwha Life'의 Life
+        now = datetime.now(timezone.utc).isoformat()
+        news = [{"title": t, "url": f"https://e.com/n{i}", "outlet": "o", "published": now} for i, t in enumerate([
+            "T1, '도란' 최현준과 동행 마무리... 차기 행선지는?",            # 원소속(T1)만: 행선지 없음이 정답
+            "데프트, 농심 레드포스 합류…2027시즌 LCK 복귀",                # 데프트는 이미 농심 이적 확정
+            "Sources: Kiin expected to join Hanwha Life Esports for the 2027 LCK season"])]
+        fa = [{"page": "Doran", "nick": "Doran", "team_from": "t1", "status": "fa"},
+              {"page": "Deft", "nick": "Deft", "team_from": "", "status": "move"},
+              {"page": "Kiin", "nick": "Kiin", "team_from": "geng", "status": "fa"},
+              {"page": "Life", "nick": "Life", "team_from": "dns", "status": "fa"}]
+        rumor_audit.init()
+        with db() as c:
+            c.execute("DELETE FROM rumor_audit")
+            for n in ("Doran", "Deft", "Kiin", "Life"):
+                c.execute("INSERT OR IGNORE INTO fa(page,nick,real,team_from,role,status,team_to,team_to_name,until,date,memo) "
+                          "VALUES(?,?,'','t1','Top','fa','','','','','')", (n, n))
+        from tracker import cluster, filters
+        filters._NAMES["at"] = cluster._PEOPLE["at"] = 0.0
+        with mock.patch.object(rumor, "_recent_news", lambda: news):
+            rumor_audit.record(fa, [], force=True)
+        rep = rumor_audit.report()
+        self.assertEqual((rep["pairs"], rep["read"]), (1, 1))                 # 기인 → 한화생명만(라이프는 사람이 아님)
+        with db() as c:
+            c.execute("DELETE FROM fa WHERE page IN ('Doran','Deft','Kiin','Life')")
+
     def test_runs_at_most_every_five_minutes(self):
         with mock.patch.object(rumor, "_recent_news", lambda: []):
             rumor_audit._RUN["at"] = 0.0

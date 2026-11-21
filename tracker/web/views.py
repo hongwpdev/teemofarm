@@ -225,6 +225,9 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
             f'<ul>{s_items}</ul></details>')
     bar = (f'<div class="archive-bar">지금 <b>{season} 시즌</b> 기록을 보고 있어요. '
            f'<a href="/{league}{here}">최신 화면으로 돌아가기 →</a></div>' if season and not pre and not wl else "")
+    if wl and season and ys and str(season) != ys[0]:      # 국제전 지난 대회도 같은 안내(시즌 고르기에 '기록'으로 나오는 해)
+        bar = (f'<div class="archive-bar">지금 <b>{season} {esc(_intl.EVENTS[league]["full"])}</b> 기록을 보고 있어요. '
+               f'<a href="/{league}{here}">최신 대회로 돌아가기 →</a></div>')
     if pre:
         bar = (f'<div class="archive-bar pre-bar"><b>{season} 시즌</b>은 아직 개막 전이에요. 지금 진행 중인 스토브리그는 '
                f'<a href="/{league}/fa">{now_label} &gt; 스토브리그</a>에서 볼 수 있어요.</div>')
@@ -424,14 +427,14 @@ def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True, name_then: s
         IN_S = '<i class="in s">영입</i>'
         def lv_tag(x):                         # 다른 팀 이적 유력(계약은 남음): 후보 선수도 표시('DK 루시드 → DRX')
             lv = leave.get(x["page"])
-            return (f'<span class="rmo" title="{esc(lv["outlet"] + " · " + lv["title"])}">➔ {team_logo(lv["team"])}{esc(team_short(lv["team"]))} '
+            return (f'<span class="rmo" data-dest="{lv["team"]}" title="{esc(lv["outlet"] + " · " + lv["title"])}">➔ {team_logo(lv["team"])}{esc(team_short(lv["team"]))} '
                     f'{"이적 확정" if lv["official"] else "이적 유력"}</span>' if lv else "")
         subs = "".join(f'<span class="subl">{pn(x, "pn sub")}{IN_S if x["joined"] else ""}{lv_tag(x)}</span>'
                        for x in rs[1:])      # 같은 포지션 선수가 더 있으면(후보 등) 이름을 모두 보여 줌
         subs += "".join(f'<span class="subl">{pn(x, "pn sub")}{ntag(x, True)}</span>' for x in newp + staff)
         subs += "".join(f'<span class="subl rml">{pn(x, "pn sub")}{rtag(x, True)}</span>' for x in rmp)
         lv = leave.get(r["page"])        # 이 선수가 다른 팀으로 갈 것 같다는 기사(계약은 남아 있음)
-        out = (f'<span class="rmo" title="{esc(lv["outlet"] + " · " + lv["title"])}">➔ {team_logo(lv["team"])}{esc(team_short(lv["team"]))} '
+        out = (f'<span class="rmo" data-dest="{lv["team"]}" title="{esc(lv["outlet"] + " · " + lv["title"])}">➔ {team_logo(lv["team"])}{esc(team_short(lv["team"]))} '
                f'{"이적 확정" if lv["official"] else "이적 유력"}</span>' if lv else "")
         cells.append(f'<li><span class="pk">{FA_POS[p]}</span>{pn(r)}{out}{subs}'
                      f'{"<i class=in>영입</i>" if r["joined"] else ""}</li>')
@@ -1597,7 +1600,10 @@ class SchTeams:
             return team_logo(k)
         src = teamlogos.url(k) if k else ""
         if src:   # 해외 로고는 리그피디아 이미지 서버로 넘어갈 수 있음: 다른 사이트 표시(Referer)가 있으면 회색 그림을 줘서 빼고 부름
-            return f'<img class="logo" src="{esc(src)}" alt="" width="20" height="20" loading="lazy" referrerpolicy="no-referrer">'
+            # (그래도 못 받으면 깨진 그림 대신 첫 글자 로고로)
+            ch = esc((self.short(k, name) or "?")[:1])
+            return (f'<img class="logo" src="{esc(src)}" alt="" width="20" height="20" loading="lazy" referrerpolicy="no-referrer" '
+                    f'onerror="var s=document.createElement(\'span\');s.className=\'logo txt\';s.textContent=\'{ch}\';this.replaceWith(s)">')
         return f'<span class="logo txt" aria-hidden="true">{esc((self.short(k, name) if k else "?")[:1])}</span>'
 
     def tname(self, k, name):

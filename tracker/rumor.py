@@ -65,6 +65,11 @@ def _read_en(title: str, nick: str, team_from: str):
     # 여러 선수 소식이 한 제목에 있으면('T1 to sign Zeus, Doran heads to DK') 그 선수가 나온 토막만 봄.
     # 토막에 팀이 없는데 다른 선수도 나오면 누구 얘기인지 몰라서 안 읽음
     parts = [p for p in re.split(r",|;|\||—|–|\s-\s|\band\b|\bwhile\b", t) if p.strip()]
+    # 'ShowMaker, Smash, and cvMax extend with Dplus KIA'처럼 이름만 늘어놓은 뒤 동사 하나면 모두 같은 소식(나누지 않음)
+    verbs = [low.find(w) for w in EN_JOIN + EN_RENEW + EN_LEAVE if low.find(w) > 0]
+    head = t[:min(verbs)] if verbs else ""
+    if head and nrx.search(head) and not _teams(head) and re.fullmatch(r"\s*[\w.'\-]+(?:\s*,\s*[\w.'\-]+)*(?:\s*,?\s*and\s+[\w.'\-]+)?\s*", head):
+        parts = [t]
     if len(parts) > 1:
         mine = " ".join(p for p in parts if nrx.search(p))
         nick_rx = people()[0]

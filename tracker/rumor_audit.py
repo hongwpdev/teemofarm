@@ -31,10 +31,12 @@ def init():
 
 
 def _pairs(fa, roster, news):
-    """(제목, 닉네임, 원소속, 읽은 결과, 기사) — 이적·재계약 말이 있고 아는 사람이 나오는 제목만."""
-    team = {r["nick"].lower(): (r["nick"], r["team_from"]) for r in fa if r.get("nick")}
+    """(제목, 닉네임, 원소속, 읽은 결과, 기사) — 이적·재계약 말이 있고 아는 사람이 나오는 제목만.
+    이미 확정된 사람(이적 확정·잔류)은 뺌(화면에 '유력'을 띄울 일이 없어 읽든 못 읽든 상관없음)."""
+    settled = {r["nick"].lower() for r in fa if r.get("nick") and r.get("status") in ("move", "stay")}
+    team = {r["nick"].lower(): (r["nick"], r["team_from"]) for r in fa if r.get("nick") and r["nick"].lower() not in settled}
     for r in roster:
-        if r.get("nick"):
+        if r.get("nick") and r["nick"].lower() not in settled:
             team.setdefault(r["nick"].lower(), (r["nick"], r["team"]))
     nick_rx = people()[0]
     for n in news:
@@ -48,12 +50,16 @@ def _pairs(fa, roster, news):
         outlet = (n["outlet"] if "outlet" in n.keys() else "") or ""
         if article_kind(title, "news", outlet) in ("view", "talk"):
             continue
-        who = set(persons(title)) if ko else {x.lower() for x in (nick_rx.findall(title) if nick_rx else [])}
+        en = rumor._EN_TEAM.sub("Hanwha", title)            # ('Hanwha Life'의 Life를 코치 라이프로 보지 않게)
+        who = set(persons(title)) if ko else {x.lower() for x in (nick_rx.findall(en) if nick_rx else [])}
+        lck = set(rumor._teams(title))
         for p in who:
             if p not in team:
                 continue
             nick, frm = team[p]
             got = rumor.read_title(title, nick, frm)
+            if not got and lck and lck <= {frm}:
+                continue                             # 원소속 팀만 나오는 기사(계약 종료·재합류 등): 다른 행선지가 없음
             yield title, nick, frm, got, n
 
 

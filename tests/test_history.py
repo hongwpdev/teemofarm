@@ -132,6 +132,15 @@ class IntlHistoryTest(unittest.TestCase):
         card = res[res.index('class="card champ'):].split("</section>")[0]
         self.assertIn("<em>3 : 2</em>", card)
 
+    def test_past_event_has_archive_bar(self):
+        # 시즌 고르기에 '기록'으로 나오는 지난 국제전도 LCK처럼 '기록을 보고 있어요' 안내(실제 사이트 전체 점검에서 찾음)
+        from datetime import date
+        with mock.patch.object(intl, "years", lambda ev, d=None: ["2026", "2011"]):
+            old = views.shell("worlds", "results", "t", "", (), date(2026, 11, 21), season="2011")
+            new = views.shell("worlds", "results", "t", "", (), date(2026, 11, 21), season="2026")
+        self.assertIn("지금 <b>2011 월드 챔피언십</b> 기록을 보고 있어요", old)
+        self.assertNotIn("archive-bar", new)
+
     def test_kind(self):
         k = lambda tab, page: intl.kind({"tab": tab, "page": page})     # noqa: E731
         self.assertEqual(k("Day 3", "2017 Season World Championship/Main Event"), "group")

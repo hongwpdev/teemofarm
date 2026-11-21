@@ -91,11 +91,22 @@ async function crawl(base, opts = {}) {
         const box = e.matches('[data-label]') ? e : e.closest('[data-label]');
         if (box && w !== '로스터') { label = box.dataset.label || ''; dest = box.dataset.dest || ''; }
         if (w === '로스터') {            // 로스터 카드: 이름 바로 뒤의 표시(발표·유력)만 그 사람 것, 행선지는 그 카드 팀
-          let n = e.nextElementSibling;
-          while (n && !n.matches('[data-nick]')) { if (n.matches('i.rm')) { label = txt(n.textContent); break; } n = n.nextElementSibling; }
-          if (!label && e.parentElement && e.parentElement.matches('.subl')) { const i = e.parentElement.querySelector('i.rm'); if (i) label = txt(i.textContent); }
+          // 이름 바로 뒤의 표시만 그 사람 것: 다른 사람 줄(.subl)이 나오면 멈춤.
+          // '➔ DK 이적 유력'(.rmo, 계약 중 선수가 다른 팀으로)은 그 팀이 행선지, 'i.rm'(유력·확정)은 이 카드 팀이 행선지
+          let n = e.nextElementSibling, out = null;
+          while (n && !n.matches('[data-nick]') && !n.matches('.subl')) {
+            if (n.matches('.rmo')) { out = n; break; }
+            if (n.matches('i.rm')) { label = txt(n.textContent); break; }
+            n = n.nextElementSibling;
+          }
+          if (!out && !label && e.parentElement && e.parentElement.matches('.subl')) {
+            const sub = e.parentElement;
+            const o = sub.querySelector('.rmo'), i = sub.querySelector('i.rm');
+            if (o) out = o; else if (i) label = txt(i.textContent);
+          }
           const card = e.closest('[data-team]');
-          if (label && !e.closest('li').querySelector('.rmo')) dest = card ? card.closest('.rc').dataset.team : '';
+          if (out) { label = /확정/.test(out.textContent) ? '확정' : '유력'; dest = out.dataset.dest || ''; }
+          else if (label) dest = card ? card.closest('.rc').dataset.team : '';
           if (label === '' ) continue;   // 계약된 선수 칸(표시 없음)은 비교하지 않음
         }
         out.facts.push([e.dataset.nick, e.dataset.pos || '', label, dest, w]);

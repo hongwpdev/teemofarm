@@ -293,6 +293,9 @@ class FuzzFoundTest(unittest.TestCase):
         self.assertEqual(read_title("DK, '쇼메이커' 허수 재계약…'스매쉬'·김대호 감독도 잔류 [공식]", "Smash", "dk"), ("dk", True))
         self.assertEqual(read_title("Diable to stay at Nongshim RedForce", "Diable", "ns"), ("ns", True))
         self.assertEqual(read_title("OKSavingsBank BRION announce Daystar as new mid laner", "Daystar", "kt"), ("bro", False))
+        # 이름만 늘어놓은 뒤 동사 하나(실제 기사): 모두 같은 소식
+        for n in ("ShowMaker", "Smash"):
+            self.assertEqual(read_title("ShowMaker, Smash, and cvMax extend with Dplus KIA ahead of 2027", n, "dk"), ("dk", True))
 
     def test_real_headlines(self):
         # 실제 기사 68건(사람이 정답을 매김): 엉뚱한 팀·헛유력은 0, 놓침은 2건까지(특이한 말투 2개)
