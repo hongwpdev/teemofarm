@@ -59,6 +59,13 @@ def check() -> list:
                 r["role"] == "Coach" and x["role"] == "Head Coach" and r["memo"] in ("감독 승격", "정식 감독")):
             bad.append(f"{who}: FA 목록은 {POS.get(r['role'], r['role'])}, 로스터는 {POS.get(x['role'], x['role'])}")
 
+    # 4-2) 잔류·이적 확정 선수가 로스터에 없음(재계약한 쇼메이커가 DK 미드 빈자리로 보이던 문제)
+    teams = {r["team"] for r in roster}
+    for r in fa:
+        team = r["team_to"] if r["status"] == "move" else r["team_from"] if r["status"] == "stay" else ""
+        if r["role"] in ("Top", "Jungle", "Mid", "Bot", "Support") and team in teams and r["nick"].lower() not in ro:
+            bad.append(f"{r['nick']}({r['team_from']}): FA 목록은 {'잔류' if r['status'] == 'stay' else team + ' 이적 확정'}인데 로스터에 없음")
+
     # 5) '유력'은 아직 미정인 사람에게만, 그리고 지금 팀이 행선지가 되면 안 됨
     rm = rumors(fa)
     for r in fa:

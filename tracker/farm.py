@@ -51,12 +51,16 @@ def sync(force=False):
             if not r or r["status"] != "fa" or not rm.get("team"):
                 continue
             iid = f"rm:{page}:{rm['team']}:{'s' if rm['stay'] else 'm'}"
+            if not rm["stay"] and _has_open(c, f"mv:{page}:{rm['team']}"):
+                continue                               # 같은 사람·같은 행선지 판이 이미 있음(로스터에 있을 때 만든 판)
             _put(c, iid, page, r["nick"], r["team_from"], rm, now)
         # 1-2) 계약이 남은 선수의 이적 유력('커리어 DK → 한화생명') → 판
         roster = [dict(r) for r in c.execute("SELECT * FROM roster WHERE league='lck'")]
         for page, rm in movers(roster).items():
             r = next((x for x in roster if x["page"] == page), None)
             if not r or not rm.get("team") or rm["team"] == r["team"]:
+                continue
+            if _has_open(c, f"rm:{page}:{rm['team']}:m"):
                 continue
             _put(c, f"mv:{page}:{rm['team']}", page, r["nick"], r["team"], rm, now)
         # 1-3) 더 새 기사가 그 행선지를 '무산·결렬'이라 하면 새로 심기는 마감(결과는 계속 리그피디아 기준)
@@ -120,6 +124,22 @@ def _games():
     return out
 
 
+def _has_open(c, iid) -> bool:
+    return bool(c.execute("SELECT 1 FROM farm_items WHERE id=? AND result IS NULL", (iid,)).fetchone())
+
+
+def _dedupe(items):
+    """같은 사람·같은 행선지·같은 방향(이적/잔류) 판이 둘이면(예전에 FA·로스터 쪽에서 따로 만든 것) 먼저 만든 판 하나만."""
+    seen, out = set(), []
+    for r in sorted(items, key=lambda r: r.get("created") or ""):
+        key = (r["page"], r["b"], r["id"].endswith(":s")) if r["kind"] == "rumor" else (r["id"],)
+        if key not in seen:
+            seen.add(key)
+            out.append(r)
+    keep = {r["id"] for r in out}
+    return [r for r in items if r["id"] in keep]
+
+
 def _put(c, iid, page, nick, frm, rm, now):
     """유력 기사 판 하나(같은 판이면 결과가 나기 전까지 최신 기사·표시로 바꿈: 유력 → 발표)."""
     from .stove import outlet_name
@@ -173,9 +193,9 @@ def board(ids=(), cid: str = "") -> dict:
         rows = [dict(r) for r in c.execute("SELECT * FROM farm_items ORDER BY COALESCE(published,'') DESC")]
         mine = {r["id"]: r for r in rows if r["id"] in ids}
         # 시즌엔 경기 판을 먼저(가까운 경기부터), 그다음 유력
-        opn = [r for r in rows if _open(r, now)]
+        opn = _dedupe([r for r in rows if _open(r, now)])
         opn = (sorted((r for r in opn if r["kind"] == "match"), key=lambda r: r["published"]) + [r for r in opn if r["kind"] == "rumor"])[:OPEN_MAX]
-        done = sorted((r for r in rows if r["result"]), key=lambda r: r["resolved_at"] or "", reverse=True)[:DONE_MAX]
+        done = sorted(_dedupe([r for r in rows if r["result"]]), key=lambda r: r["resolved_at"] or "", reverse=True)[:DONE_MAX]
         t = _tally(c, list({r["id"] for r in opn + done} | set(mine)))
         my = ({r["item"]: r["pick"] for r in c.execute("SELECT item, pick FROM farm_picks WHERE cid=?", (cid,))}
               if _CID.match(cid or "") else {})

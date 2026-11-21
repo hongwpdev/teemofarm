@@ -177,6 +177,16 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class FarmDedupeTest(unittest.TestCase):
+    def test_same_question_is_one_board(self):
+        # 시우 → 젠지: 로스터에 있을 때 만든 판(mv)과 FA가 된 뒤 만든 판(rm)이 같은 질문 → 하나만 보여 줌
+        a = {"id": "mv:Siwoo:geng", "kind": "rumor", "page": "Siwoo", "b": "geng", "created": "2026-11-18"}
+        b = {"id": "rm:Siwoo:geng:m", "kind": "rumor", "page": "Siwoo", "b": "geng", "created": "2026-11-19"}
+        c = {"id": "rm:Siwoo:geng:s", "kind": "rumor", "page": "Siwoo", "b": "geng", "created": "2026-11-19"}
+        m = {"id": "m:1", "kind": "match", "page": "LCK", "b": "t1", "created": "2026-11-19"}
+        self.assertEqual([r["id"] for r in farm._dedupe([b, a, c, m])], ["mv:Siwoo:geng", "rm:Siwoo:geng:s", "m:1"])
+
+
 class FarmIntlTest(unittest.TestCase):
     """국제전: 일정에 잡힌 경기 중 LCK 팀이 나오는 것만 판으로(코드 수정 없이 대회가 바뀌어도)."""
     @classmethod

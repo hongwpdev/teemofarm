@@ -87,6 +87,24 @@ class IntegrityTest(unittest.TestCase):
                 c.execute("DELETE FROM items WHERE id='news:dj1'")
 
 
+class FillRosterTest(unittest.TestCase):
+    def test_resigned_and_moved_fill_roster(self):
+        from tracker.fa import fill_from_fa
+        R = lambda team, role, page, until="2027-11-30", joined=0: ("lck", team, role, page, page, "", until, joined)
+        F = lambda page, frm, role, st, to="", memo="": (page, page, "", frm, role, st, to, "", "", "2026-11-18", memo)
+        rows = [R("dk", "Top", "Doran", "", 1), R("bfx", "Head Coach", "Rather")]
+        fa = [F("ShowMaker", "dk", "Mid", "stay"), F("Smash", "dk", "Bot", "stay"),           # 재계약했는데 로스터에서 빠진 선수
+              F("Doran", "t1", "Top", "move", "dk"),                                         # 이미 있음 → 그대로
+              F("Raptor", "bfx", "Jungle", "move", "kt"),                                    # 이적 확정 → 새 팀에
+              F("Lyn", "geng", "Coach", "move", "ns"),                                       # 코치는 칸 없음
+              F("Edo", "bfx", "Head Coach", "stay", memo="보직 변경"),                       # 보직 변경은 감독 칸에 안 넣음
+              F("Zeus", "hle", "Top", "fa")]                                                 # 미정은 안 넣음
+        out = fill_from_fa(rows, fa, {"dk", "kt", "ns", "bfx", "hle", "t1", "geng"})
+        got = sorted((r[1], r[2], r[3], r[7]) for r in out)
+        self.assertEqual(got, [("bfx", "Head Coach", "Rather", 0), ("dk", "Bot", "Smash", 0), ("dk", "Mid", "ShowMaker", 0),
+                               ("dk", "Top", "Doran", 1), ("kt", "Jungle", "Raptor", 1)])
+
+
 class AlertTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

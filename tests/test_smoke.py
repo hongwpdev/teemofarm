@@ -111,6 +111,7 @@ class SmokeTest(unittest.TestCase):
               "published": "2026-11-18T01:00:00+00:00"}
         guess = {**rm, "official": False, "stay": False, "team": "ns", "title": "농심행 유력"}
         x = {"page": "Bon0", "nick": "bon0", "real": "", "role": "Head Coach", "until": "", "joined": 0, "rm": rm, "pos": "감독"}
+        cx = {"page": "CoX", "nick": "CoX", "real": "", "role": "Coach", "until": "", "joined": 0, "rm": rm, "pos": "코치"}
         g = {"page": "Gx", "nick": "Gx", "real": "", "role": "Top", "until": "", "joined": 0, "rm": guess, "pos": "탑"}
         with mock.patch.object(views, "rumor_slots", return_value={"ns": {"Head Coach": [x], "Top": [g]}}), \
              mock.patch.object(views, "roster_leaving", return_value={}):
@@ -121,6 +122,13 @@ class SmokeTest(unittest.TestCase):
         self.assertNotIn("발표", card)
         self.assertIn('<li class="vac rmv"><span class="pk">탑</span>', card)        # 기사 추측은 그대로 빈자리 + 유력
         self.assertIn(">0/5<", card)
+        # 코치는 감독 칸을 채우지 않음(칸은 빈자리 그대로, 이름은 아래 줄에 '잔류')
+        with mock.patch.object(views, "rumor_slots", return_value={"ns": {"Head Coach": [cx]}}), \
+             mock.patch.object(views, "roster_leaving", return_value={}):
+            card = views.roster_card("ns", [])
+        cell = card.split('data-page="CoX"')[0].rsplit("<li", 1)[1]
+        self.assertIn("vac", cell)
+        self.assertIn('class="in s stay"', card)
 
     def test_roster_complete_mark(self):
         # 주전 5명 + 감독이 다 있으면 'n/5' 대신 '로스터 완성 ✓', 한 자리라도 비면 그대로 n/5

@@ -213,18 +213,35 @@ def poll_roster(gap, names, today, fa_rows, rc=None):
         k = (r[1], r[4].lower())
         if k not in one or r[6] > one[k][6]:
             one[k] = r
-    rows = list(one.values())
-    # 감독: Players에 Head Coach가 없으면 이번 스토브리그 기록(잔류·이적)의 감독으로 채움
-    has_coach = {r[1] for r in rows if r[2] == "Head Coach"}
-    for r in fa_rows:
-        team = r[6] or (r[3] if r[5] == "stay" else "")
-        if r[4] == "Head Coach" and r[5] in ("stay", "move") and r[10] != "보직 변경" and team and team not in has_coach:
-            rows.append(("lck", team, "Head Coach", r[0], r[1], r[2], r[8], 1 if r[5] == "move" else 0))
-            has_coach.add(team)
+    rows = fill_from_fa(list(one.values()), fa_rows, set(lck.values()))
     with db() as c:
         c.execute("DELETE FROM roster WHERE league='lck'")
         c.executemany("INSERT OR REPLACE INTO roster(league,team,role,page,nick,real,until,joined) VALUES(?,?,?,?,?,?,?,?)", rows)
     return len(rows), keep
+
+
+def fill_from_fa(rows, fa_rows, teams) -> list:
+    """리그피디아 Players의 계약 기간이 아직 옛날 것이라 로스터에서 빠진 사람을 이번 스토브리그 기록(잔류·이적 확정)으로 채움.
+    (재계약한 쇼메이커·스매쉬·킹겐·칼릭스가 로스터엔 빈자리로 보이던 문제. FA 목록과 로스터가 같은 말을 하게)
+    rows: roster 행 튜플(league, team, role, page, nick, real, until, joined), fa_rows: fa 행 튜플."""
+    rows = list(rows)
+    have = {(r[1], r[3]) for r in rows} | {(r[1], r[4].lower()) for r in rows}
+    has_coach = {r[1] for r in rows if r[2] == "Head Coach"}
+    for r in fa_rows:
+        if r[5] not in ("stay", "move") or r[10] == "보직 변경":
+            continue
+        team = r[6] if r[5] == "move" else r[3]
+        if team not in teams or (team, r[0]) in have or (team, (r[1] or "").lower()) in have:
+            continue
+        if r[4] == "Head Coach":              # 감독: 그 팀에 감독이 없을 때만
+            if team in has_coach:
+                continue
+            has_coach.add(team)
+        elif r[4] not in FA_ROLES:            # 코치는 로스터 칸이 없음
+            continue
+        rows.append(("lck", team, r[4], r[0], r[1], r[2], r[8], 1 if r[5] == "move" else 0))
+        have |= {(team, r[0]), (team, (r[1] or "").lower())}
+    return rows
 
 
 def save_profiles(pages, players, gap) -> int:

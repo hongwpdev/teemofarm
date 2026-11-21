@@ -33,7 +33,7 @@ def team_summary(team_keys) -> dict:
     moved_in = set()
     for r in fa:
         k, d = r["team_from"], (r["date"] or "")[:10]
-        p = {"page": r["page"], "nick": r["nick"], "role": r["role"], "date": d}
+        p = {"page": r["page"], "nick": r["nick"], "role": r["role"], "date": d, "memo": r["memo"] or ""}
         if r["status"] == "move":
             if r["team_to"] in out:
                 out[r["team_to"]]["in"].append({**p, "from": k})
