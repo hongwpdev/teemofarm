@@ -1,0 +1,4041 @@
+{
+"league": "intl",
+"season": 2026,
+"current": false,
+"at": "2026-11-20T12:00:00+00:00",
+"tours": [
+{
+"page": "2026 First Stand",
+"name": "First Stand 2026",
+"start": "2026-03-16",
+"end": "2026-03-22",
+"playoff": false
+},
+{
+"page": "2026 Mid-Season Invitational",
+"name": "MSI 2026",
+"start": "2026-06-28",
+"end": "2026-07-12",
+"playoff": false
+},
+{
+"page": "Esports World Cup 2026",
+"name": "Esports World Cup 2026",
+"start": "2026-07-15",
+"end": "2026-07-19",
+"playoff": true
+},
+{
+"page": "2026 Season World Championship/Play-In",
+"name": "Worlds 2026 Play-In",
+"start": "2026-10-15",
+"end": "2026-10-18",
+"playoff": false
+},
+{
+"page": "2026 Season World Championship/Main Event",
+"name": "Worlds 2026 Main Event",
+"start": "2026-10-23",
+"end": "2026-11-14",
+"playoff": false
+}
+],
+"matches": [
+{
+"id": "I26_00",
+"page": "2026 First Stand",
+"tour": "First Stand 2026",
+"playoff": false,
+"tab": "Groups Day 1",
+"at": "2026-03-16 13:00:00",
+"bo": "5",
+"t1": "Bilibili Gaming",
+"k1": "bilibili-gaming",
+"t2": "BNK FEARX",
+"k2": "bfx",
+"s1": "3",
+"s2": "2",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_01",
+"page": "2026 First Stand",
+"tour": "First Stand 2026",
+"playoff": false,
+"tab": "Groups Day 1",
+"at": "2026-03-16 18:00:00",
+"bo": "5",
+"t1": "G2 Esports",
+"k1": "g2-esports",
+"t2": "Team Secret Whales",
+"k2": "team-secret-whales",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_02",
+"page": "2026 First Stand",
+"tour": "First Stand 2026",
+"playoff": false,
+"tab": "Groups Day 2",
+"at": "2026-03-17 13:00:00",
+"bo": "5",
+"t1": "Gen.G",
+"k1": "geng",
+"t2": "JD Gaming",
+"k2": "jd-gaming",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_03",
+"page": "2026 First Stand",
+"tour": "First Stand 2026",
+"playoff": false,
+"tab": "Groups Day 2",
+"at": "2026-03-17 18:00:00",
+"bo": "5",
+"t1": "LYON (2024 American Team)",
+"k1": "lyon-2024-american-team",
+"t2": "LOUD",
+"k2": "loud",
+"s1": "3",
+"s2": "2",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_04",
+"page": "2026 First Stand",
+"tour": "First Stand 2026",
+"playoff": false,
+"tab": "Groups Day 3",
+"at": "2026-03-18 13:00:00",
+"bo": "5",
+"t1": "Bilibili Gaming",
+"k1": "bilibili-gaming",
+"t2": "G2 Esports",
+"k2": "g2-esports",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_05",
+"page": "2026 First Stand",
+"tour": "First Stand 2026",
+"playoff": false,
+"tab": "Groups Day 3",
+"at": "2026-03-18 18:00:00",
+"bo": "5",
+"t1": "BNK FEARX",
+"k1": "bfx",
+"t2": "Team Secret Whales",
+"k2": "team-secret-whales",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_06",
+"page": "2026 First Stand",
+"tour": "First Stand 2026",
+"playoff": false,
+"tab": "Groups Day 4",
+"at": "2026-03-19 13:00:00",
+"bo": "5",
+"t1": "Gen.G",
+"k1": "geng",
+"t2": "LYON (2024 American Team)",
+"k2": "lyon-2024-american-team",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_07",
+"page": "2026 First Stand",
+"tour": "First Stand 2026",
+"playoff": false,
+"tab": "Groups Day 4",
+"at": "2026-03-19 18:00:00",
+"bo": "5",
+"t1": "JD Gaming",
+"k1": "jd-gaming",
+"t2": "LOUD",
+"k2": "loud",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_08",
+"page": "2026 First Stand",
+"tour": "First Stand 2026",
+"playoff": false,
+"tab": "Groups Day 5",
+"at": "2026-03-20 13:00:00",
+"bo": "5",
+"t1": "G2 Esports",
+"k1": "g2-esports",
+"t2": "BNK FEARX",
+"k2": "bfx",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_09",
+"page": "2026 First Stand",
+"tour": "First Stand 2026",
+"playoff": false,
+"tab": "Groups Day 5",
+"at": "2026-03-20 18:00:00",
+"bo": "5",
+"t1": "LYON (2024 American Team)",
+"k1": "lyon-2024-american-team",
+"t2": "JD Gaming",
+"k2": "jd-gaming",
+"s1": "1",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_10",
+"page": "2026 First Stand",
+"tour": "First Stand 2026",
+"playoff": false,
+"tab": "Semifinals",
+"at": "2026-03-21 13:00:00",
+"bo": "5",
+"t1": "Gen.G",
+"k1": "geng",
+"t2": "G2 Esports",
+"k2": "g2-esports",
+"s1": "0",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_11",
+"page": "2026 First Stand",
+"tour": "First Stand 2026",
+"playoff": false,
+"tab": "Semifinals",
+"at": "2026-03-21 18:00:00",
+"bo": "5",
+"t1": "Bilibili Gaming",
+"k1": "bilibili-gaming",
+"t2": "JD Gaming",
+"k2": "jd-gaming",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_12",
+"page": "2026 First Stand",
+"tour": "First Stand 2026",
+"playoff": false,
+"tab": "Finals",
+"at": "2026-03-22 13:00:00",
+"bo": "5",
+"t1": "G2 Esports",
+"k1": "g2-esports",
+"t2": "Bilibili Gaming",
+"k2": "bilibili-gaming",
+"s1": "1",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_13",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Play-In Day 1",
+"at": "2026-06-28 03:00:00",
+"bo": "5",
+"t1": "T1",
+"k1": "t1",
+"t2": "Team Liquid",
+"k2": "team-liquid",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_14",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Play-In Day 1",
+"at": "2026-06-28 08:00:00",
+"bo": "5",
+"t1": "Karmine Corp",
+"k1": "karmine-corp",
+"t2": "Deep Cross Gaming",
+"k2": "deep-cross-gaming",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_15",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Play-In Day 2",
+"at": "2026-06-29 03:00:00",
+"bo": "5",
+"t1": "Karmine Corp",
+"k1": "karmine-corp",
+"t2": "T1",
+"k2": "t1",
+"s1": "0",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_16",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Play-In Day 2",
+"at": "2026-06-29 08:00:00",
+"bo": "5",
+"t1": "Deep Cross Gaming",
+"k1": "deep-cross-gaming",
+"t2": "Team Liquid",
+"k2": "team-liquid",
+"s1": "0",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_17",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Play-In Day 3",
+"at": "2026-06-30 08:00:00",
+"bo": "5",
+"t1": "Karmine Corp",
+"k1": "karmine-corp",
+"t2": "Team Liquid",
+"k2": "team-liquid",
+"s1": "0",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_18",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Play-In Day 4",
+"at": "2026-07-01 08:00:00",
+"bo": "5",
+"t1": "T1",
+"k1": "t1",
+"t2": "Team Liquid",
+"k2": "team-liquid",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_19",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Bracket Round 1",
+"at": "2026-07-03 03:00:00",
+"bo": "5",
+"t1": "Hanwha Life Esports",
+"k1": "hle",
+"t2": "Team Secret Whales",
+"k2": "team-secret-whales",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_20",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Bracket Round 1",
+"at": "2026-07-03 08:00:00",
+"bo": "5",
+"t1": "G2 Esports",
+"k1": "g2-esports",
+"t2": "Top Esports",
+"k2": "top-esports",
+"s1": "3",
+"s2": "2",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_21",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Bracket Round 1",
+"at": "2026-07-04 03:00:00",
+"bo": "5",
+"t1": "LYON (2024 American Team)",
+"k1": "lyon-2024-american-team",
+"t2": "FURIA",
+"k2": "furia",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_22",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Bracket Round 1",
+"at": "2026-07-04 08:00:00",
+"bo": "5",
+"t1": "Bilibili Gaming",
+"k1": "bilibili-gaming",
+"t2": "T1",
+"k2": "t1",
+"s1": "3",
+"s2": "2",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_23",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Bracket Round 1",
+"at": "2026-07-05 03:00:00",
+"bo": "5",
+"t1": "Team Secret Whales",
+"k1": "team-secret-whales",
+"t2": "Top Esports",
+"k2": "top-esports",
+"s1": "3",
+"s2": "1",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_24",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Bracket Round 2",
+"at": "2026-07-05 08:00:00",
+"bo": "5",
+"t1": "Hanwha Life Esports",
+"k1": "hle",
+"t2": "G2 Esports",
+"k2": "g2-esports",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_25",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Bracket Round 2",
+"at": "2026-07-06 03:00:00",
+"bo": "5",
+"t1": "Bilibili Gaming",
+"k1": "bilibili-gaming",
+"t2": "LYON (2024 American Team)",
+"k2": "lyon-2024-american-team",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_26",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Bracket Round 1",
+"at": "2026-07-06 08:00:00",
+"bo": "5",
+"t1": "T1",
+"k1": "t1",
+"t2": "FURIA",
+"k2": "furia",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_27",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Bracket Round 2",
+"at": "2026-07-08 03:00:00",
+"bo": "5",
+"t1": "LYON (2024 American Team)",
+"k1": "lyon-2024-american-team",
+"t2": "Team Secret Whales",
+"k2": "team-secret-whales",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_28",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Bracket Round 2",
+"at": "2026-07-08 08:00:00",
+"bo": "5",
+"t1": "G2 Esports",
+"k1": "g2-esports",
+"t2": "T1",
+"k2": "t1",
+"s1": "3",
+"s2": "1",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_29",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Bracket Round 4",
+"at": "2026-07-09 08:00:00",
+"bo": "5",
+"t1": "Bilibili Gaming",
+"k1": "bilibili-gaming",
+"t2": "Hanwha Life Esports",
+"k2": "hle",
+"s1": "3",
+"s2": "1",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_30",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Bracket Round 3",
+"at": "2026-07-10 08:00:00",
+"bo": "5",
+"t1": "G2 Esports",
+"k1": "g2-esports",
+"t2": "LYON (2024 American Team)",
+"k2": "lyon-2024-american-team",
+"s1": "0",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_31",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Bracket Round 4",
+"at": "2026-07-11 08:00:00",
+"bo": "5",
+"t1": "Hanwha Life Esports",
+"k1": "hle",
+"t2": "LYON (2024 American Team)",
+"k2": "lyon-2024-american-team",
+"s1": "3",
+"s2": "2",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_32",
+"page": "2026 Mid-Season Invitational",
+"tour": "MSI 2026",
+"playoff": false,
+"tab": "Finals",
+"at": "2026-07-12 07:30:00",
+"bo": "5",
+"t1": "Bilibili Gaming",
+"k1": "bilibili-gaming",
+"t2": "Hanwha Life Esports",
+"k2": "hle",
+"s1": "2",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_33",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-15 09:00:00",
+"bo": "1",
+"t1": "Gen.G",
+"k1": "geng",
+"t2": "Karmine Corp",
+"k2": "karmine-corp",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_34",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-15 09:00:00",
+"bo": "1",
+"t1": "Team Secret (Vietnamese Team)",
+"k1": "team-secret-vietnamese-team",
+"t2": "Sentinels",
+"k2": "sentinels",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_35",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-15 10:10:00",
+"bo": "1",
+"t1": "T1",
+"k1": "t1",
+"t2": "GAM Esports",
+"k2": "gam-esports",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_36",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-15 10:10:00",
+"bo": "1",
+"t1": "Bilibili Gaming",
+"k1": "bilibili-gaming",
+"t2": "Movistar KOI",
+"k2": "movistar-koi",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_37",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-15 11:20:00",
+"bo": "1",
+"t1": "AG.AL",
+"k1": "ag-al",
+"t2": "Dplus Kia",
+"k2": "dk",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_38",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-15 11:20:00",
+"bo": "1",
+"t1": "G2 Esports",
+"k1": "g2-esports",
+"t2": "FURIA",
+"k2": "furia",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_39",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-15 12:30:00",
+"bo": "1",
+"t1": "Hanwha Life Esports",
+"k1": "hle",
+"t2": "MIBR.LOS",
+"k2": "mibr-los",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_40",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-15 12:30:00",
+"bo": "1",
+"t1": "LYON (2024 American Team)",
+"k1": "lyon-2024-american-team",
+"t2": "JD Gaming",
+"k2": "jd-gaming",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_41",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-15 13:40:00",
+"bo": "3",
+"t1": "Team Secret (Vietnamese Team)",
+"k1": "team-secret-vietnamese-team",
+"t2": "Karmine Corp",
+"k2": "karmine-corp",
+"s1": "1",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_42",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-15 13:40:00",
+"bo": "3",
+"t1": "Movistar KOI",
+"k1": "movistar-koi",
+"t2": "GAM Esports",
+"k2": "gam-esports",
+"s1": "1",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_43",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-15 16:10:00",
+"bo": "3",
+"t1": "FURIA",
+"k1": "furia",
+"t2": "Dplus Kia",
+"k2": "dk",
+"s1": "0",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_44",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-15 16:10:00",
+"bo": "3",
+"t1": "MIBR.LOS",
+"k1": "mibr-los",
+"t2": "LYON (2024 American Team)",
+"k2": "lyon-2024-american-team",
+"s1": "2",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_45",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-16 09:00:00",
+"bo": "1",
+"t1": "Sentinels",
+"k1": "sentinels",
+"t2": "Gen.G",
+"k2": "geng",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_46",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-16 09:00:00",
+"bo": "1",
+"t1": "Bilibili Gaming",
+"k1": "bilibili-gaming",
+"t2": "T1",
+"k2": "t1",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_47",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-16 10:10:00",
+"bo": "1",
+"t1": "G2 Esports",
+"k1": "g2-esports",
+"t2": "AG.AL",
+"k2": "ag-al",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_48",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-16 10:10:00",
+"bo": "1",
+"t1": "Hanwha Life Esports",
+"k1": "hle",
+"t2": "JD Gaming",
+"k2": "jd-gaming",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_49",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-16 11:20:00",
+"bo": "3",
+"t1": "T1",
+"k1": "t1",
+"t2": "GAM Esports",
+"k2": "gam-esports",
+"s1": "2",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_50",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-16 11:20:00",
+"bo": "3",
+"t1": "Sentinels",
+"k1": "sentinels",
+"t2": "Karmine Corp",
+"k2": "karmine-corp",
+"s1": "0",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_51",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-16 13:50:00",
+"bo": "3",
+"t1": "G2 Esports",
+"k1": "g2-esports",
+"t2": "Dplus Kia",
+"k2": "dk",
+"s1": "0",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_52",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Group Stage",
+"at": "2026-07-16 13:50:00",
+"bo": "3",
+"t1": "JD Gaming",
+"k1": "jd-gaming",
+"t2": "MIBR.LOS",
+"k2": "mibr-los",
+"s1": "2",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_53",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Quarterfinals",
+"at": "2026-07-17 11:00:00",
+"bo": "3",
+"t1": "Hanwha Life Esports",
+"k1": "hle",
+"t2": "T1",
+"k2": "t1",
+"s1": "0",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_54",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Quarterfinals",
+"at": "2026-07-17 11:00:00",
+"bo": "3",
+"t1": "Gen.G",
+"k1": "geng",
+"t2": "JD Gaming",
+"k2": "jd-gaming",
+"s1": "2",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "I26_55",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Quarterfinals",
+"at": "2026-07-17 13:30:00",
+"bo": "3",
+"t1": "AG.AL",
+"k1": "ag-al",
+"t2": "Karmine Corp",
+"k2": "karmine-corp",
+"s1": "0",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_56",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Quarterfinals",
+"at": "2026-07-17 13:30:00",
+"bo": "3",
+"t1": "Bilibili Gaming",
+"k1": "bilibili-gaming",
+"t2": "Dplus Kia",
+"k2": "dk",
+"s1": "1",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_57",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Semifinals",
+"at": "2026-07-18 11:00:00",
+"bo": "3",
+"t1": "T1",
+"k1": "t1",
+"t2": "Karmine Corp",
+"k2": "karmine-corp",
+"s1": "1",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_58",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Semifinals",
+"at": "2026-07-18 13:30:00",
+"bo": "3",
+"t1": "Gen.G",
+"k1": "geng",
+"t2": "Dplus Kia",
+"k2": "dk",
+"s1": "1",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_59",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Third-Place Match",
+"at": "2026-07-19 10:00:00",
+"bo": "3",
+"t1": "T1",
+"k1": "t1",
+"t2": "Gen.G",
+"k2": "geng",
+"s1": "1",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "I26_60",
+"page": "Esports World Cup 2026",
+"tour": "Esports World Cup 2026",
+"playoff": true,
+"tab": "Finals",
+"at": "2026-07-19 12:30:00",
+"bo": "5",
+"t1": "Karmine Corp",
+"k1": "karmine-corp",
+"t2": "Dplus Kia",
+"k2": "dk",
+"s1": "0",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_00",
+"page": "2026 Season World Championship/Play-In",
+"tour": "Worlds 2026 Play-In",
+"playoff": false,
+"tab": "Round 1",
+"at": "2026-10-15 18:00:00",
+"bo": "5",
+"t1": "Cloud9",
+"k1": "cloud9",
+"t2": "Karmine Corp",
+"k2": "karmine-corp",
+"s1": "2",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_01",
+"page": "2026 Season World Championship/Play-In",
+"tour": "Worlds 2026 Play-In",
+"playoff": false,
+"tab": "Round 1",
+"at": "2026-10-15 23:00:00",
+"bo": "5",
+"t1": "FURIA",
+"k1": "furia",
+"t2": "MVK Esports",
+"k2": "mvk-esports",
+"s1": "0",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_02",
+"page": "2026 Season World Championship/Play-In",
+"tour": "Worlds 2026 Play-In",
+"playoff": false,
+"tab": "Round 2",
+"at": "2026-10-16 18:00:00",
+"bo": "5",
+"t1": "MVK Esports",
+"k1": "mvk-esports",
+"t2": "Karmine Corp",
+"k2": "karmine-corp",
+"s1": "0",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_03",
+"page": "2026 Season World Championship/Play-In",
+"tour": "Worlds 2026 Play-In",
+"playoff": false,
+"tab": "Round 1",
+"at": "2026-10-16 23:00:00",
+"bo": "5",
+"t1": "FURIA",
+"k1": "furia",
+"t2": "Cloud9",
+"k2": "cloud9",
+"s1": "3",
+"s2": "1",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_04",
+"page": "2026 Season World Championship/Play-In",
+"tour": "Worlds 2026 Play-In",
+"playoff": false,
+"tab": "Round 2",
+"at": "2026-10-17 18:00:00",
+"bo": "5",
+"t1": "MVK Esports",
+"k1": "mvk-esports",
+"t2": "FURIA",
+"k2": "furia",
+"s1": "3",
+"s2": "1",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_05",
+"page": "2026 Season World Championship/Play-In",
+"tour": "Worlds 2026 Play-In",
+"playoff": false,
+"tab": "Round 3",
+"at": "2026-10-18 18:00:00",
+"bo": "5",
+"t1": "Karmine Corp",
+"k1": "karmine-corp",
+"t2": "MVK Esports",
+"k2": "mvk-esports",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_06",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 1",
+"at": "2026-10-23 17:00:00",
+"bo": "1",
+"t1": "Gen.G",
+"k1": "geng",
+"t2": "Invictus Gaming",
+"k2": "invictus-gaming",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_07",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 1",
+"at": "2026-10-23 18:00:00",
+"bo": "1",
+"t1": "Hanwha Life Esports",
+"k1": "hle",
+"t2": "Top Esports",
+"k2": "top-esports",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_08",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 1",
+"at": "2026-10-23 19:00:00",
+"bo": "1",
+"t1": "Bilibili Gaming",
+"k1": "bilibili-gaming",
+"t2": "Movistar KOI",
+"k2": "movistar-koi",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_09",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 1",
+"at": "2026-10-23 20:00:00",
+"bo": "1",
+"t1": "Anyone's Legend",
+"k1": "anyone-s-legend",
+"t2": "Karmine Corp",
+"k2": "karmine-corp",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_10",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 1",
+"at": "2026-10-23 21:00:00",
+"bo": "1",
+"t1": "G2 Esports",
+"k1": "g2-esports",
+"t2": "Dplus Kia",
+"k2": "dk",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_11",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 1",
+"at": "2026-10-23 22:00:00",
+"bo": "1",
+"t1": "Team Liquid",
+"k1": "team-liquid",
+"t2": "CTBC Flying Oyster",
+"k2": "ctbc-flying-oyster",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_12",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 1",
+"at": "2026-10-23 23:00:00",
+"bo": "1",
+"t1": "LØS",
+"k1": "l-s",
+"t2": "T1",
+"k2": "t1",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_13",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 1",
+"at": "2026-10-24 00:00:00",
+"bo": "1",
+"t1": "Team Secret Whales",
+"k1": "team-secret-whales",
+"t2": "LYON (2024 American Team)",
+"k2": "lyon-2024-american-team",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_14",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 2",
+"at": "2026-10-24 17:00:00",
+"bo": "1",
+"t1": "Top Esports",
+"k1": "top-esports",
+"t2": "Anyone's Legend",
+"k2": "anyone-s-legend",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_15",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 2",
+"at": "2026-10-24 18:00:00",
+"bo": "1",
+"t1": "CTBC Flying Oyster",
+"k1": "ctbc-flying-oyster",
+"t2": "Movistar KOI",
+"k2": "movistar-koi",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_16",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 2",
+"at": "2026-10-24 19:00:00",
+"bo": "1",
+"t1": "G2 Esports",
+"k1": "g2-esports",
+"t2": "LØS",
+"k2": "l-s",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_17",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 2",
+"at": "2026-10-24 20:00:00",
+"bo": "1",
+"t1": "LYON (2024 American Team)",
+"k1": "lyon-2024-american-team",
+"t2": "Karmine Corp",
+"k2": "karmine-corp",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_18",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 2",
+"at": "2026-10-24 21:00:00",
+"bo": "1",
+"t1": "Invictus Gaming",
+"k1": "invictus-gaming",
+"t2": "Team Secret Whales",
+"k2": "team-secret-whales",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_19",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 2",
+"at": "2026-10-24 22:00:00",
+"bo": "1",
+"t1": "Hanwha Life Esports",
+"k1": "hle",
+"t2": "Gen.G",
+"k2": "geng",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_20",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 2",
+"at": "2026-10-24 23:00:00",
+"bo": "1",
+"t1": "Dplus Kia",
+"k1": "dk",
+"t2": "T1",
+"k2": "t1",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_21",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 2",
+"at": "2026-10-25 00:00:00",
+"bo": "1",
+"t1": "Team Liquid",
+"k1": "team-liquid",
+"t2": "Bilibili Gaming",
+"k2": "bilibili-gaming",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_22",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 3",
+"at": "2026-10-25 17:00:00",
+"bo": "1",
+"t1": "Hanwha Life Esports",
+"k1": "hle",
+"t2": "Invictus Gaming",
+"k2": "invictus-gaming",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_23",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 3",
+"at": "2026-10-25 18:00:00",
+"bo": "1",
+"t1": "Top Esports",
+"k1": "top-esports",
+"t2": "G2 Esports",
+"k2": "g2-esports",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_24",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 3",
+"at": "2026-10-25 19:00:00",
+"bo": "3",
+"t1": "Dplus Kia",
+"k1": "dk",
+"t2": "Movistar KOI",
+"k2": "movistar-koi",
+"s1": "2",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_25",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 3",
+"at": "2026-10-25 22:00:00",
+"bo": "3",
+"t1": "Gen.G",
+"k1": "geng",
+"t2": "LYON (2024 American Team)",
+"k2": "lyon-2024-american-team",
+"s1": "2",
+"s2": "1",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_26",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 3",
+"at": "2026-10-26 17:00:00",
+"bo": "1",
+"t1": "T1",
+"k1": "t1",
+"t2": "CTBC Flying Oyster",
+"k2": "ctbc-flying-oyster",
+"s1": "1",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_27",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 3",
+"at": "2026-10-26 18:00:00",
+"bo": "1",
+"t1": "Karmine Corp",
+"k1": "karmine-corp",
+"t2": "Bilibili Gaming",
+"k2": "bilibili-gaming",
+"s1": "0",
+"s2": "1",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_28",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 3",
+"at": "2026-10-26 19:00:00",
+"bo": "3",
+"t1": "LØS",
+"k1": "l-s",
+"t2": "Team Secret Whales",
+"k2": "team-secret-whales",
+"s1": "2",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_29",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 3",
+"at": "2026-10-26 22:00:00",
+"bo": "3",
+"t1": "Team Liquid",
+"k1": "team-liquid",
+"t2": "Anyone's Legend",
+"k2": "anyone-s-legend",
+"s1": "2",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_30",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 4",
+"at": "2026-10-28 20:00:00",
+"bo": "3",
+"t1": "Movistar KOI",
+"k1": "movistar-koi",
+"t2": "T1",
+"k2": "t1",
+"s1": "0",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_31",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 4",
+"at": "2026-10-28 23:00:00",
+"bo": "3",
+"t1": "Invictus Gaming",
+"k1": "invictus-gaming",
+"t2": "LYON (2024 American Team)",
+"k2": "lyon-2024-american-team",
+"s1": "2",
+"s2": "1",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_32",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 4",
+"at": "2026-10-29 20:00:00",
+"bo": "3",
+"t1": "Karmine Corp",
+"k1": "karmine-corp",
+"t2": "CTBC Flying Oyster",
+"k2": "ctbc-flying-oyster",
+"s1": "2",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_33",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 4",
+"at": "2026-10-29 23:00:00",
+"bo": "3",
+"t1": "Top Esports",
+"k1": "top-esports",
+"t2": "Bilibili Gaming",
+"k2": "bilibili-gaming",
+"s1": "2",
+"s2": "1",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_34",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 4",
+"at": "2026-10-30 20:00:00",
+"bo": "3",
+"t1": "Team Liquid",
+"k1": "team-liquid",
+"t2": "LØS",
+"k2": "l-s",
+"s1": "1",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_35",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 4",
+"at": "2026-10-30 23:00:00",
+"bo": "3",
+"t1": "Hanwha Life Esports",
+"k1": "hle",
+"t2": "G2 Esports",
+"k2": "g2-esports",
+"s1": "2",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_36",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 5",
+"at": "2026-10-31 17:00:00",
+"bo": "3",
+"t1": "Karmine Corp",
+"k1": "karmine-corp",
+"t2": "Movistar KOI",
+"k2": "movistar-koi",
+"s1": "2",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_37",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 5",
+"at": "2026-10-31 20:00:00",
+"bo": "3",
+"t1": "LØS",
+"k1": "l-s",
+"t2": "LYON (2024 American Team)",
+"k2": "lyon-2024-american-team",
+"s1": "1",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_38",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Round 5",
+"at": "2026-10-31 23:00:00",
+"bo": "3",
+"t1": "Hanwha Life Esports",
+"k1": "hle",
+"t2": "Bilibili Gaming",
+"k2": "bilibili-gaming",
+"s1": "0",
+"s2": "2",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_39",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Quarterfinals",
+"at": "2026-11-03 22:00:00",
+"bo": "5",
+"t1": "Top Esports",
+"k1": "top-esports",
+"t2": "Invictus Gaming",
+"k2": "invictus-gaming",
+"s1": "1",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_40",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Quarterfinals",
+"at": "2026-11-04 22:00:00",
+"bo": "5",
+"t1": "Gen.G",
+"k1": "geng",
+"t2": "LYON (2024 American Team)",
+"k2": "lyon-2024-american-team",
+"s1": "3",
+"s2": "0",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_41",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Quarterfinals",
+"at": "2026-11-05 22:00:00",
+"bo": "5",
+"t1": "Dplus Kia",
+"k1": "dk",
+"t2": "Bilibili Gaming",
+"k2": "bilibili-gaming",
+"s1": "0",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_42",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Quarterfinals",
+"at": "2026-11-06 22:00:00",
+"bo": "5",
+"t1": "Karmine Corp",
+"k1": "karmine-corp",
+"t2": "T1",
+"k2": "t1",
+"s1": "1",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_43",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Semifinals",
+"at": "2026-11-07 22:00:00",
+"bo": "5",
+"t1": "Invictus Gaming",
+"k1": "invictus-gaming",
+"t2": "Gen.G",
+"k2": "geng",
+"s1": "0",
+"s2": "3",
+"win": "2",
+"ff": ""
+},
+{
+"id": "W26_44",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Semifinals",
+"at": "2026-11-08 22:00:00",
+"bo": "5",
+"t1": "Bilibili Gaming",
+"k1": "bilibili-gaming",
+"t2": "T1",
+"k2": "t1",
+"s1": "3",
+"s2": "1",
+"win": "1",
+"ff": ""
+},
+{
+"id": "W26_45",
+"page": "2026 Season World Championship/Main Event",
+"tour": "Worlds 2026 Main Event",
+"playoff": false,
+"tab": "Finals",
+"at": "2026-11-14 19:00:00",
+"bo": "5",
+"t1": "Bilibili Gaming",
+"k1": "bilibili-gaming",
+"t2": "Gen.G",
+"k2": "geng",
+"s1": "3",
+"s2": "1",
+"win": "1",
+"ff": ""
+}
+],
+"standings": {},
+"teams": {
+"anyone-s-legend": {
+"name": "Anyone's Legend",
+"short": "AL",
+"image": "Anyone's Legendlogo profile.png"
+},
+"bilibili-gaming": {
+"name": "Bilibili Gaming",
+"short": "BLG",
+"image": "Bilibili Gaminglogo profile.png"
+},
+"cloud9": {
+"name": "Cloud9",
+"short": "C9",
+"image": "Cloud9logo profile.png"
+},
+"ctbc-flying-oyster": {
+"name": "CTBC Flying Oyster",
+"short": "CFO",
+"image": "CTBC Flying Oysterlogo square.png"
+},
+"dk": {
+"name": "Dplus Kia",
+"short": "DK",
+"image": "Dplus Kialogo profile.png"
+},
+"furia": {
+"name": "FURIA",
+"short": "FUR",
+"image": "FURIAlogo profile.png"
+},
+"g2-esports": {
+"name": "G2 Esports",
+"short": "G2",
+"image": "G2 Esportslogo profile.png"
+},
+"geng": {
+"name": "Gen.G",
+"short": "GEN",
+"image": "Gen.Glogo square.png"
+},
+"hle": {
+"name": "Hanwha Life Esports",
+"short": "HLE",
+"image": "Hanwha Life Esportslogo profile.png"
+},
+"invictus-gaming": {
+"name": "Invictus Gaming",
+"short": "iG",
+"image": "Invictus Gaminglogo profile.png"
+},
+"karmine-corp": {
+"name": "Karmine Corp",
+"short": "KC",
+"image": "Karmine Corplogo profile.png"
+},
+"l-s": {
+"name": "LØS",
+"short": "LOS",
+"image": "LØSlogo profile.png"
+},
+"movistar-koi": {
+"name": "Movistar KOI",
+"short": "MKOI",
+"image": "Movistar KOIlogo square.png"
+},
+"mvk-esports": {
+"name": "MVK Esports",
+"short": "MVK",
+"image": "MVK Esportslogo profile.png"
+},
+"t1": {
+"name": "T1",
+"short": "T1",
+"image": "T1logo profile.png"
+},
+"team-liquid": {
+"name": "Team Liquid",
+"short": "TL",
+"image": "Team Liquidlogo profile.png"
+},
+"team-secret-whales": {
+"name": "Team Secret Whales",
+"short": "TSW",
+"image": "Team Secret Whaleslogo profile.png"
+},
+"top-esports": {
+"name": "Top Esports",
+"short": "TES",
+"image": "Top Esportslogo profile.png"
+},
+"lyon-2024-american-team": {
+"name": "LYON (2024 American Team)",
+"short": "LYON",
+"image": ""
+},
+"bfx": {
+"name": "BNK FEARX",
+"short": "BFX",
+"image": "BNK FEARXlogo profile.png"
+},
+"deep-cross-gaming": {
+"name": "Deep Cross Gaming",
+"short": "DCG",
+"image": "Deep Cross Gaminglogo profile.png"
+},
+"gam-esports": {
+"name": "GAM Esports",
+"short": "GAM",
+"image": "GAM Esportslogo square.png"
+},
+"jd-gaming": {
+"name": "JD Gaming",
+"short": "JDG",
+"image": "JD Gaminglogo profile.png"
+},
+"loud": {
+"name": "LOUD",
+"short": "LOUD",
+"image": "LOUDlogo profile.png"
+},
+"sentinels": {
+"name": "Sentinels",
+"short": "SEN",
+"image": "Sentinelslogo profile.png"
+},
+"ag-al": {
+"name": "AG.AL",
+"short": "AG.AL",
+"image": ""
+},
+"mibr-los": {
+"name": "MIBR.LOS",
+"short": "MIBR.LOS",
+"image": ""
+},
+"team-secret-vietnamese-team": {
+"name": "Team Secret (Vietnamese Team)",
+"short": "TS",
+"image": ""
+}
+},
+"rosters": {
+"2026 Season World Championship/Main Event": [
+{
+"team": "Anyone's Legend",
+"region": "CN",
+"players": [
+[
+"Top",
+"Breathe"
+],
+[
+"Jungle",
+"Tarzan (Lee Seung-yong)"
+],
+[
+"Mid",
+"Shanks"
+],
+[
+"Bot",
+"Hope (Wang Jie)"
+],
+[
+"Support",
+"Kael (Kim Jin-hong)"
+],
+[
+"Coach",
+"BigWei"
+],
+[
+"Coach",
+"Teacherma"
+]
+]
+},
+{
+"team": "Bilibili Gaming",
+"region": "CN",
+"players": [
+[
+"Top",
+"Bin (Chen Ze-Bin)"
+],
+[
+"Jungle",
+"Xun"
+],
+[
+"Mid",
+"Knight (Zhuo Ding)"
+],
+[
+"Bot",
+"Viper (Park Do-hyeon)"
+],
+[
+"Support",
+"ON"
+],
+[
+"Coach",
+"Daeny"
+],
+[
+"Coach",
+"Chieh"
+],
+[
+"Coach",
+"Ben"
+],
+[
+"Coach",
+"zyb"
+]
+]
+},
+{
+"team": "CTBC Flying Oyster",
+"region": "APAC",
+"players": [
+[
+"Top",
+"Rest"
+],
+[
+"Jungle",
+"Shad0w"
+],
+[
+"Mid",
+"POUT"
+],
+[
+"Bot",
+"Doggo"
+],
+[
+"Support",
+"Kino"
+],
+[
+"Coach",
+"Chawy"
+],
+[
+"Coach",
+"Wulala"
+]
+]
+},
+{
+"team": "Dplus Kia",
+"region": "KR",
+"players": [
+[
+"Top",
+"Siwoo"
+],
+[
+"Jungle",
+"Lucid (Choi Yong-hyeok)"
+],
+[
+"Mid",
+"ShowMaker"
+],
+[
+"Bot",
+"Smash (Shin Geum-jae)"
+],
+[
+"Support",
+"Career"
+],
+[
+"Coach",
+"CvMax"
+],
+[
+"Coach",
+"PoohManDu"
+],
+[
+"Coach",
+"Hachani"
+]
+]
+},
+{
+"team": "G2 Esports",
+"region": "EMEA",
+"players": [
+[
+"Top",
+"BrokenBlade"
+],
+[
+"Jungle",
+"SkewMond"
+],
+[
+"Mid",
+"Caps"
+],
+[
+"Bot",
+"Hans Sama"
+],
+[
+"Support",
+"Labrov"
+],
+[
+"Coach",
+"Perkz"
+],
+[
+"Coach",
+"Memento"
+],
+[
+"Coach",
+"Rodrigo"
+]
+]
+},
+{
+"team": "Gen.G",
+"region": "KR",
+"players": [
+[
+"Top",
+"Kiin"
+],
+[
+"Jungle",
+"Canyon"
+],
+[
+"Mid",
+"Chovy"
+],
+[
+"Bot",
+"Ruler"
+],
+[
+"Support",
+"Duro"
+],
+[
+"Coach",
+"Ryu"
+],
+[
+"Coach",
+"Lyn"
+],
+[
+"Coach",
+"Nova (Park Chan-ho)"
+]
+]
+},
+{
+"team": "Hanwha Life Esports",
+"region": "KR",
+"players": [
+[
+"Top",
+"Zeus"
+],
+[
+"Jungle",
+"Kanavi"
+],
+[
+"Mid",
+"Zeka (Kim Geon-woo)"
+],
+[
+"Bot",
+"Gumayusi"
+],
+[
+"Support",
+"Delight"
+],
+[
+"Coach",
+"Homme"
+],
+[
+"Coach",
+"Mowgli"
+],
+[
+"Coach",
+"Sin (Yeon Hyeong-mo)"
+]
+]
+},
+{
+"team": "Invictus Gaming",
+"region": "CN",
+"players": [
+[
+"Top",
+"TheShy"
+],
+[
+"Jungle",
+"Wei (Yan Yang-Wei)"
+],
+[
+"Mid",
+"Rookie"
+],
+[
+"Bot",
+"JiaQi"
+],
+[
+"Support",
+"Meiko"
+],
+[
+"Coach",
+"Kezman"
+],
+[
+"Coach",
+"Helper (Kwon Yeong-jae)"
+],
+[
+"Coach",
+"Chengz"
+],
+[
+"Coach",
+"Fury (Lee Jin-yong)"
+]
+]
+},
+{
+"team": "Karmine Corp",
+"region": "EMEA",
+"players": [
+[
+"Top",
+"Canna"
+],
+[
+"Jungle",
+"Yike"
+],
+[
+"Mid",
+"kyeahoo"
+],
+[
+"Bot",
+"Caliste"
+],
+[
+"Support",
+"Busio"
+],
+[
+"Coach",
+"Reapered"
+],
+[
+"Coach",
+"Zeph"
+]
+]
+},
+{
+"team": "LØS",
+"region": "Brazil",
+"players": [
+[
+"Top",
+"Zest (Kim Dong-min)"
+],
+[
+"Jungle",
+"Curse (Raí Yamada)"
+],
+[
+"Mid",
+"Feisty"
+],
+[
+"Bot",
+"Duduhh"
+],
+[
+"Support",
+"Ackerman (Gabriel Aparicio)"
+],
+[
+"Coach",
+"Enatron"
+],
+[
+"Coach",
+"Invokid"
+],
+[
+"Coach",
+"Brandão"
+]
+]
+},
+{
+"team": "LYON (2024 American Team)",
+"region": "NA",
+"players": [
+[
+"Top",
+"Dhokla"
+],
+[
+"Jungle",
+"Inspired"
+],
+[
+"Mid",
+"Saint (Kang Sung-in)"
+],
+[
+"Bot",
+"Berserker (Kim Min-cheol)"
+],
+[
+"Support",
+"Isles"
+],
+[
+"Coach",
+"Reignover"
+],
+[
+"Coach",
+"Rigby"
+]
+]
+},
+{
+"team": "Movistar KOI",
+"region": "EMEA",
+"players": [
+[
+"Top",
+"Myrwn"
+],
+[
+"Jungle",
+"Elyoya"
+],
+[
+"Mid",
+"Jojopyun"
+],
+[
+"Bot",
+"Supa"
+],
+[
+"Support",
+"Alvaro (Álvaro Fernández)"
+],
+[
+"Coach",
+"Melzhet"
+],
+[
+"Coach",
+"Alphari"
+],
+[
+"Coach",
+"Independent"
+]
+]
+},
+{
+"team": "T1",
+"region": "KR",
+"players": [
+[
+"Top",
+"Doran (Choi Hyeon-jun)"
+],
+[
+"Jungle",
+"Oner"
+],
+[
+"Mid",
+"Faker"
+],
+[
+"Bot",
+"Peyz"
+],
+[
+"Support",
+"Keria"
+],
+[
+"Coach",
+"Tom (Im Jae-hyeon)"
+],
+[
+"Coach",
+"Easyhoon"
+],
+[
+"Coach",
+"Mata"
+]
+]
+},
+{
+"team": "Team Liquid",
+"region": "NA",
+"players": [
+[
+"Top",
+"Morgan"
+],
+[
+"Jungle",
+"Josedeodo"
+],
+[
+"Mid",
+"Quid"
+],
+[
+"Bot",
+"Yeon (Sean Sung)"
+],
+[
+"Support",
+"CoreJJ"
+],
+[
+"Coach",
+"Spawn (Jake Tiberi)"
+],
+[
+"Coach",
+"Spookz"
+]
+]
+},
+{
+"team": "Team Secret Whales",
+"region": "APAC",
+"players": [
+[
+"Top",
+"Pun"
+],
+[
+"Jungle",
+"Hizto"
+],
+[
+"Mid",
+"Dire"
+],
+[
+"Bot",
+"Eddie"
+],
+[
+"Support",
+"Bie"
+],
+[
+"Coach",
+"WarHorse"
+],
+[
+"Coach",
+"Ciel (Trần Tiến Thịnh)"
+]
+]
+},
+{
+"team": "Top Esports",
+"region": "CN",
+"players": [
+[
+"Top",
+"369"
+],
+[
+"Jungle",
+"Tian"
+],
+[
+"Mid",
+"Creme"
+],
+[
+"Bot",
+"JackeyLove"
+],
+[
+"Support",
+"Zhuo"
+],
+[
+"Coach",
+"Poppy (Chang Po-Hao)"
+],
+[
+"Coach",
+"Xiaobai"
+]
+]
+}
+],
+"2026 Season World Championship/Play-In": [
+{
+"team": "Cloud9",
+"region": "NA",
+"players": [
+[
+"Top",
+"Thanatos (Park Seung-gyu)"
+],
+[
+"Jungle",
+"Blaber"
+],
+[
+"Mid",
+"Loki (Lee Sang-min)"
+],
+[
+"Bot",
+"Tactical"
+],
+[
+"Support",
+"Vulcan (Philippe Laflamme)"
+],
+[
+"Head Coach",
+"IWDominate"
+],
+[
+"Assistant Coach",
+"Veigar v2"
+],
+[
+"Assistant Coach",
+"Arrow"
+],
+[
+"Assistant Coach",
+"YamatoCannon"
+]
+]
+},
+{
+"team": "FURIA",
+"region": "BR",
+"players": [
+[
+"Top",
+"Guigo"
+],
+[
+"Jungle",
+"Tatu (Pedro Seixas)"
+],
+[
+"Mid",
+"Tutsz"
+],
+[
+"Bot",
+"Ayu (Andrey Saraiva)"
+],
+[
+"Support",
+"JoJo (Gabriel Dzelme)"
+],
+[
+"Coach",
+"furyz"
+],
+[
+"Coach",
+"Luuukz"
+],
+[
+"Coach",
+"Lanterninho"
+]
+]
+},
+{
+"team": "Karmine Corp",
+"region": "EMEA",
+"players": [
+[
+"Top",
+"Canna"
+],
+[
+"Jungle",
+"Yike"
+],
+[
+"Mid",
+"kyeahoo"
+],
+[
+"Bot",
+"Caliste"
+],
+[
+"Support",
+"Busio"
+],
+[
+"Coach",
+"Reapered"
+],
+[
+"Coach",
+"Zeph"
+]
+]
+},
+{
+"team": "MVK Esports",
+"region": "APAC",
+"players": [
+[
+"Top",
+"Kratos (Ngô Đức Khánh)"
+],
+[
+"Jungle",
+"Gury"
+],
+[
+"Jungle",
+"SanSan"
+],
+[
+"Mid",
+"Chika"
+],
+[
+"Bot",
+"Harky"
+],
+[
+"Support",
+"SiuLoong"
+],
+[
+"Coach",
+"SofM"
+],
+[
+"Coach",
+"BigKoro"
+],
+[
+"Coach",
+"Suga"
+]
+]
+}
+],
+"Esports World Cup 2026": [
+{
+"team": "AG.AL",
+"region": "CN",
+"players": [
+[
+"Top",
+"Flandre"
+],
+[
+"Jungle",
+"Tarzan (Lee Seung-yong)"
+],
+[
+"Mid",
+"Shanks"
+],
+[
+"Bot",
+"Hope (Wang Jie)"
+],
+[
+"Support",
+"Kael (Kim Jin-hong)"
+],
+[
+"Coach",
+"BigWei"
+],
+[
+"Coach",
+"Teacherma"
+],
+[
+"Coach",
+"Despa1r"
+]
+]
+},
+{
+"team": "Bilibili Gaming",
+"region": "CN",
+"players": [
+[
+"Top",
+"Bin (Chen Ze-Bin)"
+],
+[
+"Jungle",
+"Xun"
+],
+[
+"Mid",
+"Knight (Zhuo Ding)"
+],
+[
+"Bot",
+"Viper (Park Do-hyeon)"
+],
+[
+"Support",
+"ON"
+],
+[
+"Coach",
+"Daeny"
+],
+[
+"Coach",
+"Chieh"
+],
+[
+"Coach",
+"Ben"
+],
+[
+"Coach",
+"zyb"
+]
+]
+},
+{
+"team": "Dplus Kia",
+"region": "KR",
+"players": [
+[
+"Top",
+"Siwoo"
+],
+[
+"Jungle",
+"Lucid (Choi Yong-hyeok)"
+],
+[
+"Mid",
+"ShowMaker"
+],
+[
+"Bot",
+"Smash (Shin Geum-jae)"
+],
+[
+"Support",
+"Career"
+],
+[
+"Coach",
+"cvMax"
+],
+[
+"Coach",
+"PoohManDu"
+],
+[
+"Coach",
+"Hachani"
+]
+]
+},
+{
+"team": "FURIA",
+"region": "BR",
+"players": [
+[
+"Top",
+"Guigo"
+],
+[
+"Jungle",
+"Tatu (Pedro Seixas)"
+],
+[
+"Mid",
+"Tutsz"
+],
+[
+"Bot",
+"Ayu (Andrey Saraiva)"
+],
+[
+"Support",
+"JoJo (Gabriel Dzelme)"
+],
+[
+"Coach",
+"furyz"
+],
+[
+"Coach",
+"Luuukz"
+]
+]
+},
+{
+"team": "G2 Esports",
+"region": "EMEA",
+"players": [
+[
+"Top",
+"BrokenBlade"
+],
+[
+"Jungle",
+"SkewMond"
+],
+[
+"Mid",
+"Caps"
+],
+[
+"Bot",
+"Hans Sama"
+],
+[
+"Support",
+"Labrov"
+],
+[
+"Coach",
+"Memento"
+],
+[
+"Coach",
+"Rodrigo"
+]
+]
+},
+{
+"team": "GAM Esports",
+"region": "APAC",
+"players": [
+[
+"Top",
+"Kiaya"
+],
+[
+"Jungle",
+"Draktharr"
+],
+[
+"Mid",
+"Gloryy"
+],
+[
+"Bot",
+"Artemis (Trần Quốc Hưng)"
+],
+[
+"Support",
+"Taki (Đinh Anh Tài)"
+],
+[
+"Coach",
+"Naul"
+],
+[
+"Coach",
+"Hype (Trần Hữu Toàn)"
+]
+]
+},
+{
+"team": "Gen.G",
+"region": "KR",
+"players": [
+[
+"Top",
+"Kiin"
+],
+[
+"Jungle",
+"Canyon"
+],
+[
+"Mid",
+"Chovy"
+],
+[
+"Bot",
+"Ruler"
+],
+[
+"Support",
+"Duro"
+],
+[
+"Coach",
+"Ryu"
+],
+[
+"Coach",
+"Lyn"
+],
+[
+"Coach",
+"Nova (Park Chan-ho)"
+]
+]
+},
+{
+"team": "Hanwha Life Esports",
+"region": "KR",
+"players": [
+[
+"Top",
+"Zeus"
+],
+[
+"Jungle",
+"Kanavi"
+],
+[
+"Mid",
+"Zeka (Kim Geon-woo)"
+],
+[
+"Bot",
+"Gumayusi"
+],
+[
+"Support",
+"Delight"
+],
+[
+"Coach",
+"Homme"
+],
+[
+"Coach",
+"Mowgli"
+],
+[
+"Coach",
+"Sin (Yeon Hyeong-mo)"
+]
+]
+},
+{
+"team": "JD Gaming",
+"region": "CN",
+"players": [
+[
+"Top",
+"Xiaoxu"
+],
+[
+"Jungle",
+"JunJia"
+],
+[
+"Mid",
+"HongQ"
+],
+[
+"Bot",
+"GALA"
+],
+[
+"Support",
+"Vampire"
+],
+[
+"Coach",
+"Tabe"
+],
+[
+"Coach",
+"Xiaobai"
+],
+[
+"Coach",
+"Zoom"
+]
+]
+},
+{
+"team": "Karmine Corp",
+"region": "EMEA",
+"players": [
+[
+"Top",
+"Canna"
+],
+[
+"Jungle",
+"Yike"
+],
+[
+"Mid",
+"kyeahoo"
+],
+[
+"Bot",
+"Caliste"
+],
+[
+"Support",
+"Busio"
+],
+[
+"Coach",
+"Reapered"
+],
+[
+"Coach",
+"Zeph"
+]
+]
+},
+{
+"team": "LYON (2024 American Team)",
+"region": "NA",
+"players": [
+[
+"Top",
+"Dhokla"
+],
+[
+"Jungle",
+"Inspired"
+],
+[
+"Mid",
+"Saint (Kang Sung-in)"
+],
+[
+"Bot",
+"Berserker (Kim Min-cheol)"
+],
+[
+"Support",
+"Isles"
+],
+[
+"Coach",
+"Reignover"
+],
+[
+"Coach",
+"Rigby"
+]
+]
+},
+{
+"team": "MIBR.LOS",
+"region": "BR",
+"players": [
+[
+"Top",
+"Zest (Kim Dong-min)"
+],
+[
+"Jungle",
+"Curse (Raí Yamada)"
+],
+[
+"Mid",
+"Feisty"
+],
+[
+"Bot",
+"Duduhh"
+],
+[
+"Support",
+"Ackerman (Gabriel Aparicio)"
+],
+[
+"Coach",
+"Enatron"
+],
+[
+"Coach",
+"Invokid"
+],
+[
+"Coach",
+"Brandão"
+]
+]
+},
+{
+"team": "Movistar KOI",
+"region": "EMEA",
+"players": [
+[
+"Top",
+"Myrwn"
+],
+[
+"Jungle",
+"Elyoya"
+],
+[
+"Mid",
+"Jojopyun"
+],
+[
+"Bot",
+"Supa"
+],
+[
+"Support",
+"Alvaro (Álvaro Fernández)"
+],
+[
+"Coach",
+"Melzhet"
+],
+[
+"Coach",
+"Alphari"
+],
+[
+"Coach",
+"Independent"
+]
+]
+},
+{
+"team": "Sentinels",
+"region": "NA",
+"players": [
+[
+"Top",
+"Impact"
+],
+[
+"Jungle",
+"HamBak"
+],
+[
+"Mid",
+"DARKWINGS"
+],
+[
+"Bot",
+"Rahel"
+],
+[
+"Support",
+"huhi"
+],
+[
+"Coach",
+"Goldenglue"
+],
+[
+"Coach",
+"Dayos"
+]
+]
+},
+{
+"team": "T1",
+"region": "KR",
+"players": [
+[
+"Top",
+"Doran (Choi Hyeon-jun)"
+],
+[
+"Jungle",
+"Oner"
+],
+[
+"Mid",
+"Faker"
+],
+[
+"Bot",
+"Peyz"
+],
+[
+"Support",
+"Keria"
+],
+[
+"Coach",
+"Tom (Im Jae-hyeon)"
+],
+[
+"Coach",
+"Easyhoon"
+],
+[
+"Coach",
+"Mata"
+]
+]
+},
+{
+"team": "Team Secret (Vietnamese Team)",
+"region": "APAC",
+"players": [
+[
+"Top",
+"Pun"
+],
+[
+"Jungle",
+"Hizto"
+],
+[
+"Mid",
+"Dire"
+],
+[
+"Bot",
+"Eddie"
+],
+[
+"Support",
+"Bie"
+],
+[
+"Coach",
+"WarHorse"
+],
+[
+"Coach",
+"Ciel (Trần Tiến Thịnh)"
+]
+]
+}
+],
+"2026 First Stand": [
+{
+"team": "Bilibili Gaming",
+"region": "CN",
+"players": [
+[
+"Top",
+"Bin (Chen Ze-Bin)"
+],
+[
+"Jungle",
+"Xun"
+],
+[
+"Mid",
+"Knight (Zhuo Ding)"
+],
+[
+"Bot",
+"Viper (Park Do-hyeon)"
+],
+[
+"Support",
+"ON"
+],
+[
+"Coach",
+"Daeny"
+],
+[
+"Coach",
+"Chieh"
+],
+[
+"Coach",
+"Ben"
+],
+[
+"Coach",
+"zyb"
+]
+]
+},
+{
+"team": "BNK FEARX",
+"region": "KR",
+"players": [
+[
+"Top",
+"Clear (Song Hyeon-min)"
+],
+[
+"Jungle",
+"Raptor (Jeon Eo-jin)"
+],
+[
+"Mid",
+"VicLa"
+],
+[
+"Bot",
+"Diable"
+],
+[
+"Support",
+"Kellin"
+],
+[
+"Coach",
+"Edo (Park Jun-seok)"
+],
+[
+"Coach",
+"Lira"
+],
+[
+"Coach",
+"Rather"
+]
+]
+},
+{
+"team": "G2 Esports",
+"region": "EMEA",
+"players": [
+[
+"Top",
+"BrokenBlade"
+],
+[
+"Jungle",
+"SkewMond"
+],
+[
+"Mid",
+"Caps"
+],
+[
+"Bot",
+"Hans Sama"
+],
+[
+"Support",
+"Labrov"
+],
+[
+"Coach",
+"Dylan Falco"
+],
+[
+"Coach",
+"Memento"
+],
+[
+"Coach",
+"Rodrigo"
+]
+]
+},
+{
+"team": "Gen.G",
+"region": "KR",
+"players": [
+[
+"Top",
+"Kiin"
+],
+[
+"Jungle",
+"Canyon"
+],
+[
+"Mid",
+"Chovy"
+],
+[
+"Bot",
+"Ruler"
+],
+[
+"Support",
+"Duro"
+],
+[
+"Coach",
+"Ryu"
+],
+[
+"Coach",
+"Lyn"
+],
+[
+"Coach",
+"Nova (Park Chan-ho)"
+]
+]
+},
+{
+"team": "JD Gaming",
+"region": "CN",
+"players": [
+[
+"Top",
+"Xiaoxu"
+],
+[
+"Jungle",
+"JunJia"
+],
+[
+"Mid",
+"HongQ"
+],
+[
+"Bot",
+"GALA"
+],
+[
+"Support",
+"Vampire"
+],
+[
+"Coach",
+"Tabe"
+],
+[
+"Coach",
+"Xiaobai"
+],
+[
+"Coach",
+"Zoom"
+]
+]
+},
+{
+"team": "LOUD",
+"region": "BR",
+"players": [
+[
+"Top",
+"Xyno"
+],
+[
+"Jungle",
+"YoungJae"
+],
+[
+"Mid",
+"Envy (Bruno Farias)"
+],
+[
+"Bot",
+"Bull"
+],
+[
+"Support",
+"RedBert"
+],
+[
+"Coach",
+"Raise"
+],
+[
+"Coach",
+"Sephis"
+]
+]
+},
+{
+"team": "LYON (2024 American Team)",
+"region": "NA",
+"players": [
+[
+"Top",
+"Dhokla"
+],
+[
+"Jungle",
+"Inspired"
+],
+[
+"Mid",
+"Saint (Kang Sung-in)"
+],
+[
+"Bot",
+"Berserker (Kim Min-cheol)"
+],
+[
+"Support",
+"Isles"
+],
+[
+"Coach",
+"Reignover"
+],
+[
+"Coach",
+"Rigby"
+]
+]
+},
+{
+"team": "Team Secret Whales",
+"region": "APAC",
+"players": [
+[
+"Top",
+"Pun"
+],
+[
+"Jungle",
+"Hizto"
+],
+[
+"Mid",
+"Dire"
+],
+[
+"Bot",
+"Eddie"
+],
+[
+"Support",
+"Bie"
+],
+[
+"Coach",
+"WarHorse"
+],
+[
+"Coach",
+"Ciel (Trần Tiến Thịnh)"
+]
+]
+}
+],
+"2026 Mid-Season Invitational": [
+{
+"team": "Bilibili Gaming",
+"region": "CN",
+"players": [
+[
+"Top",
+"Bin (Chen Ze-Bin)"
+],
+[
+"Jungle",
+"Xun"
+],
+[
+"Mid",
+"Knight (Zhuo Ding)"
+],
+[
+"Bot",
+"Viper (Park Do-hyeon)"
+],
+[
+"Support",
+"ON"
+],
+[
+"Coach",
+"Daeny"
+],
+[
+"Coach",
+"Chieh"
+],
+[
+"Coach",
+"Ben"
+],
+[
+"Coach",
+"zyb"
+]
+]
+},
+{
+"team": "Deep Cross Gaming",
+"region": "APAC",
+"players": [
+[
+"Top",
+"Flauren"
+],
+[
+"Jungle",
+"Pop9"
+],
+[
+"Mid",
+"HongSuo"
+],
+[
+"Bot",
+"Feng (Chen Chun-Feng)"
+],
+[
+"Support",
+"ShiauC"
+],
+[
+"Coach",
+"REFRA1N"
+],
+[
+"Coach",
+"Lxz (Chiu Liang-Jung)"
+]
+]
+},
+{
+"team": "FURIA",
+"region": "br",
+"players": [
+[
+"Top",
+"Guigo"
+],
+[
+"Jungle",
+"Tatu (Pedro Seixas)"
+],
+[
+"Mid",
+"Tutsz"
+],
+[
+"Bot",
+"Ayu (Andrey Saraiva)"
+],
+[
+"Support",
+"JoJo (Gabriel Dzelme)"
+],
+[
+"Coach",
+"furyz"
+],
+[
+"Coach",
+"Luuukz"
+]
+]
+},
+{
+"team": "G2 Esports",
+"region": "EMEA",
+"players": [
+[
+"Top",
+"BrokenBlade"
+],
+[
+"Jungle",
+"SkewMond"
+],
+[
+"Mid",
+"Caps"
+],
+[
+"Bot",
+"Hans Sama"
+],
+[
+"Support",
+"Labrov"
+],
+[
+"Coach",
+"Dylan Falco"
+],
+[
+"Coach",
+"Memento"
+],
+[
+"Coach",
+"Rodrigo"
+]
+]
+},
+{
+"team": "Hanwha Life Esports",
+"region": "KR",
+"players": [
+[
+"Top",
+"Zeus"
+],
+[
+"Jungle",
+"Kanavi"
+],
+[
+"Mid",
+"Zeka (Kim Geon-woo)"
+],
+[
+"Bot",
+"Gumayusi"
+],
+[
+"Support",
+"Delight"
+],
+[
+"Coach",
+"Homme"
+],
+[
+"Coach",
+"Mowgli"
+],
+[
+"Coach",
+"Sin (Yeon Hyeong-mo)"
+]
+]
+},
+{
+"team": "Karmine Corp",
+"region": "EMEA",
+"players": [
+[
+"Top",
+"Canna"
+],
+[
+"Jungle",
+"Yike"
+],
+[
+"Mid",
+"kyeahoo"
+],
+[
+"Bot",
+"Caliste"
+],
+[
+"Support",
+"Busio"
+],
+[
+"Coach",
+"Reapered"
+],
+[
+"Coach",
+"Zeph"
+]
+]
+},
+{
+"team": "LYON (2024 American Team)",
+"region": "na",
+"players": [
+[
+"Top",
+"Dhokla"
+],
+[
+"Jungle",
+"Inspired"
+],
+[
+"Mid",
+"Saint (Kang Sung-in)"
+],
+[
+"Bot",
+"Berserker (Kim Min-cheol)"
+],
+[
+"Support",
+"Isles"
+],
+[
+"Coach",
+"Reignover"
+],
+[
+"Coach",
+"Rigby"
+]
+]
+},
+{
+"team": "T1",
+"region": "KR",
+"players": [
+[
+"Top",
+"Doran (Choi Hyeon-jun)"
+],
+[
+"Jungle",
+"Oner"
+],
+[
+"Mid",
+"Faker"
+],
+[
+"Bot",
+"Peyz"
+],
+[
+"Support",
+"Keria"
+],
+[
+"Coach",
+"Tom (Im Jae-hyeon)"
+],
+[
+"Coach",
+"Mata"
+],
+[
+"Coach",
+"Easyhoon"
+]
+]
+},
+{
+"team": "Team Liquid",
+"region": "na",
+"players": [
+[
+"Top",
+"Morgan"
+],
+[
+"Jungle",
+"Josedeodo"
+],
+[
+"Mid",
+"Quid"
+],
+[
+"Bot",
+"Yeon (Sean Sung)"
+],
+[
+"Support",
+"CoreJJ"
+],
+[
+"Coach",
+"Spawn (Jake Tiberi)"
+],
+[
+"Coach",
+"Spookz"
+]
+]
+},
+{
+"team": "Team Secret Whales",
+"region": "APAC",
+"players": [
+[
+"Top",
+"Pun"
+],
+[
+"Jungle",
+"Hizto"
+],
+[
+"Mid",
+"Dire"
+],
+[
+"Bot",
+"Eddie"
+],
+[
+"Support",
+"Bie"
+],
+[
+"Coach",
+"WarHorse"
+],
+[
+"Coach",
+"Ciel (Trần Tiến Thịnh)"
+]
+]
+},
+{
+"team": "Top Esports",
+"region": "CN",
+"players": [
+[
+"Top",
+"ZUIAN"
+],
+[
+"Jungle",
+"Tian"
+],
+[
+"Mid",
+"Creme"
+],
+[
+"Bot",
+"JackeyLove"
+],
+[
+"Support",
+"fengyue"
+],
+[
+"Coach",
+"Poppy (Chang Po-Hao)"
+],
+[
+"Coach",
+"BoBo (He Wen-Bo)"
+],
+[
+"Coach",
+"Leo (Li Yu-Ming)"
+]
+]
+}
+]
+}
+}

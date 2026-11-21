@@ -27,8 +27,40 @@ KEEP_SEC = 6 * 3600                      # 대회 목록·순위표는 이 시�
 _NOT_LEAGUE = re.compile(r"Promotion|Qualifier|Regional Finals|Play-In|Showmatch|Tiebreak", re.I)   # 순위표로 안 쓰는 단계
 
 
-INTL = "intl"        # 국제전(퍼스트 스탠드·MSI·월즈·EWC): 메뉴엔 없고, LCK 팀 경기를 독버섯 판·소식 검색어에 쓰려고 받음
+INTL = "intl"        # 국제전(퍼스트 스탠드·MSI·EWC·월즈): LCK 팀 경기는 독버섯 판·소식 검색어에, 대회마다 국제전 메뉴(web/intl.py)에
 INTL_LEAGUES = ("First Stand", "Mid-Season Invitational", "World Championship", "Esports World Cup")
+# 국제전 메뉴 하나 = 리그피디아 대회 문서 이름 규칙 하나(연도는 문서 이름에서 읽음. 쇼매치 같은 곁가지 문서는 뺌)
+INTL_EVENTS = {
+    "fst": re.compile(r"^(\d{4}) First Stand(?:/|$)"),
+    "msi": re.compile(r"^(\d{4}) Mid-Season Invitational(?:/|$)"),
+    "ewc": re.compile(r"^Esports World Cup (\d{4})(?:/|$)"),
+    "worlds": re.compile(r"^(\d{4}) Season World Championship(?:/|$)"),
+}
+
+
+def intl_event(page: str):
+    """대회 문서 → (메뉴 키, 연도) 또는 (None, '')."""
+    if "Showmatch" in (page or ""):
+        return None, ""
+    for k, rx in INTL_EVENTS.items():
+        m = rx.match(page or "")
+        if m:
+            return k, m.group(1)
+    return None, ""
+
+
+def _rosters(pages, gap) -> dict:
+    """국제전 참가팀 로스터·권역(리그피디아 TournamentRosters) → {대회 문서: [{"team", "region", "players": [[역할, 선수 문서], …]}]}."""
+    out = {}
+    if not pages:
+        return out
+    rows = cargo(gap, tables="TournamentRosters", fields="Team,OverviewPage,Region,RosterLinks,Roles",
+                 where=f'OverviewPage IN ({",".join(_cq(p) for p in pages)})')
+    for r in rows:
+        links, roles = (r.get("RosterLinks") or "").split(";;"), (r.get("Roles") or "").split(";;")
+        players = [[ro.strip(), li.strip()] for ro, li in zip(roles, links) if li.strip()]
+        out.setdefault(r["OverviewPage"], []).append({"team": r.get("Team") or "", "region": r.get("Region") or "", "players": players})
+    return out
 
 
 def leagues():
@@ -193,10 +225,15 @@ def refresh(league: str = "lck", gap=None) -> bool:
                 elif k:
                     teams[k] = known.get(n) or {"name": n, "short": (rows.get(n) or {}).get("Short") or n,
                                                 "image": (rows.get(n) or {}).get("Image") or ""}
+            # 국제전 참가팀 로스터·권역: 대회 목록처럼 6시간 동안 저장본(로스터는 대회 중에 거의 안 바뀜)
+            rosters = {}
+            if league == INTL:
+                epages = [p for p in by_page if intl_event(p)[0]]
+                rosters = prev["rosters"] if fresh and prev.get("rosters") is not None else _rosters(epages, gap)
             d = {"league": league, "season": season, "current": season == cs, "at": datetime.now(timezone.utc).isoformat(),
                  "tours": [{"page": t["OverviewPage"], "name": t["Name"], "start": t.get("DateStart") or "",
                             "end": t.get("Date") or "", "playoff": t.get("IsPlayoffs") == "1"} for t in tours],
-                 "matches": matches, "standings": stand, "teams": teams,
+                 "matches": matches, "standings": stand, "teams": teams, "rosters": rosters,
                  "cs": cs, "tours_raw": tours, "kept_at": prev.get("kept_at") if fresh else time.time()}
         except Exception as e:  # noqa: BLE001
             log.warning("schedule %s refresh failed: %s", league, e)
@@ -212,9 +249,10 @@ def refresh(league: str = "lck", gap=None) -> bool:
             log.warning("schedule %s save failed: %s", league, e)
         log.info("schedule %s %s: %d matches, standings %d", league, season, len(matches),
                  sum(len(g["table"]) for g in stand.get("groups") or []))
-    if league not in ("lck", INTL):                    # 해외 팀 로고(없는 것만 받음). 국제전은 화면이 없어 로고를 안 받음
+    if league != "lck":                                # 해외 팀 로고(없는 것만 받음). 국제전은 국제전 메뉴에 나오는 팀만
+        wk = {m[s] for m in matches if league != INTL or intl_event(m["page"])[0] for s in ("k1", "k2")}
         try:
-            teamlogos.ensure({k: t["image"] for k, t in teams.items() if t.get("image")})
+            teamlogos.ensure({k: t["image"] for k, t in teams.items() if t.get("image") and k in wk})
         except Exception as e:  # noqa: BLE001
             log.warning("schedule %s logos failed: %s", league, e)
     return True

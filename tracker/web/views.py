@@ -155,13 +155,19 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
     """공통 껍데기: 머리줄(사이트 이름·업데이트), 리그 선택, 메뉴, 본문, 아래쪽 안내, 스크립트."""
     head, foot_fail = status_parts(today)
     # 1층: 리그 고르기(드롭다운) · 2층: 그 리그의 4개 탭. 미니게임은 오른쪽 위 도구 칸
-    cur = LEAGUES.get(league, LEAGUES[DEFAULT_LEAGUE])
+    from . import intl as _intl                                # (intl이 이 파일을 불러서 여기서)
+    wl = league in _intl.EVENTS                                # 국제전(FST·MSI·EWC·WORLDS): 지역 리그와 메뉴가 다름
+    cur = {**_intl.EVENTS[league], "enabled": False} if wl else LEAGUES.get(league, LEAGUES[DEFAULT_LEAGUE])
     lg_items = "".join(
         (f'<li><a class="{"on" if k == league else ""}" href="/{k}"{" aria-current=page" if k == league else ""}>'
          f'{esc(v["name"])}<small>{esc(v["sub"])}</small></a></li>' if v["enabled"] else
          f'<li><a class="soon{" on" if k == league else ""}" href="/{k}/schedule">{esc(v["name"])}<small>{esc(v["sub"])} · 일정·결과</small></a></li>' if v.get("wiki") else
          f'<li><a class="soon" href="/{k}">{esc(v["name"])}<small>{esc(v["sub"])} · 곧 추가</small></a></li>')
         for k, v in LEAGUES.items())
+    # 국제전은 구분선·이름표 아래에 대회 순서(연중 흐름)대로. 고르면 '대회 일정'으로(스토브리그·시즌 탭이 없어 빈 화면이 되지 않게)
+    lg_items += '<li class="sep" role="separator"></li><li class="lab">국제전</li>' + "".join(
+        f'<li><a class="{"on" if k == league else ""}" href="/{k}/schedule"{" aria-current=page" if k == league else ""}>'
+        f'{esc(v["name"])}<small>{esc(v["sub"])}</small></a></li>' for k, v in _intl.EVENTS.items())
     lgsel = (f'<details class="lgsel"><summary aria-label="리그 고르기"><b>{esc(cur["name"])}</b><i aria-hidden="true">▾</i></summary>'
              f'<ul>{lg_items}</ul></details>')
     stove = stove_phase(today)
@@ -175,10 +181,12 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
     now_y = current_season(today)
     pre = bool(season) and stove and season == now_y          # 개막 전 다음 시즌 미리 보기(스토브리그 기간의 '2027 시즌 예정')
     tab_defs = [news_t, stove_t, season_t, team_t] if stove else [news_t, season_t, team_t, stove_t]
+    if wl:                                                     # WORLDS: 소식 · 대회 일정(일정 / 결과·순위) · 진출팀
+        tab_defs = [news_t, ("schedule", "/schedule", "대회 일정", ("schedule", "results")), ("teams", "/teams", "진출팀", ("teams",))]
     if pre:                                                    # 미리 보기엔 아직 경기·스토브리그가 없음: 한눈에 · 시즌(일정) · 팀(로스터)
         tab_defs = [("news", "", "개막 준비", ("news",)), season_t, team_t]
     # 'HOT'은 지금 시기에 앞으로 온 메뉴 하나에만: 스토브리그 기간엔 '스토브리그', 시즌 중엔 '시즌'. 지난 시즌 기록을 볼 땐 안 붙임
-    hot = {} if season else {(stove_t if stove else season_t)[0]: True}
+    hot = {} if season or wl else {(stove_t if stove else season_t)[0]: True}
     sq = f"?season={season}" if season else ""
     # 시즌 고르기: (스토브리그 기간엔) 다음 시즌 예정 + 지금 시즌 + 지난 시즌 기록
     # 해마다 한 묶음: 2026년 11월 스토브리그는 '2026 시즌' 안의 스토브리그 메뉴로 봄. 데이터상 시즌(now_y)은 그다음 해
@@ -192,10 +200,16 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
                + f'<li><a class="{"" if season else "on"}" href="/{league}{here}">{now_label}<small>지금</small></a></li>'
                + "".join(f'<li><a class="{"on" if season == y else ""}" href="/{league}{here}?season={y}">{y} 시즌<small>기록</small></a></li>'
                          for y in past_ys))
-    ssel = "" if not cur["enabled"] else (f'<details class="lgsel ssel"><summary aria-label="시즌 고르기"><b>{f"{season} 시즌" if season else now_label}</b><i aria-hidden="true">▾</i></summary>'
+    if wl:                                                     # 국제전 시즌 고르기: 리그피디아에 그 대회가 있는 해
+        ys = _intl.years(league)
+        latest = ys[0] if ys else ""
+        s_items = "".join(f'<li><a class="{"on" if str(season or latest) == y else ""}" href="/{league}{here}{"" if y == latest else "?season=" + y}">'
+                          f'{y} 시즌<small>{"최근" if y == latest else "기록"}</small></a></li>' for y in ys)
+        sq = f"?season={season}" if season and str(season) != latest else ""
+    ssel = "" if not (cur["enabled"] or (wl and s_items)) else (f'<details class="lgsel ssel"><summary aria-label="시즌 고르기"><b>{f"{season} 시즌" if season else now_label}</b><i aria-hidden="true">▾</i></summary>'
             f'<ul>{s_items}</ul></details>')
     bar = (f'<div class="archive-bar">지금 <b>{season} 시즌</b> 기록을 보고 있어요. '
-           f'<a href="/{league}{here}">최신 화면으로 돌아가기 →</a></div>' if season and not pre else "")
+           f'<a href="/{league}{here}">최신 화면으로 돌아가기 →</a></div>' if season and not pre and not wl else "")
     if pre:
         bar = (f'<div class="archive-bar pre-bar"><b>{season} 시즌</b>은 아직 개막 전이에요. 지금 진행 중인 스토브리그는 '
                f'<a href="/{league}/fa">{now_label} &gt; 스토브리그</a>에서 볼 수 있어요.</div>')
@@ -233,7 +247,7 @@ def shell(league: str, active: str, title: str, main: str, scripts, today, scope
 {adsense_head()}</head><body data-league="{league}" data-sec="{active}" data-auto="{AUTO_MINUTES}" data-scope="{scope}"{extra_attr}>
 <header class="header"><div class="in">
 <h1 class="brand">{SHROOM_SVG}<a class="home" href="/{DEFAULT_LEAGUE}" title="메인 화면으로">{esc(SITE_NAME)}<small>협곡의 시야를 밝히듯, LoL 소식·스토브리그·시즌 일정을 한눈에</small></a></h1>
-<div class="stat">{head}<span class="tools"><button type="button" class="tbtn" id="spo" aria-pressed="false" title="경기 결과·루머 핵심을 흐리게 가려요" aria-label="스포 방지">{ICON_EYE_OFF}<span class="lb">스포 방지</span></button><button type="button" class="tbtn ico" id="thm" title="화면 밝기 바꾸기">{ICON_MOON}</button><a class="tbtn{" on" if active == "game" else ""}" href="/{league}/game" aria-label="미니게임">🍄<span class="lb">미니게임</span></a></span></div>
+<div class="stat">{head}<span class="tools"><button type="button" class="tbtn" id="spo" aria-pressed="false" title="경기 결과·루머 핵심을 흐리게 가려요" aria-label="스포 방지">{ICON_EYE_OFF}<span class="lb">스포 방지</span></button><button type="button" class="tbtn ico" id="thm" title="화면 밝기 바꾸기">{ICON_MOON}</button><a class="tbtn{" on" if active == "game" else ""}" href="/{DEFAULT_LEAGUE if wl else league}/game" aria-label="미니게임">🍄<span class="lb">미니게임</span></a></span></div>
 </div>
 <div class="subnav">{lgsel}{ssel}<nav class="top_tab" aria-label="메뉴">{tabs}</nav></div>
 </header>
@@ -279,8 +293,9 @@ def rumor_slots() -> dict:
         with db() as c:
             fa_rows = c.execute("SELECT * FROM fa WHERE league='lck'").fetchall()
         rms = rumors(fa_rows)
-        people = [(r, rms.get(r["page"])) for r in fa_rows]
         ros = roster_rows()
+        signed = {r["page"] for r in ros}           # 리그피디아 로스터에 이미 오른 선수는 FA 표가 늦어도 'FA 유력'으로 안 띄움
+        people = [(r, rms.get(r["page"])) for r in fa_rows if r["page"] not in signed]
         leaving = movers(ros)
         people += [({**dict(r), "team_from": r["team"]}, leaving.get(r["page"])) for r in ros]
         for r, rm in people:
@@ -1396,6 +1411,11 @@ TOUR_KO = (("Season Playoffs", "플레이오프"), ("Season Play-In", "플레이
 
 def tour_ko(page: str, lg_name: str = "LCK") -> str:
     """'LPL/2026 Season/Split 1 Playoffs' → '스플릿 1 플레이오프', 'LCK/2026 Season/Cup' → 'LCK 컵'."""
+    ev = schedule.intl_event(page)[0]                    # 국제전: '2026 Season World Championship/Play-In' → 월즈 플레이-인, '2026 First Stand' → FST
+    if ev:
+        name = {"worlds": "월즈"}.get(ev, ev.upper())
+        sub = {"Play-In": " 플레이-인", "Main Event": " 본선"}.get(page.split("/", 1)[1] if "/" in page else "", "")
+        return name + sub
     t = (page or "").split("Season/", 1)[-1]
     if t == "Cup":
         return f"{lg_name} 컵"
@@ -1453,7 +1473,8 @@ class SchTeams:
 def tab_ko(tab: str) -> str:
     """'Week 3' → '3주차', 'Playoffs Round 2' → '플레이오프 2라운드', 'Finals' → '결승'."""
     t = tab or ""
-    for en, ko in (("Playoffs ", "플레이오프 "), ("Play-In ", "플레이-인 "), ("Group Stage", "그룹 스테이지")):
+    for en, ko in (("Playoffs ", "플레이오프 "), ("Play-In ", "플레이-인 "), ("Group Stage", "그룹 스테이지"), ("Groups ", "그룹 "),
+                   ("Bracket ", "브래킷 ")):
         t = t.replace(en, ko)
     words = t.split()
     if len(words) >= 2 and words[-1].isdigit():
@@ -1461,7 +1482,8 @@ def tab_ko(tab: str) -> str:
         unit = {"Week": "주차", "Round": "라운드", "Day": "일차"}.get(w)
         if unit:
             return " ".join(words[:-2] + [n + unit])
-    return {"Finals": "결승", "Final": "결승", "Semifinals": "준결승", "Quarterfinals": "8강", "Tiebreakers": "타이브레이커"}.get(t, t)
+    return {"Finals": "결승", "Final": "결승", "Semifinals": "준결승", "Quarterfinals": "8강", "Tiebreakers": "타이브레이커",
+            "Third-Place Match": "3·4위전"}.get(t, t)
 
 
 def _sch_at(m):

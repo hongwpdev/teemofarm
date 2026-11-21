@@ -96,7 +96,70 @@ class RumorTest(unittest.TestCase):
         old = {"title": "[단독] '카나비' 서진혁, 젠지 합류 유력", "url": "u", "outlet": "OSEN", "published": "2026-11-17T09:00:00+00:00"}
         p = [{"page": "Kanavi", "nick": "Kanavi", "team_from": "dk"}]
         self.assertIn("Kanavi", _guess(p, [old], marks=MOVE_MARK, allow_stay=False))
-        self.assertNotIn("Kanavi", _guess(p, [old], marks=MOVE_MARK, allow_stay=False, since={"Kanavi": "2026-11-18"}))
+        self.assertNotIn("Kanavi", _guess(p, [old], marks=MOVE_MARK, allow_stay=False, since={"Kanavi": {"date": "2026-11-18"}}))
+
+    def test_no_rumor_back_to_team_just_left(self):
+        # T1을 떠나 DK에 입단한 도란: 그 뒤 기사에 T1이 나와도 'T1 이적 유력'은 아님
+        n = {"title": "[단독] '도란' 최현준, T1 합류 유력", "url": "u", "outlet": "OSEN", "published": "2026-11-21T09:00:00+00:00"}
+        p = [{"page": "Doran", "nick": "Doran", "team_from": "dk"}]
+        self.assertIn("Doran", _guess(p, [n], marks=MOVE_MARK, allow_stay=False))
+        self.assertNotIn("Doran", _guess(p, [n], marks=MOVE_MARK, allow_stay=False, since={"Doran": {"date": "2026-11-20", "from": "t1"}}))
+
+    def test_settled_uses_roster_when_fa_table_lags(self):
+        # FA 표는 아직 '미정'(T1)인데 로스터엔 DK로 올라온 도란: T1이 떠나온 팀
+        from tracker.core import db
+        from tracker.rumor import _settled
+        with db() as c:
+            c.execute("INSERT OR REPLACE INTO fa(page,nick,real,team_from,role,status,team_to,team_to_name,until,date,memo) "
+                      "VALUES('DoranT','DoranT','','t1','Top','fa','','','','','')")
+        try:
+            self.assertEqual(_settled({"DoranT": "dk"})["DoranT"]["from"], "t1")
+            self.assertNotIn("DoranT", _settled({"DoranT": "t1"}))
+        finally:
+            with db() as c:
+                c.execute("DELETE FROM fa WHERE page='DoranT'")
+
+    def test_title_pattern_matrix(self):
+        # 자주 나오는 제목 틀 × 팀 조합 × 선수: 잘못된 행선지(떠나온 팀·다른 선수의 행선지)를 읽지 않는지
+        import itertools
+        KO = {"hle": "한화생명", "t1": "T1", "geng": "젠지", "dk": "디플러스 기아", "kt": "KT", "ns": "농심",
+              "bfx": "BNK 피어엑스", "drx": "DRX", "dns": "DN 수퍼스", "bro": "브리온"}
+        EN = {"hle": "Hanwha Life Esports", "t1": "T1", "geng": "Gen.G", "dk": "Dplus KIA", "kt": "KT Rolster",
+              "ns": "Nongshim RedForce", "bfx": "BNK FEARX", "drx": "DRX", "dns": "DN SOOPers", "bro": "BRION"}
+        P = [("Zeus", "제우스"), ("Doran", "도란"), ("Kanavi", "카나비"), ("Canyon", "캐니언"), ("Kiin", "기인")]
+        n = 0
+        for i, (a, b, c, d) in enumerate(itertools.islice(itertools.permutations(KO, 4), 0, 5040, 97)):
+            p, q = P[i % 5], P[(i + 2) % 5]
+            A, B, C = KO[a], KO[b], KO[c]
+            cases = [
+                (f"{A}, '{p[1]}'와 계약 종료", [(p, a, None), (p, b, None)]),
+                (f"{A} 떠난 '{p[1]}', {B} 합류", [(p, a, (b, False)), (p, b, None)]),
+                (f"'{p[1]}', {A}와 결별…{B}행 유력", [(p, a, (b, False)), (p, b, None)]),
+                (f"'{p[1]}', {A} 잔류 확정", [(p, a, (a, True)), (p, b, None)]),
+                (f"[단독] {A}, '{p[1]}' 영입 무산", [(p, b, None)]),
+                (f"'{p[1]}' 떠난 자리에 {B} 출신 '{q[1]}' 합류", [(p, a, None), (p, b, None)]),
+                (f"{A}·{B} 관심…'{p[1]}' 행선지는?", [(p, c, None)]),
+                (f"'{p[1]}'·'{q[1]}', {B} 합류", [(p, a, (b, False)), (q, c, (b, False))]),
+                (f"[단독] {B}, '{p[1]}' 영입 임박…'{q[1]}'와 재계약", [(p, a, (b, False)), (q, c, (c, True))]),
+                (f"{A}, '{p[1]}' 떠나보내고 '{q[1]}' 영입", [(p, a, None), (p, b, None), (q, c, (a, False))]),
+                (f"'{p[1]}' 빈자리 채운다…{A}, '{q[1]}' 영입 임박", [(p, a, None), (q, b, (a, False))]),
+                (f"'{p[1]}' 후계자에서 주전으로... 이동주, {A}와 2년 재계약", [(p, a, None)]),
+                (f"Sources: {EN[b]} to sign {p[0]}, {q[0]} heads to {EN[c]}", [(p, a, (b, False)), (q, d, (c, False))]),
+                (f"{EN[a]} parts ways with {p[0]}", [(p, a, None), (p, b, None)]),
+                (f"{p[0]} re-signs with {EN[a]}", [(p, a, (a, True))]),
+            ]
+            for t, exp in cases:
+                for who, tf, want in exp:
+                    n += 1
+                    self.assertEqual(read_title(t, who[0], tf), want, f"{t} / {who[0]} (원소속 {tf})")
+        self.assertGreater(n, 1000)
+
+    def test_english_title_with_two_players(self):
+        # 'T1 to sign Zeus, Doran heads to DK': 도란(이미 DK)은 T1행이 아님, 제우스는 T1행
+        t = "Sources: T1 to sign Zeus, Doran heads to Dplus KIA"
+        self.assertIsNone(read_title(t, "Doran", "dk"))
+        self.assertEqual(read_title(t, "Zeus", "hle"), ("t1", False))
+        self.assertEqual(read_title("Sources: Cuzz set to join DN SOOPers", "Cuzz", "kt"), ("dns", False))
 
     def test_leave_to_other_team(self):
         # '영입' 같은 말 없이 '원소속 떠나 다른 팀 ○○로'

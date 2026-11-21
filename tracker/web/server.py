@@ -16,7 +16,7 @@ from ..config import DEFAULT_LEAGUE, FA_INTERVAL, FEATURES, KST, LEAGUES, NEWS_I
 from ..core import db, init_db
 from ..fa import player_info
 from ..logos import TEAM_LOGOS
-from . import views
+from . import intl, views
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 STATIC_TYPES = {".css": "text/css; charset=utf-8", ".js": "application/javascript; charset=utf-8"}
@@ -150,7 +150,8 @@ class Handler(BaseHTTPRequestHandler):
                               "application/json; charset=utf-8", cache="no-cache")
         if u.path == "/api/match":                        # 경기 상세(세트별 밴픽·선수·챔피언·KDA). 일정에 있는 경기만
             lg, mid = one("league", DEFAULT_LEAGUE), one("id")
-            m = next((x for x in (schedule.get(lg).get("matches") or []) if x["id"] == mid), None) if lg in LEAGUES and mid else None
+            lg = schedule.INTL if lg in intl.EVENTS else lg           # 국제전 화면의 경기는 국제전 수집에 있음
+            m = next((x for x in (schedule.get(lg).get("matches") or []) if x["id"] == mid), None) if (lg in LEAGUES or lg == schedule.INTL) and mid else None
             if not m:
                 return self._send(404, json.dumps({"msg": "경기를 찾을 수 없어요"}, ensure_ascii=False).encode(), "application/json; charset=utf-8")
             try:
@@ -184,6 +185,15 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/ads.txt":                           # 애드센스 판매자 확인(site.json에 client를 넣으면 생김)
             txt = views.ads_txt()
             return self._send(200 if txt else 404, txt.encode(), "text/plain; charset=utf-8", cache="public, max-age=3600")
+
+        # 국제전(/fst · /msi · /ewc · /worlds): 소식 · /schedule|results(대회 일정) · /teams(진출팀), ?season=연도
+        if parts and parts[0] in intl.EVENTS and len(parts) <= 2:
+            ev, sec = parts[0], (parts[1] if len(parts) == 2 else "")
+            if sec not in ("", "schedule", "results", "teams"):
+                return self._redirect(f"/{ev}/schedule")      # 스토브리그·로스터처럼 국제전에 없는 메뉴는 대회 일정으로
+            page = intl.render(ev, sec, one("season"))
+            page = page.replace("{{ORIGIN}}", self._origin()).replace("{{PATH}}", html.escape(u.path + (f"?{u.query}" if u.query else ""), quote=True))
+            return self._send(200, page.encode(), "text/html; charset=utf-8", cache="public, max-age=0, s-maxage=30")
 
         # 리그 화면: /<리그>[/fa|/builder|/stove (스토브리그) · /schedule|/results (시즌) · /roster|/teams (팀)]
         if parts and parts[0] in LEAGUES and len(parts) <= 2:

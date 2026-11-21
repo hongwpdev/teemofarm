@@ -16,4 +16,6 @@ services:
       NEW_HOURS: "3"
       # 디스코드 이적 알림: 서버의 .env 파일에 DISCORD_WEBHOOK=웹훅주소 를 넣으면 켜짐(저장소에는 넣지 않음)
       DISCORD_WEBHOOK: ${DISCORD_WEBHOOK:-}
+      # 운영 알림(데이터 점검에 새 문제가 생기면): 서버의 .env 파일에 DISCORD_OPS_WEBHOOK=웹훅주소 (소식 채널과 다른 채널 권장)
+      DISCORD_OPS_WEBHOOK: ${DISCORD_OPS_WEBHOOK:-}
       # TEAMS_FILE: /data/teams.json   # 팀 추가·검색어 변경 시

@@ -173,10 +173,12 @@ def poll_fa(gap=None, max_age=FA_FULL_SEC):
             note = " · 프로필은 이전 것 유지"
             PROFILE_RETRY.update(pages=list(dict.fromkeys(pages)), players=list(exp) + list(players) + list(roster_players))
             log.warning("fa profiles failed: %s", e)
-        try:                                      # 같은 사람이 화면마다 다르게 보일 데이터면 로그에 남김
-            from . import integrity
-            for p in integrity.check():
+        try:                                      # 같은 사람이 화면마다 다르게 보일 데이터면 로그 + 새 문제는 디스코드 운영 채널로
+            from . import alerts, integrity
+            probs = integrity.check()
+            for p in probs:
                 log.warning("정합성: %s", p)
+            alerts.integrity_alert(probs)
         except Exception as e:  # noqa: BLE001
             log.warning("정합성 점검 실패: %s", e)
         set_status("fa", "fa", True, f"FA {len(rows)}명{note}")

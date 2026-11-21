@@ -144,6 +144,12 @@ _sch.DATA = {"lck": {"season": 2026, "current": False, "at": now.isoformat(), "s
     _sm("HANJIN BRION", "bro", "Nongshim RedForce", "ns", -24 * 74, "2", "1", "2"),
     _sm("KT Rolster", "kt", "BNK FEARX", "bfx", -24 * 75, "1", "2", "1")],
     "tours": [{"page": "LCK/2026 Season/Rounds 3-4", "name": "LCK 2026 Rounds 3-4", "start": "2026-07-29", "end": "2026-08-23", "playoff": False}]}}
+# 국제전 점검용: 리그피디아에서 받아 둔 2026 FST·MSI·EWC·월즈 실제 자료(tests/fixtures)
+import json as _json  # noqa: E402
+_fx = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tests", "fixtures", "intl_2026.json")
+if os.path.exists(_fx):
+    with open(_fx, encoding="utf-8") as _f:
+        _sch.DATA["intl"] = _json.load(_f)
 server.chat.init()
 server.player_extra.init()
 server.maint.init()

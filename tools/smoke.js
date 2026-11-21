@@ -27,6 +27,12 @@ const PAGES = [
   ['/about', ['.brand', '.pol-page']],
   ['/lck/summary', ['.brand', '.sgrid']],
   ['/lck/contracts', ['.brand']],
+  ['/worlds/schedule', ['.brand', '.tours']],
+  ['/worlds/results', ['.brand', '.wswiss']],
+  ['/worlds/teams', ['.brand', '.wteam']],
+  ['/fst/results', ['.brand', '.wgt']],
+  ['/msi/results', ['.brand', '.wgt']],
+  ['/ewc/schedule', ['.brand', '.tours']],
   ['/lck/teams', ['.brand']],
   ['/privacy', ['.brand', '.pol-page']],
 ];

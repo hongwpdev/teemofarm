@@ -13,7 +13,7 @@ from .classify import article_kind, title_has_team
 from .cluster import EVENTS, persons
 from .config import TEAMS
 from .core import db
-from .filters import ko_nicks
+from .filters import ko_nicks, people
 
 DAYS = 14             # 이 기간 안의 기사만 봄
 CACHE_SEC = 60
@@ -51,9 +51,20 @@ def _read_en(title: str, nick: str, team_from: str):
     t = _EN_TEAM.sub("Hanwha", title)
     low = t.lower()
     # 닉네임은 표기 그대로(대소문자 포함) 한 단어로 있어야 함('Clear'가 'make it clear'에 걸리지 않게)
-    named = re.search(rf"(?<![A-Za-z0-9]){re.escape(nick)}(?![A-Za-z0-9])", t)
-    if not named or any(w in low for w in EN_NEG):
+    nrx = re.compile(rf"(?<![A-Za-z0-9]){re.escape(nick)}(?![A-Za-z0-9])")
+    if not nrx.search(t) or any(w in low for w in EN_NEG):
         return None
+    # 여러 선수 소식이 한 제목에 있으면('T1 to sign Zeus, Doran heads to DK') 그 선수가 나온 토막만 봄.
+    # 토막에 팀이 없는데 다른 선수도 나오면 누구 얘기인지 몰라서 안 읽음
+    parts = [p for p in re.split(r",|;|\||—|–|\s-\s|\band\b|\bwhile\b", t) if p.strip()]
+    if len(parts) > 1:
+        mine = " ".join(p for p in parts if nrx.search(p))
+        nick_rx = people()[0]
+        others_named = {x.lower() for x in (nick_rx.findall(t) if nick_rx else [])} - {nick.lower()}
+        if _teams(mine):
+            t, low = mine, mine.lower()
+        elif others_named:
+            return None
     teams = _teams(t)
     left = None
     for w in EN_LEAVE:                       # 'leaves KT', 'parts ways with T1': 떠나는 말 바로 뒤의 팀
@@ -101,8 +112,8 @@ def _left_teams(title: str) -> set:
     out = set()
     for w in LEAVE + ("출신",):
         for m in re.finditer(re.escape(w), title):
-            if re.match(r"\s*(?:빈\s?)?자리", title[m.end():]):   # '카나비 떠난 자리에'의 팀은 그 자리를 채우는 팀
-                continue
+            if re.match(r"\s*(?:빈\s?)?자리", title[m.end():]) or title[m.start():].startswith("떠나보내"):
+                continue                       # '카나비 떠난 자리에'·'도란 떠나보내고'의 팀은 그 자리를 채우는(데려오는) 팀
             hit = _teams(title[max(0, m.start() - 12):m.start()])
             if len(hit) == 1:
                 out.add(hit[0])
@@ -138,11 +149,25 @@ def read_title(title: str, nick: str, team_from: str):
     if len(segs) > 1:
         # 다른 선수 토막은 빼고 봄. 사람이 안 보이는 토막도 다른 팀 얘기면 뺌('…빈센조도 BNK 피어엑스행')
         # '…2028년까지 재계약'처럼 팀·사람이 없는 토막은 그 선수 얘기로 둠
+        # 그 선수 토막 바로 뒤의 사람 없는 토막은 이어지는 말('…T1행 유력')이라 함께 봄
         mine = [p for p in segs if nick.lower() in persons(p)]
         my_teams = set(_teams(" ".join(mine)))
-        title = " ".join(p for p in segs if p in mine or (not persons(p) and set(_teams(p)) <= my_teams))
+        keep = []
+        for i, p in enumerate(segs):
+            # (단, '…이동주, DNS와 재계약'처럼 다른 이름(본명)이 주어로 나오면 다른 사람 얘기)
+            follows = i > 0 and segs[i - 1] in mine and not persons(p) and not re.match(r"\s*[가-힣]{2,4}(?:,|\s?(?:은|는|이|가)\s)", p)
+            if p in mine or follows or (not persons(p) and set(_teams(p)) <= my_teams):
+                keep.append(p)
+        title = " ".join(keep)
     if any(w in title for w in NEG) or _vacancy_of(title, nick):
         return None
+    # '한화생명, 도란 떠나보내고 캐니언 영입': '떠나보내' 앞에 나온 선수는 그 팀을 떠나는 쪽(뒤 선수만 영입)
+    sendoff = title.find("떠나보내")
+    if sendoff >= 0:
+        names = [nick.lower()] + [ko for en, ko in ko_nicks().items() if en.lower() == nick.lower() and ko]
+        at = [title.lower().find(n) for n in names if n in title.lower()]
+        if at and min(at) < sendoff:
+            return None
     teams = _teams(title)
     left = _left_teams(title)
     # 원소속이 아닌 '떠난 팀'은 행선지가 아님('한화생명 떠나 DN 수퍼스 합류'는 이미 DNS 로스터인 블러핑에게 HLE행이 아님,
@@ -177,14 +202,16 @@ def called_off_hit(title: str, nick: str, team_from: str):
     return (others[0], False) if len(others) == 1 else None
 
 
-def _guess(people, news, marks=None, allow_stay=True, off=None, since=None):
+def _guess(people, news, marks=None, allow_stay=True, off=None, since=None):  # noqa: F811 (people: 사람 목록)
     """people: [{"page", "nick", "team_from"}] → {page: 유력 정보}. marks를 주면 그 말이 제목에 있는 기사만 봄.
     더 새 기사가 같은 행선지를 '무산·결렬'이라 하면 그 유력은 버림. off(dict)를 주면 {page: {(팀, 잔류 여부)}}로 채워 줌.
-    since({page: 'YYYY-MM-DD'})를 주면 그날보다 앞선 기사는 안 봄(이적·재계약이 확정되기 전 소문)."""
+    since({page: {"date": 'YYYY-MM-DD', "from": 팀 키}})를 주면 그날보다 앞선 기사는 안 봄(이적·재계약이 확정되기 전 소문),
+    그리고 방금 떠나온 팀으로 '다시 이적 유력'도 안 봄('T1 → DK 입단한 도란: T1 이적 유력'은 지난 소문)."""
     out = {}
     for r in people:
         best, gone = None, set()
-        cut = (since or {}).get(r["page"]) or ""
+        st = (since or {}).get(r["page"]) or {}
+        cut, came_from = st.get("date") or "", st.get("from") or ""
         for n in news:                          # 최신순
             if cut and (n["published"] or "")[:10] < cut:
                 break                           # (최신순이라 이 뒤는 모두 더 예전)
@@ -198,7 +225,7 @@ def _guess(people, news, marks=None, allow_stay=True, off=None, since=None):
             if marks and not any(w in n["title"] for w in marks):
                 continue
             hit = read_title(n["title"], r["nick"], r["team_from"])
-            if not hit or (hit[1] and not allow_stay) or hit in gone:
+            if not hit or (hit[1] and not allow_stay) or hit in gone or (came_from and hit[0] == came_from and not hit[1]):
                 continue
             # '[오피셜] 제우스 계약 종료, T1 리턴하나'처럼 공식 기사 안의 추측(…하나, 설, 유력)은 '발표'가 아니라 '유력'
             official = (kind == "official" and not any(w in n["title"] for w in GUESS)
@@ -265,14 +292,24 @@ def movers(rows) -> dict:
     예) "[소식통] '시우' 전시우, 2027 LCK 시즌 젠지 합류 예정" → Siwoo: DK → GEN 유력"""
     key = tuple((r["page"], r["team"]) for r in rows)
     people = [{"page": r["page"], "nick": r["nick"], "team_from": r["team"]} for r in rows if r["team"] and r["nick"]]
-    return _cached("roster", key, lambda: _both(people, marks=MOVE_MARK, allow_stay=False, since=_settled()))[0]
+    now = {r["page"]: r["team"] for r in rows}
+    return _cached("roster", key, lambda: _both(people, marks=MOVE_MARK, allow_stay=False, since=_settled(now)))[0]
 
 
-def _settled() -> dict:
-    """{page: 'YYYY-MM-DD'}: 이번 스토브리그에 이적·재계약이 확정된 날(리그피디아). 그 전 기사는 지금 팀 기준 소문이 아님."""
+def _settled(now_team=None) -> dict:
+    """{page: {"date", "from"}}: 이번 스토브리그에 이적·재계약이 확정된 날과 떠나온 팀(리그피디아).
+    그 전 기사는 지금 팀 기준 소문이 아니고, 떠나온 팀으로 돌아간다는 '이적 유력'도 지난 소문.
+    FA 표가 아직 '미정'이어도 로스터에 다른 팀으로 올라와 있으면(now_team) 그 FA 표의 원소속이 떠나온 팀."""
+    now_team = now_team or {}
     try:
         with db() as c:
-            return {r["page"]: (r["date"] or "")[:10] for r in c.execute("SELECT page, date FROM fa WHERE status IN ('move', 'stay')")
-                    if r["date"]}
+            rows = c.execute("SELECT page, date, status, team_from FROM fa").fetchall()
     except Exception:  # noqa: BLE001
         return {}
+    out = {}
+    for r in rows:
+        moved = r["status"] == "move" or (now_team.get(r["page"]) and r["team_from"] and now_team[r["page"]] != r["team_from"])
+        if r["status"] in ("move", "stay") or moved:
+            out[r["page"]] = {"date": (r["date"] or "")[:10] if r["status"] in ("move", "stay") else "",
+                              "from": r["team_from"] if moved else ""}
+    return out

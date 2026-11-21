@@ -6,7 +6,7 @@
 from collections import defaultdict
 
 from .core import db
-from .rumor import movers, rumors
+from .rumor import _settled, movers, rumors
 
 POS = {"Top": "탑", "Jungle": "정글", "Mid": "미드", "Bot": "원딜", "Support": "서폿", "Head Coach": "감독", "Coach": "코치"}
 
@@ -47,6 +47,9 @@ def check() -> list:
         who = f"{r['nick']}({r['team_from']})"
         if r["status"] == "fa" and x["team"] == r["team_from"] and (x["until"] or "") <= (r["date"] or ""):
             bad.append(f"{who}: FA 목록은 미정인데 로스터엔 {x['team']} 소속")
+        elif r["status"] == "fa" and x["team"] != r["team_from"]:
+            # 리그피디아 FA 목록이 로스터보다 늦게 바뀜(도란: 로스터엔 DK인데 FA 목록은 T1 미정). 화면은 로스터 기준으로 막아 두지만 알림
+            bad.append(f"{who}: FA 목록은 미정인데 로스터엔 {x['team']} — 리그피디아 FA 목록 갱신 대기")
         elif r["status"] == "move" and r["team_to"] and x["team"] != r["team_to"]:
             bad.append(f"{who}: FA 목록은 {r['team_to']} 이적 확정인데 로스터엔 {x['team']}")
         elif r["status"] == "stay" and x["team"] != r["team_from"]:
@@ -62,8 +65,18 @@ def check() -> list:
         x = rm.get(r["page"])
         if x and r["status"] != "fa":
             bad.append(f"{r['nick']}: 이미 {r['status']}인데 '유력' 표시")
+    settled = _settled({r["page"]: r["team"] for r in roster})
     for page, x in movers(roster).items():
         r = next((y for y in roster if y["page"] == page), None)
         if r and x["team"] == r["team"]:
             bad.append(f"{r['nick']}: 지금 {r['team']} 선수인데 '{r['team']} 이적 유력'으로 읽음 ({x['title']})")
+        came = (settled.get(page) or {}).get("from")
+        if r and came and x["team"] == came and not x["stay"]:     # 6) 방금 떠나온 팀으로 '이적 유력'
+            bad.append(f"{r['nick']}: {came}을 떠나 {r['team']}에 왔는데 '{came} 이적 유력'으로 읽음 ({x['title']})")
+    # 7) 로스터에 이미 오른 선수에게 FA '유력'(다른 팀 행)
+    signed = {r["page"]: r["team"] for r in roster}
+    for r in fa:
+        x = rm.get(r["page"])
+        if x and r["page"] in signed and not x["stay"] and x["team"] != signed[r["page"]]:
+            bad.append(f"{r['nick']}: 로스터엔 {signed[r['page']]}인데 FA '{x['team']} 유력'으로 읽음 ({x['title']})")
     return bad

@@ -67,5 +67,50 @@ class IntegrityTest(unittest.TestCase):
         self.assertEqual(rows[0][5], "stay")
 
 
+    def test_fa_table_lags_behind_roster(self):
+        # 도란: 로스터엔 DK(영입)인데 리그피디아 FA 목록은 아직 T1 미정 → 알림 대상
+        put([("DoranI", "DoranI", "", "t1", "Top", "fa", "", "", "", "2026-11-17", "")],
+            [("dk", "Top", "DoranI", "DoranI", "", "", 1)])
+        self.assertTrue(any("FA 목록은 미정인데 로스터엔 dk" in p for p in integrity.check()))
+
+    def test_fa_rumor_for_signed_player(self):
+        from datetime import datetime, timezone
+        from tracker.core import save
+        put([("Doran", "Doran", "", "t1", "Top", "fa", "", "", "", "2026-11-17", "")],
+            [("dk", "Top", "Doran", "Doran", "", "", 1)])
+        save([{"id": "news:dj1", "team": "lck", "source": "news", "title": "[단독] '도란' 최현준, 한화생명 합류 유력",
+               "url": "https://example.com/dj", "outlet": "OSEN", "published": datetime.now(timezone.utc).isoformat()}])
+        try:
+            self.assertTrue(any("로스터엔 dk인데 FA 'hle 유력'" in p for p in integrity.check()))
+        finally:
+            with db() as c:
+                c.execute("DELETE FROM items WHERE id='news:dj1'")
+
+
+class AlertTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+
+    def test_new_problems_only_once(self):
+        from unittest import mock
+        from tracker import alerts
+        sent = []
+        with mock.patch.object(alerts, "WEBHOOK", "https://discord.invalid/hook"), \
+             mock.patch.object(alerts, "_post", side_effect=sent.append):
+            alerts._meta(alerts.KEY, "[]")
+            self.assertEqual(alerts.integrity_alert(["A 문제", "B 문제"]), ["A 문제", "B 문제"])
+            self.assertEqual(len(sent), 1)
+            self.assertIn("새 문제 2건", sent[0])
+            self.assertEqual(alerts.integrity_alert(["A 문제", "B 문제"]), [])      # 같은 문제는 다시 안 보냄
+            self.assertEqual(len(sent), 1)
+            self.assertEqual(alerts.integrity_alert(["A 문제"]), [])               # B 해결
+            self.assertEqual(alerts.integrity_alert(["A 문제", "B 문제"]), ["B 문제"])   # B가 다시 생기면 다시
+            self.assertEqual(len(sent), 2)
+        with mock.patch.object(alerts, "WEBHOOK", ""), mock.patch.object(alerts, "_post") as p:
+            alerts.integrity_alert(["C 문제"])                                      # 웹훅이 없으면 보내지 않음(로그만)
+            p.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
