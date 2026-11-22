@@ -1,4 +1,4 @@
-"""메뉴 순서·HOT 표시: 스토브리그 기간엔 '스토브리그'가, 시즌 중엔 '시즌'이 소식 다음에 오고 HOT이 붙음."""
+"""메뉴 순서·HOT 표시: 위 메뉴는 늘 소식 · 이적 · 경기 · 팀(시기마다 순서가 바뀌지 않음). HOT은 스토브리그 기간엔 '이적', 시즌 중엔 '경기'."""
 import os
 import re
 import tempfile
@@ -26,13 +26,13 @@ class MenuTest(unittest.TestCase):
 
     def test_stove_league(self):
         labels, hot = menu(date(2026, 11, 20))
-        self.assertEqual(labels[:2], ["소식", "스토브리그"])
-        self.assertEqual(hot, ["스토브리그"])
+        self.assertEqual(labels, ["소식", "이적", "경기", "팀"])          # 늘 같은 순서·같은 이름
+        self.assertEqual(hot, ["이적"])
 
     def test_season(self):
         labels, hot = menu(date(2027, 4, 15))
-        self.assertEqual(labels[:2], ["소식", "시즌"])
-        self.assertEqual(hot, ["시즌"])
+        self.assertEqual(labels, ["소식", "이적", "경기", "팀"])          # 시즌 중에도 순서는 그대로, HOT만 '경기'로
+        self.assertEqual(hot, ["경기"])
 
     def test_no_same_year_twice(self):
         # 스토브리그 기간(2026년 11월): 지금은 '2026 시즌'(안에 스토브리그 메뉴). 같은 해가 '기록'으로 또 보이면 안 됨
@@ -48,7 +48,7 @@ class MenuTest(unittest.TestCase):
         # '2027 시즌 · 예정': 경기·스토브리그가 아직 없으니 개막 준비 · 시즌 · 팀만, HOT 없음, 시즌 유지
         page = views.shell("lck", "news", "", "", (), date(2026, 11, 20), season=2027)
         labels, hot = menu(date(2026, 11, 20), season=2027)
-        self.assertEqual(labels, ["개막 준비", "시즌", "팀"])
+        self.assertEqual(labels, ["개막 준비", "경기", "팀"])
         self.assertEqual(hot, [])
         self.assertIn('aria-label="시즌 고르기"><b>2027 시즌</b>', page)
         self.assertIn("아직 개막 전", page)

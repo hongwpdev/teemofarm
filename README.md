@@ -25,6 +25,10 @@ docker compose up -d --build      # 코드를 바꾼 뒤에는 꼭 --build
 2. 반영 후 2분 안에 주요 화면(`/healthz`·`/lck`·로스터·이적·일정)이 열리지 않으면 직전 코드로 되돌려요.
 3. 실패한 커밋은 `.deploy_bad`에 적어 두고 다시 시도하지 않아요. 고친 커밋을 올리면 다시 반영해요.
 커밋 메시지에 `[restart]`가 있으면 코드가 그대로여도 다시 띄워요.
+4. 결과를 디스코드 운영 채널로 알려요(`tools/ops_notify.py`): 재시작·반영 실패(되돌림, 테스트 기록 끝부분 포함)·반영 성공.
+   성공하면 Cloudflare 캐시를 비우고, 실제 주소의 주요 화면과 데이터 점검(`/api/integrity`·`/api/rumor-audit`) 결과를 한 번에 보내요.
+   설정은 서버의 `.env`(저장소에는 넣지 않음): `DISCORD_OPS_WEBHOOK`(운영 채널), `CF_ZONE_ID`·`CF_API_TOKEN`(Cache Purge 권한),
+   `SITE_BASE_URL`(기본 `https://teemofarm.com`). 없으면 그 부분만 건너뛰고 `data/update.log`에만 남아요.
 
 **자동 재시작**: `python app.py`로 직접 띄우면 app.py가 감독 역할만 하고 서버를 따로 띄워요.
 `tracker/` 아래 파일이 바뀌면 3~5초 안에 서버를 알아서 다시 띄우고, 서버가 죽어도 5초 뒤 다시 띄워요.

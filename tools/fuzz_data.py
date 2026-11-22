@@ -300,17 +300,17 @@ def part_b(n, rnd):
         probs = integrity.check()
         # 숫자: 이적 시장 버튼 숫자 = 소식 화면·오른쪽 요약 숫자(fa_counts)
         fa_html = views.render_fa("lck")
-        btn = {k: int(v) for v, k in re.findall(r'<b>(\d+)</b>(FA 전체|이적 확정|잔류|미정|유력)', fa_html)}
+        btn = {k: int(v) for k, v in re.findall(r'>(전체|확정|잔류|미정|유력) <b>(\d+)</b></button>', fa_html)}
         cnt = views.fa_counts()
         checks["숫자 일치(이적 시장=요약)"] += 1
-        if {k: v for k, v in btn.items() if k != "FA 전체"} != {"이적 확정": cnt.get("move", 0), "잔류": cnt.get("stay", 0),
+        if {k: v for k, v in btn.items() if k != "전체"} != {"확정": cnt.get("move", 0), "잔류": cnt.get("stay", 0),
                                                               "미정": cnt.get("fa", 0), "유력": cnt.get("rm", 0)}:
             fails["숫자 일치(이적 시장=요약)"] += 1
         checks["네 칸 합 = FA 전체"] += 1
-        if btn.get("FA 전체") != sum(v for k, v in btn.items() if k != "FA 전체"):
+        if btn.get("전체") != sum(v for k, v in btn.items() if k != "전체"):
             fails["네 칸 합 = FA 전체"] += 1
         sm_html = views.render_summary("lck")
-        st = {k: int(v) for v, k in re.findall(r'<span><b>(\d+)</b>(영입|재계약|미정|유력)</span>', sm_html)}
+        st = {k: int(v) for v, k in re.findall(r'<span><b>(\d+)</b>(영입|잔류|미정|유력)</span>', sm_html)}
         checks["숫자 일치(이적 시장=팀별)"] += 1
         if (st.get("미정"), st.get("유력")) != (btn.get("미정"), btn.get("유력")):
             fails["숫자 일치(이적 시장=팀별)"] += 1
@@ -342,7 +342,7 @@ def part_b(n, rnd):
                 checks["이적 시장 상태"] += 1
                 if falist.get(nick) != exp_status:
                     bad("이적 시장 상태", nick, falist.get(nick))
-            # 팀별: 확정 이적이면 도착 팀 '영입' + 원소속 '이탈', 잔류면 원소속 '재계약', 미정이면 '미정' 또는 '이적설'
+            # 팀별: 확정 이적이면 도착 팀 '영입' + 원소속 '이탈', 잔류면 원소속 '잔류', 미정이면 '미정' 또는 '유력'
             s = summ.get(nick, set())
             if row:
                 checks["팀별 줄"] += 1
@@ -352,7 +352,7 @@ def part_b(n, rnd):
                     ok = s == want
                 elif exp_status == "stay":
                     ok = s == {(frm, "stay")}
-                else:   # 미정: 기사 추측이 없으면 원소속 카드 '미정'만, 있으면 원소속 카드 '이적설' + (이적 유력이면) 행선지 카드 '이적설'
+                else:   # 미정: 기사 추측이 없으면 원소속 카드 '미정'만, 있으면 원소속 카드 '유력' + (이적 유력이면) 행선지 카드 '유력'
                     g = rms.get(nick)
                     if g and not g["official"]:
                         ok = s == ({(frm, "rm")} | ({(g["team"], "rm")} if not g["stay"] and g["team"] in KEYS else set()))
@@ -360,7 +360,7 @@ def part_b(n, rnd):
                         ok = s == {(frm, "open")}
                 if not ok:
                     bad("팀별 줄", nick, sorted(s))
-                # 이적설 팀 = 이적 시장의 유력 팀
+                # 팀별 유력 줄의 팀 = 이적 시장의 유력 팀
                 rm = rms.get(nick)
                 if exp_status == "fa" and rm and not rm["stay"] and not rm["official"]:
                     checks["유력 팀 일치(이적 시장=팀별)"] += 1

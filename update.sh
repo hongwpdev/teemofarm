@@ -6,6 +6,9 @@
 #     - 반영 후: 주요 화면이 2분 안에 열리지 않으면 직전 코드로 되돌림
 #     - 실패한 커밋은 .deploy_bad 에 적어 두고 다시 시도하지 않음(새 커밋이 올라오면 다시 시도)
 #     커밋 메시지에 [restart]가 있으면 코드가 그대로여도 재시작
+#  3) 결과를 디스코드 운영 채널로 알림(tools/ops_notify.py): 재시작·반영 실패(되돌림)·반영 성공(+ Cloudflare 캐시 비우기,
+#     실제 주소 점검, 데이터 점검 요약). 설정은 이 폴더의 .env: DISCORD_OPS_WEBHOOK, CF_ZONE_ID, CF_API_TOKEN, SITE_BASE_URL
+#     알림이 실패해도 반영에는 영향 없음
 cd "$(dirname "$0")" || exit 1
 NAME=lck-stove-tracker
 BAD=.deploy_bad
@@ -14,6 +17,11 @@ HEALTH_PATHS="/healthz /lck /lck/roster /lck/fa /lck/schedule"
 TEST_IMAGE=${TEST_IMAGE:-python:3.12-slim}
 log() { echo "$(date '+%F %T') $*"; }
 docker_on() { docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "$NAME"; }
+notify() {   # $1: ok|fail|restart, 나머지는 tools/ops_notify.py로. 표준 입력(테스트 기록)도 넘김. 90초 안에 끝나지 않으면 그만둠
+  [ -f tools/ops_notify.py ] || return 0
+  timeout 90 docker run --rm -i --network host -v "$PWD:/src:ro" -w /src -e PYTHONDONTWRITEBYTECODE=1 \
+    "$TEST_IMAGE" python tools/ops_notify.py "$@" 2>&1 | sed 's/^/  [알림] /' || true
+}
 
 # 1분 안에 끝나지 않은 앞 실행(반영·확인 중)과 겹치지 않게
 if command -v flock >/dev/null 2>&1; then
@@ -24,6 +32,7 @@ fi
 if docker_on && [ "$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$NAME" 2>/dev/null)" = unhealthy ]; then
   log "응답 없음 → 재시작"
   docker restart "$NAME" >/dev/null
+  notify restart </dev/null
 fi
 
 git fetch -q origin main || exit 1
@@ -52,12 +61,15 @@ for p in sys.argv[1:]:
 
 fail() {   # $1: 이유. 코드를 OLD로 되돌리고, 컨테이너가 이미 바뀌었으면 OLD로 다시 띄움
   echo "$NEW" > "$BAD"
+  why="$1"
   git reset -q --hard "$OLD"
   if [ "$2" = rebuild ]; then
     docker compose up -d --build --force-recreate >/dev/null 2>&1
-    if healthy; then log "되돌림 완료: $(git log -1 --format='%h %s')"; else log "되돌렸지만 아직 응답 없음 — 서버를 직접 확인해 주세요"; fi
+    if healthy; then log "되돌림 완료: $(git log -1 --format='%h %s')"; else why="$why · 되돌렸지만 아직 응답 없음 — 서버 확인 필요"; log "되돌렸지만 아직 응답 없음 — 서버를 직접 확인해 주세요"; fi
   fi
   log "반영 실패($1) → $(git rev-parse --short "$NEW") 건너뜀, $(git rev-parse --short "$OLD") 유지"
+  if [ "$1" = "테스트 실패" ]; then tail -20 /tmp/teemofarm-test.log; else echo; fi \
+    | notify fail "$why" "$(git log -1 --format='%h %s' "$NEW")" "$(git log -1 --format='%h %s' "$OLD")"
   exit 1
 }
 
@@ -77,3 +89,4 @@ if docker_on; then
 fi
 rm -f "$BAD"
 log "반영: $(git log -1 --format='%h %s')"
+docker_on && notify ok "$(git log -1 --format='%h %s')" "$(git log -1 --format='%h %s' "$OLD")" </dev/null

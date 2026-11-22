@@ -75,7 +75,7 @@
   const my = store.get(window.SPS.MY);
   if (B.teamable && my && !qs.has("team") && !qs.has("q")) {
     qs.set("team", my);
-    location.replace(location.pathname + "?" + qs.toString());
+    location.replace(location.pathname + "?" + qs.toString() + location.hash);   // #tf 같은 바로가기는 그대로
     return;
   }
 

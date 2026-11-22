@@ -144,7 +144,7 @@ def _dedupe(items):
 def _put(c, iid, page, nick, frm, rm, now):
     """유력 기사 판 하나(같은 판이면 결과가 나기 전까지 최신 기사·표시로 바꿈: 유력 → 발표)."""
     from .stove import outlet_name
-    tag = ("잔류 " if rm["stay"] else "") + ("발표" if rm["official"] else "유력")    # 화면 공통 글자(views.rm_label과 같음)
+    tag = ("잔류 " if rm["stay"] else "") + ("발표" if rm["official"] else "유력")    # 저장용 태그. 화면 글자는 views.tag_label·farm.js tagLabel로 바꿔 보임
     c.execute("INSERT INTO farm_items(id,kind,page,nick,a,b,a_label,b_label,title,url,outlet,published,lock_at,created,tag) "
               "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title, url=excluded.url, "
               "outlet=excluded.outlet, published=excluded.published, tag=excluded.tag WHERE farm_items.result IS NULL",

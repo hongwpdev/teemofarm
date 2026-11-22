@@ -99,7 +99,7 @@ class SmokeTest(unittest.TestCase):
                 self.assertIn('data-s="fa" data-rm=1', row("GusX"))
                 self.assertIn('<span class="st2 s-rm">유력</span>', row("GusX"))
                 self.assertIn('data-s="fa" data-p', row("NoX"))
-                self.assertRegex(html, r'data-s="rm"><b>1</b>유력')
+                self.assertRegex(html, r'data-s="rm">유력 <b>1</b>')
         finally:
             with db() as c:
                 c.execute("DELETE FROM fa WHERE page IN ('BonX','MovX','GusX','NoX')")
@@ -194,18 +194,20 @@ class SmokeTest(unittest.TestCase):
         self.assertRegex(on, r'class="on" href="/lck"[^>]*>전체<')               # 기본: 전체, 주소에 hot 없음
         self.assertIn('href="/lck?hot=1"', on)                                   # 오피셜은 hot=1
         self.assertRegex(self.get("/lck?hot=1")[1], r'class="on" href="/lck\?hot=1"[^>]*>오피셜<')
-        self.assertRegex(self.get("/lck?hot=2")[1], r'class="on" href="/lck\?hot=2"[^>]*>스토브리그<')   # 이동·계약 소식만
+        self.assertRegex(self.get("/lck?hot=2")[1], r'class="on" href="/lck\?hot=2"[^>]*>이적<')   # 이동·계약 소식만
         self.assertRegex(self.get("/lck?cat=stove")[1], r'class="on" href="/lck\?hot=2"')                    # ?cat=stove 도 같은 보기
 
     def test_community_posts(self):
-        # 인벤 게시판 글: '오피셜' 대신 '커뮤니티' 배지, 오피셜 보기·'뉴스만'에서는 빠짐
+        # 인벤 게시판 글: 기본으로는 숨김(화면 단순화), '출처: 커뮤니티 글까지'에서만. 배지 글자는 없음. 오피셜 보기·'뉴스만'에서는 빠짐
         from datetime import datetime, timezone
         from tracker.core import save
         t = "[잡담] 롤) 폭스 탑라이너 타나토스 합류"
         save([{"id": "news:talk1", "team": "lck", "source": "news", "title": t, "url": "https://example.com/t",
                "outlet": "인벤", "published": datetime.now(timezone.utc).isoformat()}])
-        body = self.get("/lck?team=all")[1]
-        self.assertRegex(body, r'<span class="kb k-talk">커뮤니티</span>\[잡담\] 롤\) 폭스')
+        self.assertNotIn("폭스 탑라이너", self.get("/lck?team=all")[1])
+        body = self.get("/lck?team=all&src=all")[1]
+        self.assertIn("[잡담] 롤) 폭스", body)
+        self.assertNotIn('k-talk">커뮤니티</span>', body)
         self.assertNotIn("폭스 탑라이너", self.get("/lck?team=all&hot=1")[1])
         self.assertNotIn("폭스 탑라이너", self.get("/lck?team=all&src=news")[1])
 
@@ -218,9 +220,9 @@ class SmokeTest(unittest.TestCase):
                "outlet": "인벤", "published": now},
               {"id": "news:talk3", "team": "lck", "source": "news", "title": "슼피셜)롤 GENG 서폿 클라우드 합류", "url": "https://example.com/t3",
                "outlet": "에펨코리아", "published": now}])
-        body = self.get("/lck?team=all")[1]
+        body = self.get("/lck?team=all&src=all")[1]
         self.assertNotIn("패치 너무 별로", body)
-        self.assertRegex(body, r'<span class="kb k-talk">커뮤니티</span>슼피셜\)롤 GENG')
+        self.assertIn("슼피셜)롤 GENG", body)
 
     def test_summary_labels_and_no_double_row(self):
         # 스토브리그 팀별: 명사 라벨(영입·이탈·재계약·이적설·미정), 이적설에 잡힌 선수는 같은 카드 '미정'에 또 안 나옴
@@ -237,10 +239,10 @@ class SmokeTest(unittest.TestCase):
             html = views.render_summary("lck")
         card = html[html.index('id="m-hle"'):].split("</article>")[0]
         labels = __import__("re").findall(r"<em>(.*?)</em>", card)
-        self.assertEqual(labels, ["영입", "이탈", "이적설", "미정"])
-        self.assertEqual(card.count(">Kiin<"), 1)                       # 이적설에만
+        self.assertEqual(labels, ["영입", "이탈", "유력", "미정"])         # 이적 시장과 같은 말(이적설·재계약 → 유력·잔류)
+        self.assertEqual(card.count(">Kiin<"), 1)                       # 유력에만
         self.assertIn(">Delight<", card)
-        for old in ("들어옴", "나감", "<em>소문</em>"):
+        for old in ("들어옴", "나감", "<em>소문</em>", "<em>이적설</em>", "<em>재계약</em>"):
             self.assertNotIn(old, html)
 
     def test_ended_season_is_not_a_record(self):

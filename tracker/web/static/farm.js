@@ -165,7 +165,7 @@ ${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">$
   }
   function when(iso) { const d = new Date(iso); return isNaN(d) ? "" : `${d.getMonth() + 1}/${d.getDate()}`; }
   function source(it) {
-    if (it.kind === "rumor") return `<span class="tf-src">${esc(it.tag || "유력")} · <a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.outlet)} 기사 ↗</a></span>`;
+    if (it.kind === "rumor") return `<span class="tf-src">${esc(tagLabel(it.tag))} · <a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.outlet)} 기사 ↗</a></span>`;
     const d = new Date(it.published);
     return `<span class="tf-src">${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} · ${esc(it.title)}</span>`;
   }
@@ -184,7 +184,9 @@ ${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">$
     return `<div class="tf-tug"><div class="tf-tl"><span class="tf-pa">${esc(sideName(it, p))} ${pa}%</span><span class="tf-n">민심 ${m}명${minor && !it.result ? ` · <b class="tf-bonus">${esc(sideName(it, minor))} 역배 +2</b>` : hot ? ` · <b class="tf-hot">🔥 격전지</b>` : ""}</span><span class="tf-pb">${esc(sideName(it, q))} ${100 - pa}%</span></div><span class="tf-gauge">${s}</span></div>`;
   }
   // 사이트 전체 점검(tools/crawl.js)이 다른 화면과 상태·행선지를 비교할 수 있게
-  const facts = it => it.kind === "rumor" && !it.result && !/무산/.test(it.tag || "") ? ` data-nick="${esc(it.nick)}" data-label="${esc(it.tag || "")}" data-dest="${esc(it.b)}"` : "";
+  // 기사 태그(발표·잔류 발표·잔류 유력·잔류 무산) → 화면 말 4개(확정·잔류·유력·미정)+무산. views.tag_label과 같게
+  function tagLabel(t) { t = t || ""; return /무산/.test(t) ? "무산" : /잔류 발표/.test(t) ? "잔류" : /발표/.test(t) ? "확정" : "유력"; }
+  const facts = it => it.kind === "rumor" && !it.result && !/무산/.test(it.tag || "") ? ` data-nick="${esc(it.nick)}" data-label="${esc(tagLabel(it.tag))}" data-dest="${esc(it.b)}"` : "";
 
   // 진행 중 한 줄
   function openRow(it) {
@@ -308,7 +310,12 @@ ${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">$
       }
       if (back) save();
       judge(); paint(); hideGold(); checkUnlock();
-    }).catch(() => { paint(); hideGold(); checkUnlock(); }).finally(() => { box.dataset.ready = "1"; });
+    }).catch(() => { paint(); hideGold(); checkUnlock(); }).finally(() => {
+      box.dataset.ready = "1";
+      // 소식 첫 화면에선 접혀 있음: 수확할 버섯이 있거나 #tf로 들어왔으면 펼쳐 둠
+      const fold = document.getElementById("tff");
+      if (fold && (location.hash === "#tf" || box.querySelector(".tf-harvest"))) fold.open = true;
+    });
   }
 
   // ── 연출 ──
@@ -539,18 +546,6 @@ ${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">$
     if (typeof d.showModal === "function") d.showModal();
     else copy(shareText()).then(() => toast("내 농장 기록을 복사했어요. 붙여 넣어 자랑해 보세요")).catch(() => {});
   }
-
-  // ── 소식 목록의 '이 소식 O/X 심기 ↑' → 위 독버섯 심기 칸의 그 판으로 ──
-  document.addEventListener("click", e => {
-    const a = e.target.closest("[data-farm-jump]");
-    if (!a) return;
-    e.preventDefault();
-    const id = a.dataset.farmJump, sel = `li[data-item="${CSS.escape(id)}"]`;
-    if (tab !== "open" || !box.querySelector(sel)) { tab = "open"; if (!box.querySelector(sel)) more = true; paint(); }
-    const li = box.querySelector(sel) || box;
-    li.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (li !== box) { li.classList.remove("tf-flash"); void li.offsetWidth; li.classList.add("tf-flash"); }
-  });
 
   // ── 숨은 황금 버섯(하루 한 번) ──
   // 숨을 자리: 오른쪽 스토브리그 현황·팀 로스터 칸, 리그 안내 줄, 휴대폰 스토브리그 숫자 줄, 소식 목록 위(광고 칸은 빼고)

@@ -110,14 +110,14 @@ class PrecedenceTest(unittest.TestCase):
             [("dk", "Top", "PrecB", "PrecB", "", "2027-11-30", 1)])
         import re
         html = views.render_fa("lck")
-        btn = {k: int(v) for v, k in re.findall(r'<b>(\d+)</b>(이적 확정|잔류|미정)</button>', html)}
+        btn = {k: int(v) for k, v in re.findall(r'>(확정|잔류|미정) <b>(\d+)</b></button>', html)}
         cnt = views.fa_counts()
-        self.assertEqual(btn, {"이적 확정": cnt.get("move", 0), "잔류": cnt.get("stay", 0), "미정": cnt.get("fa", 0)})
+        self.assertEqual(btn, {"확정": cnt.get("move", 0), "잔류": cnt.get("stay", 0), "미정": cnt.get("fa", 0)})
         self.assertEqual(cnt.get("move"), 1)
 
 
 class RumorBucketTest(unittest.TestCase):
-    """'유력인데 왜 미정이야': 이적 시장 네 칸(이적 확정·잔류·미정·유력)은 서로 겹치지 않고, 팀별·요약 숫자도 같음."""
+    """'유력인데 왜 미정이야': 이적 시장 네 칸(확정·잔류·유력·미정)은 서로 겹치지 않고, 팀별·요약 숫자도 같음."""
     @classmethod
     def setUpClass(cls):
         init_db()
@@ -143,14 +143,15 @@ class RumorBucketTest(unittest.TestCase):
                       ("bk1", "", "news", "한화생명 떠난 '제우스', 친정 T1 복귀 유력", "https://e.com/bk1", "위키트리", now, now))
         state.reset()
         html = views.render_fa("lck")
-        btn = {k: int(v) for v, k in re.findall(r'<b>(\d+)</b>(FA 전체|이적 확정|잔류|미정|유력)', html)}
-        self.assertEqual(btn, {"FA 전체": 3, "이적 확정": 0, "잔류": 1, "미정": 1, "유력": 1})
+        btn = {k: int(v) for k, v in re.findall(r'>(전체|확정|잔류|미정|유력) <b>(\d+)</b></button>', html)}
+        self.assertEqual(btn, {"전체": 3, "확정": 0, "잔류": 1, "미정": 1, "유력": 1})
         self.assertEqual(views.fa_counts(), {"stay": 1, "fa": 1, "rm": 1})
         sm = views.render_summary("lck")
-        self.assertIn("<span><b>1</b>미정</span><span><b>1</b>유력</span>", sm)
+        self.assertIn("<span><b>1</b>유력</span><span><b>1</b>미정</span>", sm)
         hle = sm[sm.index('id="m-hle"'):].split("</article>")[0]
         self.assertNotIn('<div class="sl open">', hle)                    # 제우스는 HLE 카드에서 '미정'이 아니라
-        self.assertIn("→ T1 유력", hle)                                    # '이적설 → T1 유력'
+        self.assertIn("→ T1", hle)                                         # '유력 → T1'
+        self.assertIn('<em>유력</em>', hle)
         t1 = sm[sm.index('id="m-t1"'):].split("</article>")[0]
         self.assertIn(">Zeus<", t1)
 

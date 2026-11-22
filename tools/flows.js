@@ -100,7 +100,7 @@ async function teamTabs(p, path) {
 
 async function popups(p) {
   await p.goto(B + '/lck/fa');
-  if (!(await p.$('.fa-row .nm >> visible=true'))) await click(p, '#tabs a[data-t="all"]', '이적·FA 전체 팀');   // 내 팀에 FA가 없으면 전체로
+  if (!(await p.$('.fa-row .nm >> visible=true'))) await p.selectOption('#tsel', 'all');   // 내 팀에 FA가 없으면 전체로
   if (await click(p, '.fa-row .nm >> visible=true', '이적·FA 선수 이름')) {
     if (!(await p.$eval('#dim', d => d.classList.contains('show')).catch(() => false))) bad('이적·FA: 선수 이름을 눌러도 프로필 팝업이 안 뜸');
     await p.keyboard.press('Escape'); await p.waitForTimeout(300);
@@ -119,6 +119,39 @@ async function popups(p) {
   if (await click(p, 'a[data-pol="privacy"]', '개인정보처리방침')) {
     if (!(await p.$eval('#pol-privacy', d => d.open).catch(() => false))) bad('개인정보처리방침 팝업이 안 열림');
     await p.keyboard.press('Escape');
+  }
+}
+
+// 이적 시장 선수별: 상태 칩·팀·포지션 고르기가 목록과 주소에 바로 반영되는지(새로 불러오지 않음)
+async function faFilters(p) {
+  await p.goto(B + '/lck/fa?team=all');
+  const all = await p.$$eval('.fa-row', xs => xs.length);
+  if (!all) { bad('이적 시장: 목록이 비어 있음'); return; }
+  const n = async s => +(await p.$eval(`.sum button[data-s="${s}"] b`, e => e.textContent).catch(() => 'NaN'));
+  const sum4 = (await n('move')) + (await n('stay')) + (await n('rm')) + (await n('fa'));
+  if (sum4 !== await n('all')) bad(`이적 시장: 네 칸 합 ${sum4} ≠ 전체 ${await n('all')}`);
+  for (const st of ['move', 'stay', 'rm', 'fa']) {
+    await click(p, `.sum button[data-s="${st}"]`, `이적 시장 '${st}' 칩`);
+    const r = await p.evaluate(st => ({ rows: [...document.querySelectorAll('#falist .fa-row')].map(e => (e.dataset.s === 'fa' && e.dataset.rm === '1') ? 'rm' : e.dataset.s),
+      on: (document.querySelector('.sum button.on') || {}).dataset?.s, q: location.search }), st);
+    if (r.on !== st) bad(`이적 시장: '${st}' 칩을 눌렀는데 '${r.on}'이 켜짐`);
+    if (r.rows.some(x => x !== st)) bad(`이적 시장: '${st}' 칩인데 다른 상태가 섞임 (${[...new Set(r.rows)].join(',')})`);
+    if (r.rows.length !== await n(st)) bad(`이적 시장: '${st}' 칩 숫자 ${await n(st)}인데 목록 ${r.rows.length}명`);
+    if (!r.q.includes('s=' + st)) bad(`이적 시장: '${st}' 칩이 주소에 안 남음 (${r.q})`);
+  }
+  await click(p, '.sum button[data-s="all"]', "이적 시장 '전체' 칩");
+  await p.selectOption('#psel', '미드');
+  const ps = await p.$$eval('#falist .fa-row', xs => xs.map(e => e.dataset.p));
+  if (ps.some(x => x !== '미드')) bad(`이적 시장: 포지션 '미드'를 골랐는데 ${[...new Set(ps)].join(',')}`);
+  const tk = await p.$$eval('#tsel option', xs => xs.map(o => o.value).filter(v => v !== 'all'));
+  await p.selectOption('#psel', 'all');
+  if (tk.length) {
+    await p.selectOption('#tsel', tk[0]);
+    const ts = await p.$$eval('#falist .fa-row', xs => xs.map(e => e.dataset.t));
+    if (ts.some(x => x !== tk[0])) bad(`이적 시장: 팀 '${tk[0]}'를 골랐는데 다른 팀이 섞임`);
+    if (!p.url().includes('team=' + tk[0])) bad('이적 시장: 고른 팀이 주소에 안 남음');
+    await p.reload();
+    if ((await p.$eval('#tsel', e => e.value)) !== tk[0]) bad('이적 시장: 새로고침하니 고른 팀이 풀림');
   }
 }
 
@@ -165,7 +198,7 @@ async function swap(p) {
   await p.goto(B + '/lck?team=all');
   await p.waitForSelector('#tf[data-ready]', { timeout: 5000 }).catch(() => {});
   await p.evaluate(() => { window.__keep = 1; });
-  const tab = p.locator('.view_tab a', { hasText: '스토브리그' });
+  const tab = p.locator('.view_tab a', { hasText: '이적' });
   await tab.scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, 100));
   const y0 = await p.evaluate(() => scrollY);
   await tab.click();
@@ -174,7 +207,7 @@ async function swap(p) {
   const s = await p.evaluate(() => ({ keep: window.__keep, y: scrollY, on: (document.querySelector('.view_tab a.on') || {}).textContent, go: !!document.getElementById('go') }));
   if (s.keep !== 1) bad('소식 보기를 바꿨는데 화면 전체를 새로 불러옴(소식 칸만 바뀌어야 함)');
   if (Math.abs(s.y - y0) > 2) bad(`소식 보기를 바꿨는데 스크롤이 ${y0} → ${s.y}로 튐`);
-  if (s.on !== '스토브리그') bad(`바꾼 뒤 보기 표시가 '${s.on}'`);
+  if (s.on !== '이적') bad(`바꾼 뒤 보기 표시가 '${s.on}'`);
   if (!s.go) bad('바꾼 뒤 [조회] 단추가 사라짐');
   await p.goBack();
   const back = await p.waitForFunction(() => !location.search.includes('hot=2') && !document.querySelector('.layout.is-loading') &&
@@ -184,7 +217,9 @@ async function swap(p) {
 
 async function farm(p, seeded) {
   const pts = async () => +(await p.$eval('.tf-pts', e => e.textContent).catch(() => 'NaN'));
-  await p.goto(B + '/lck');
+  await p.goto(B + '/lck#tf');                          // 독버섯 심기는 접혀 있음: #tf로 들어오면 펼쳐짐(새로고침해도 주소 그대로)
+  if (await p.$eval('#tff', d => !d.open).catch(() => false)) await p.waitForFunction(() => document.getElementById('tff').open, null, { timeout: 5000 })
+    .catch(() => bad('#tf로 들어왔는데 독버섯 심기가 안 펼쳐짐'));
   if (!(await p.waitForSelector('#tf .tf-bar', { timeout: 5000 }).catch(() => null))) { bad('독버섯 심기 상태바가 안 보임'); return; }
   await p.waitForSelector('#tf[data-ready]', { timeout: 5000 }).catch(() => bad('독버섯 심기가 서버 판 목록을 못 받아 옴'));
   if (seeded) {
@@ -247,16 +282,8 @@ async function farm(p, seeded) {
     await p.reload(); await p.waitForSelector('#tf[data-ready]', { timeout: 5000 }).catch(() => {}); await p.waitForTimeout(300);
     if (await p.$('.tf-goldspot')) bad('황금 버섯을 찾은 날인데 또 나옴');
   }
-  // 소식 목록의 '이 소식 O/X 심기 ↑' → 위 독버섯 심기 칸의 그 판(접혀 있던 판도 펼쳐서)으로
-  const jumps = await p.$$('[data-farm-jump]');
-  if (!jumps.length) bad('열린 유력 판의 기사에 O/X 심기 바로가기가 없음');
-  else {
-    const j = jumps[jumps.length - 1], id = await j.getAttribute('data-farm-jump');
-    await j.scrollIntoViewIfNeeded(); await j.click(); await p.waitForTimeout(900);
-    const ok = await p.evaluate(id => { const li = document.querySelector(`#tf li[data-item="${CSS.escape(id)}"]`); if (!li) return false;
-      const r = li.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }, id);
-    if (!ok) bad(`O/X 심기 바로가기를 눌렀는데 그 판(${id})이 화면에 안 보임`);
-  }
+  // 소식 목록의 'O/X 심기' 바로가기는 화면 단순화로 뺐음(독버섯 심기는 소식 맨 위 접힌 칸 하나로)
+  if (await p.$('[data-farm-jump]')) bad("소식 목록에 'O/X 심기' 바로가기가 다시 생김(단순화 때 뺐음)");
   // 티모 스킨 도감: 열리고, 잠긴 스킨은 못 누르고, 바깥을 누르면 닫힘
   await p.click('.tf-skin'); await p.waitForTimeout(200);
   const sk = await p.evaluate(() => ({ open: !!document.querySelector('.tf-skins:not([hidden])'), n: document.querySelectorAll('[data-skin]').length,
@@ -305,6 +332,7 @@ async function farm(p, seeded) {
       await teamTabs(p, '/lck');
       await teamTabs(p, '/lck/results');
       await popups(p);
+      await faFilters(p);
       await toggles(p);
       await memory(p);
       await vote(p);

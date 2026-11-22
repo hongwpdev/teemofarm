@@ -238,7 +238,7 @@ class Handler(BaseHTTPRequestHandler):
             elif season and sec in ("", "roster", "fa", "schedule", "results", "stove"):
                 page = views.render_archive(league, "fa" if sec == "stove" else sec, season, one("t"))
             elif sec == "":
-                page = views.render_news(league, one("team"), one("src", "all"), parse_hot(one("hot"), one("cat")),
+                page = views.render_news(league, one("team"), one("src", ""), parse_hot(one("hot"), one("cat")),
                                          one("from"), one("to"), one("q"))
             elif sec == "roster":
                 page = views.render_roster(league)
@@ -248,8 +248,8 @@ class Handler(BaseHTTPRequestHandler):
                 page = views.render_schedule(league, None, "plan")
             elif sec == "results":
                 page = views.render_schedule(league, None, "results", one("stage"))
-            elif sec == "stove":                         # 스토브리그 일정은 '이적 시장' 맨 위 한 줄로 옮김
-                return self._redirect(f"/{league}/fa")
+            elif sec == "stove":                         # 스토브리그 일정은 이적 > 팀별 맨 위 한 줄로 옮김
+                return self._redirect(f"/{league}/summary")
             elif sec == "teams":
                 page = views.render_teams(league)
             elif sec == "summary":
