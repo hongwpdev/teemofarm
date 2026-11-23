@@ -327,7 +327,7 @@ def rumor_slots() -> dict:
     try:
         fa_rows, rms, ros = snap["fa"], snap["rumors"], snap["roster"]
         # 리그피디아 로스터에 다른 팀으로 이미 오른 선수는 FA 표가 늦어도 'FA 유력'으로 안 띄움
-        # (원래 팀에 계약 끝날 때까지 남아 있는 선수는 그대로: 'DK 로스터에 있는 루시드 → DRX 유력')
+        # (원래 팀에 계약 끝날 때까지 남아 있는 선수도 행선지 카드에 '유력': 'DK 로스터에 있는 루시드' → DRX 카드. 원래 팀 카드엔 안 보임)
         signed = {r["page"]: r["team"] for r in ros}
         people = [(r, rms.get(r["page"])) for r in fa_rows if signed.get(r["page"], r["team_from"]) == r["team_from"]]
         leaving = snap["leaving"]
@@ -389,6 +389,10 @@ def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True, name_then: s
             by.setdefault(r["role"], []).append(r)
     rmk = rumor_slots().get(k, {}) if rm else {}
     leave = roster_leaving() if rm else {}
+    # 다른 LCK 팀으로 갈 것 같은(유력·확정 기사) 계약 중 선수는 가는 팀 카드에만 보임(같은 사람이 두 카드에 두 번 X).
+    # 원래 팀 카드에선 '➔ ○○ 유력' 화살표를 빼고, 같은 자리 두 번째 줄(주전이 따로 있음)이면 줄째 뺌. 갈 카드가 없는 곳이면 그대로
+    lck = set(team_keys())
+    goes = lambda x: (leave.get(x["page"]) or {}).get("team") in lck - {k}   # noqa: E731
     # 오피셜 기사로 확정된 사람(리그피디아 반영 전)은 이 팀 사람으로 채워 보여 줌(빗금·점선 아님), 기사 추측만 '유력'
     # (감독 자리는 감독만 채움: 오피셜 기사로 잔류한 '코치'는 칸을 채우지 않고 아래 줄에만)
     news_in = {p: [x for x in rmk.get(p, []) if x["rm"]["official"] and (p != "Head Coach" or x["role"] == "Head Coach")]
@@ -436,10 +440,10 @@ def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True, name_then: s
             return (f'<span class="rmo" data-dest="{lv["team"]}" title="{esc(lv["outlet"] + " · " + lv["title"])}">➔ {team_logo(lv["team"])}{esc(team_short(lv["team"]))} '
                     f'{"확정" if lv["official"] else "유력"}</span>' if lv else "")
         subs = "".join(f'<span class="subl">{pn(x, "pn sub")}{IN_S if x["joined"] else ""}{lv_tag(x)}</span>'
-                       for x in rs[1:])      # 같은 포지션 선수가 더 있으면(후보 등) 이름을 모두 보여 줌
+                       for x in rs[1:] if not goes(x))      # 같은 포지션 선수가 더 있으면(후보 등) 이름을 모두 보여 줌
         subs += "".join(f'<span class="subl">{pn(x, "pn sub")}{ntag(x, True)}</span>' for x in newp + staff)
         subs += "".join(f'<span class="subl rml">{pn(x, "pn sub")}{rtag(x, True)}</span>' for x in rmp)
-        lv = leave.get(r["page"])        # 이 선수가 다른 팀으로 갈 것 같다는 기사(계약은 남아 있음)
+        lv = None if goes(r) else leave.get(r["page"])        # 이 선수가 다른 팀으로 갈 것 같다는 기사(계약은 남아 있음). LCK 팀이면 그 팀 카드에만
         out = (f'<span class="rmo" data-dest="{lv["team"]}" title="{esc(lv["outlet"] + " · " + lv["title"])}">➔ {team_logo(lv["team"])}{esc(team_short(lv["team"]))} '
                f'{"확정" if lv["official"] else "유력"}</span>' if lv else "")
         cells.append(f'<li><span class="pk">{FA_POS[p]}</span>{pn(r)}{out}{subs}'

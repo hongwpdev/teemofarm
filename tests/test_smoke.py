@@ -131,6 +131,29 @@ class SmokeTest(unittest.TestCase):
         self.assertIn("vac", cell)
         self.assertIn('class="in s stay"', card)
 
+    def test_leaving_player_only_on_destination_card(self):
+        # 계약 중인데 다른 LCK 팀으로 갈 것 같은 선수(루시드 DK → DRX, 델라잇 HLE → DK)는 가는 팀 카드에만 '유력'.
+        # 원래 팀 카드: 두 번째 줄(주전이 따로 있음)은 줄째 빠지고, 주전은 이름만 남고 '➔ ○○ 유력' 화살표는 안 보임
+        from unittest import mock
+        from tracker.web import views
+        def row(team, role, nick, joined=0):
+            return {"team": team, "role": role, "page": nick, "nick": nick, "real": "", "until": "", "joined": joined}
+        lv = lambda t: {"team": t, "stay": False, "official": False, "title": "이적 유력", "url": "u", "outlet": "인벤",   # noqa: E731
+                        "published": "2026-11-20T01:00:00+00:00"}
+        rows = [row("dk", "Jungle", "Kanavi", 1), row("dk", "Jungle", "Lucid"), row("dk", "Support", "Career"),
+                row("hle", "Support", "Delight")]
+        slots = {"drx": {"Jungle": [{**rows[1], "team_from": "dk", "rm": lv("drx"), "pos": "정글"}]},
+                 "dk": {"Support": [{**rows[3], "team_from": "hle", "rm": lv("dk"), "pos": "서폿"}]}}
+        with mock.patch.object(views, "rumor_slots", return_value=slots), \
+             mock.patch.object(views, "roster_leaving", return_value={"Lucid": lv("drx"), "Delight": lv("dk")}):
+            dk, drx, hle = (views.roster_card(t, rows) for t in ("dk", "drx", "hle"))
+        self.assertNotIn(">Lucid<", dk)                                  # DK 카드엔 루시드 줄 없음
+        self.assertIn(">Lucid<", drx)                                    # DRX 카드엔 유력으로
+        self.assertIn('<i class="in rm"', drx)
+        self.assertIn(">Delight<", hle)                                  # 주전은 이름은 남음
+        self.assertNotIn("rmo", hle)                                     # 화살표는 없음
+        self.assertIn(">Delight<", dk)                                   # 가는 팀(DK)에 유력
+
     def test_roster_complete_mark(self):
         # 주전 5명 + 감독이 다 있으면 'n/5' 대신 '로스터 완성 ✓', 한 자리라도 비면 그대로 n/5
         from tracker.web import views
