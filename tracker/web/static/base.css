@@ -1576,3 +1576,4 @@ nav.stove{margin-bottom:1rem}
 @media (max-width:420px){.fa-lite .sum button{padding:.6rem 1rem;font-size:1.25rem}.fa-lite .fsel label{flex:1}.fa-lite .fsel select{flex:1;min-width:0}}
 .stack{grid-template-columns:minmax(0,1fr)}          /* 가로로 긴 줄(일정 칩)이 화면 폭을 밀어내지 않게 */
 .stack>.sdates{margin:0}
+.fa-lite .fsel label span{white-space:nowrap}

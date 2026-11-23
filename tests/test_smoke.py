@@ -15,6 +15,28 @@ from tracker import chat, farm, maint, matchinfo, player_extra, share, vote  # n
 from tracker.core import init_db  # noqa: E402
 from tracker.web import server  # noqa: E402
 
+
+def art(team, stay=False, official=False, title="이적 유력"):
+    """기사 하나(유력·오피셜): rumor.py가 만드는 모양."""
+    return {"team": team, "stay": stay, "official": official, "title": title, "url": "https://e.com", "outlet": "인벤",
+            "published": "2026-11-20T01:00:00+00:00"}
+
+
+def fa_row(page, frm, role, status="fa", to=""):
+    return {"page": page, "nick": page, "real": "", "team_from": frm, "role": role, "status": status, "team_to": to,
+            "team_to_name": "", "until": "", "date": "2026-11-18", "memo": ""}
+
+
+def ro_row(team, role, page, joined=0):
+    return {"team": team, "role": role, "page": page, "nick": page, "real": "", "until": "", "joined": joined}
+
+
+def fake_snap(fa=(), roster=(), rumors=None, leaving=None):
+    """state.get()과 같은 모양의 가짜 스냅숏(데이터 넣는 대신 화면 규칙만 볼 때)."""
+    return {"fa": list(fa), "fa_raw": list(fa), "roster": list(roster), "rumors": rumors or {}, "leaving": leaving or {},
+            "off": {}, "key": "fake", "at": 0.0}
+
+
 PAGES = ["/lck", "/lck/roster", "/lck/fa", "/lck/summary", "/lck/predict", "/lck/contracts", "/lck/teams", "/lck/schedule", "/lck/results", "/lck/stove", "/lck/teams", "/lpl/results", "/lck/builder", "/lck/game", "/lpl", "/lpl/schedule", "/lec/schedule", "/cblol/roster",
          "/lck?team=t1", "/lck?q=faker", "/lck?hot=0&src=news", "/worlds", "/worlds/schedule", "/worlds/results", "/worlds/teams",
          "/worlds/fa", "/fst/schedule", "/msi/results", "/ewc/teams", "/msi"]
@@ -106,17 +128,11 @@ class SmokeTest(unittest.TestCase):
 
     def test_roster_card_official_news_fills_slot(self):
         # 리그피디아엔 빈자리지만 오피셜 기사로 잔류가 확정된 감독(bon0): 빗금·'잔류 발표'가 아니라 채운 칸 + '잔류'
-        from unittest import mock
         from tracker.web import views
-        rm = {"team": "ns", "stay": True, "official": True, "title": "[오피셜] 농심, 본 감독 재계약", "url": "u", "outlet": "인벤",
-              "published": "2026-11-18T01:00:00+00:00"}
-        guess = {**rm, "official": False, "stay": False, "team": "ns", "title": "농심행 유력"}
-        x = {"page": "Bon0", "nick": "bon0", "real": "", "role": "Head Coach", "until": "", "joined": 0, "rm": rm, "pos": "감독"}
-        cx = {"page": "CoX", "nick": "CoX", "real": "", "role": "Coach", "until": "", "joined": 0, "rm": rm, "pos": "코치"}
-        g = {"page": "Gx", "nick": "Gx", "real": "", "role": "Top", "until": "", "joined": 0, "rm": guess, "pos": "탑"}
-        with mock.patch.object(views, "rumor_slots", return_value={"ns": {"Head Coach": [x], "Top": [g]}}), \
-             mock.patch.object(views, "roster_leaving", return_value={}):
-            card = views.roster_card("ns", [])
+        off = art("ns", stay=True, official=True, title="[오피셜] 농심, 본 감독 재계약")
+        snap = fake_snap(fa=[fa_row("Bon0", "ns", "Head Coach"), fa_row("Gx", "kt", "Top")],
+                         rumors={"Bon0": off, "Gx": art("ns", title="농심행 유력")})
+        card = views.roster_card("ns", [], ppl=views.place.build(snap))
         coach = card.split('data-page="Bon0"')[0].rsplit("<li", 1)[1]
         self.assertNotIn("vac", coach)
         self.assertIn('class="in stay"', card)
@@ -124,9 +140,8 @@ class SmokeTest(unittest.TestCase):
         self.assertIn('<li class="vac rmv"><span class="pk">탑</span>', card)        # 기사 추측은 그대로 빈자리 + 유력
         self.assertIn(">0/5<", card)
         # 코치는 감독 칸을 채우지 않음(칸은 빈자리 그대로, 이름은 아래 줄에 '잔류')
-        with mock.patch.object(views, "rumor_slots", return_value={"ns": {"Head Coach": [cx]}}), \
-             mock.patch.object(views, "roster_leaving", return_value={}):
-            card = views.roster_card("ns", [])
+        snap = fake_snap(fa=[fa_row("CoX", "ns", "Coach")], rumors={"CoX": off})
+        card = views.roster_card("ns", [], ppl=views.place.build(snap))
         cell = card.split('data-page="CoX"')[0].rsplit("<li", 1)[1]
         self.assertIn("vac", cell)
         self.assertIn('class="in s stay"', card)
@@ -134,28 +149,25 @@ class SmokeTest(unittest.TestCase):
     def test_leaving_player_only_on_destination_card(self):
         # 계약 중인데 다른 LCK 팀으로 갈 것 같은 선수(루시드 DK → DRX, 델라잇 HLE → DK)는 가는 팀 카드에만 '유력'.
         # 원래 팀 카드에선 주전이든 두 번째 줄이든 빠짐(리그피디아상 계약 중이어도). 주전이 빠진 칸은 빈자리(+ 들어올 유력 선수)
-        from unittest import mock
         from tracker.web import views
-        def row(team, role, nick, joined=0):
-            return {"team": team, "role": role, "page": nick, "nick": nick, "real": "", "until": "", "joined": joined}
-        lv = lambda t: {"team": t, "stay": False, "official": False, "title": "이적 유력", "url": "u", "outlet": "인벤",   # noqa: E731
-                        "published": "2026-11-20T01:00:00+00:00"}
-        rows = [row("dk", "Jungle", "Kanavi", 1), row("dk", "Jungle", "Lucid"), row("dk", "Support", "Career"),
-                row("hle", "Support", "Delight")]
-        slots = {"drx": {"Jungle": [{**rows[1], "team_from": "dk", "rm": lv("drx"), "pos": "정글"}]},
-                 "dk": {"Support": [{**rows[3], "team_from": "hle", "rm": lv("dk"), "pos": "서폿"}]}}
-        with mock.patch.object(views, "rumor_slots", return_value=slots), \
-             mock.patch.object(views, "roster_leaving", return_value={"Lucid": lv("drx"), "Delight": lv("dk")}):
-            dk, drx, hle = (views.roster_card(t, rows) for t in ("dk", "drx", "hle"))
+        rows = [ro_row("dk", "Jungle", "Kanavi", 1), ro_row("dk", "Jungle", "Lucid"), ro_row("dk", "Support", "Career"),
+                ro_row("hle", "Support", "Delight"), ro_row("geng", "Support", "Duro")]
+        snap = fake_snap(roster=rows, leaving={"Lucid": art("drx"), "Delight": art("dk"), "Career": art("hle"), "Duro": art("drx")})
+        ppl = views.place.build(snap)
+        dk, drx, hle, gen = (views.roster_card(t, rows, ppl=ppl) for t in ("dk", "drx", "hle", "geng"))
         self.assertNotIn(">Lucid<", dk)                                  # DK 카드엔 루시드 줄 없음
         self.assertIn(">Lucid<", drx)                                    # DRX 카드엔 유력으로
         self.assertIn('<i class="in rm"', drx)
-        self.assertNotIn(">Delight<", hle)                               # 주전이어도 HLE 카드엔 없음(듀로 GEN → DRX도 같음)
-        self.assertIn('<li class="vac"><span class="pk">서폿</span>', hle) # 그 자리는 빈자리
-        self.assertIn(">0/5<", hle)
-        self.assertNotIn("rmo", hle + dk)
-        self.assertIn(">Delight<", dk)                                   # 가는 팀(DK)에 유력
-        self.assertEqual(dk.count(">Delight<") + hle.count(">Delight<") + drx.count(">Delight<"), 1)   # 한 사람은 한 카드에만
+        self.assertNotIn(">Delight<", hle)                               # 주전이어도 HLE 카드엔 없음
+        self.assertNotIn(">Duro<", gen)                                  # 듀로 GEN → DRX도 같음
+        self.assertIn(">Duro<", drx)
+        self.assertIn('<li class="vac rmv"><span class="pk">서폿</span><span class="pn" role="button"', hle)   # 빈자리 + 커리어 유력
+        self.assertIn(">Career<", hle)
+        self.assertIn('<li class="vac"><span class="pk">서폿</span>', gen)  # 들어올 사람 없으면 그냥 빈자리
+        self.assertNotIn("rmo", hle + dk + gen)
+        everywhere = dk + drx + hle + gen
+        for nick in ("Lucid", "Delight", "Career", "Duro", "Kanavi"):
+            self.assertEqual(everywhere.count(f">{nick}<"), 1, nick)    # 한 사람은 한 카드에만
 
     def test_roster_complete_mark(self):
         # 주전 5명 + 감독이 다 있으면 'n/5' 대신 '로스터 완성 ✓', 한 자리라도 비면 그대로 n/5
@@ -251,22 +263,20 @@ class SmokeTest(unittest.TestCase):
         self.assertIn("슼피셜)롤 GENG", body)
 
     def test_summary_labels_and_no_double_row(self):
-        # 스토브리그 팀별: 명사 라벨(영입·이탈·재계약·이적설·미정), 이적설에 잡힌 선수는 같은 카드 '미정'에 또 안 나옴
+        # 스토브리그 팀별: 명사 라벨(영입·이탈·잔류·유력·미정), 유력에 잡힌 선수는 같은 카드 '미정'에 또 안 나옴
         from unittest import mock
         from tracker.web import views
-        sm = {k: {"in": [], "out": [], "stay": [], "open": [], "updated": ""} for k in views.team_keys()}
-        sm["hle"] = {"in": [{"page": "Zeka", "nick": "Zeka", "role": "Mid", "date": "", "from": ""}],
-                     "out": [{"page": "Doran", "nick": "Doran", "role": "Top", "date": "", "to": "t1"}],
-                     "stay": [], "open": [{"page": "Kiin", "nick": "Kiin", "role": "Top", "date": ""},
-                                          {"page": "Delight", "nick": "Delight", "role": "Support", "date": ""}], "updated": ""}
-        rm = {"team": "hle", "stay": False, "outlet": "OSEN", "title": "기인 HLE 유력"}
-        with mock.patch.object(views.stv, "team_summary", return_value=sm), \
-             mock.patch.object(views, "rumor_slots", return_value={"hle": {"top": [{"page": "Kiin", "nick": "Kiin", "role": "Top", "rm": rm, "pos": "탑"}]}}):
+        snap = fake_snap(fa=[fa_row("Doran", "hle", "Top", "move", "t1"), fa_row("Kiin", "geng", "Top"), fa_row("Delight", "hle", "Support")],
+                         roster=[ro_row("hle", "Mid", "Zeka", 1), ro_row("t1", "Top", "Doran", 1)],
+                         rumors={"Kiin": art("hle", title="기인 HLE 유력")})
+        with mock.patch.object(views.state, "get", return_value=snap):
             html = views.render_summary("lck")
+        gen = html[html.index('id="m-geng"'):].split("</article>")[0]
+        self.assertIn(">Kiin<small>→ HLE</small>", gen)                 # 원래 팀 카드엔 '→ 행선지'
         card = html[html.index('id="m-hle"'):].split("</article>")[0]
         labels = __import__("re").findall(r"<em>(.*?)</em>", card)
         self.assertEqual(labels, ["영입", "이탈", "유력", "미정"])         # 이적 시장과 같은 말(이적설·재계약 → 유력·잔류)
-        self.assertEqual(card.count(">Kiin<"), 1)                       # 유력에만
+        self.assertEqual(card.count(">Kiin<"), 1)                       # 유력에만(미정에 또 안 나옴)
         self.assertIn(">Delight<", card)
         for old in ("들어옴", "나감", "<em>소문</em>", "<em>이적설</em>", "<em>재계약</em>"):
             self.assertNotIn(old, html)

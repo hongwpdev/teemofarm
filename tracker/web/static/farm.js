@@ -229,7 +229,7 @@ ${skinBox()}<div class="tf-field" title="수확한 버섯이 밭에 자라요">$
   function outcome(it) {
     if (it.kind !== "rumor") return `${esc(it.result === "a" ? it.a_short : it.b_short)} 승`;
     const stay = it.id.endsWith(":s");
-    return it.result === "o" ? (stay ? `O · ${esc(it.a_short)} 잔류 확정` : `O · ${esc(it.b_short)} 이적 확정`) : (stay ? "X · 잔류 안 함" : `X · ${esc(it.b_short)}행 아님`);
+    return it.result === "o" ? (stay ? `O · ${esc(it.a_short)} 잔류` : `O · ${esc(it.b_short)} 확정`) : (stay ? "X · 잔류 안 함" : `X · ${esc(it.b_short)}행 아님`);
   }
   function doneRow(it) {
     const mine = st.plantedMushrooms[it.id];

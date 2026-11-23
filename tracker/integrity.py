@@ -81,10 +81,10 @@ def check() -> list:
         came = (settled.get(page) or {}).get("from")
         if r and came and x["team"] == came and not x["stay"]:     # 6) 방금 떠나온 팀으로 '이적 유력'
             bad.append(f"{r['nick']}: {came}을 떠나 {r['team']}에 왔는데 '{came} 이적 유력'으로 읽음 ({x['title']})")
-    # 7) 로스터에 이미 오른 선수에게 FA '유력'(다른 팀 행)
+    # 7) 다른 팀 로스터에 이미 오른 선수에게 FA '유력'(또 다른 팀 행). 원래 팀 로스터에 계약이 아직 남아 있는 것(킹겐)은 정상
     signed = {r["page"]: r["team"] for r in roster}
     for r in fa:
         x = rm.get(r["page"])
-        if x and r["page"] in signed and not x["stay"] and x["team"] != signed[r["page"]]:
+        if x and signed.get(r["page"], r["team_from"]) != r["team_from"] and not x["stay"] and x["team"] != signed[r["page"]]:
             bad.append(f"{r['nick']}: 로스터엔 {signed[r['page']]}인데 FA '{x['team']} 유력'으로 읽음 ({x['title']})")
     return bad

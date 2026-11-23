@@ -30,6 +30,12 @@ node tools/flows.js http://127.0.0.1:8099     # 사용 흐름: 메뉴·하위 �
   같은 사람의 직책(감독·코치·포지션)과 상태·행선지(발표·유력·확정)가 이적 시장·이동 보드·행선지 맞히기·로스터에서 같은지.
   새 화면·새 표시를 만들면 사람이 나오는 요소에 `data-nick`·`data-pos`(직책), 상태가 있으면 `data-label`·`data-dest`를 붙인다.
   직책 글자는 `shown_pos()`, 유력 글자는 `rm_label()`만 쓴다(화면마다 따로 만들면 어긋남).
+- **사람마다 어디에 · 무슨 말로 보일지는 `tracker/place.py` 한 곳에서만 정한다**(상태 말 · 행선지 · 로스터 카드 팀 · 숫자).
+  화면(이적 시장 · 로스터 카드 · 팀별 · 이동 보드 · 숫자 칸)은 `views.people()` 결과를 그리기만 한다. 화면 코드에서 FA 표·로스터·기사를 따로 조합하지 않는다.
+- **상황별 점검**(`python tools/scenarios.py`, 단위 테스트 `tests/test_scenarios.py`): 루시드·듀로·딜라이트↔커리어 같은 실제 상황마다
+  사람이 정한 정답(이적 시장 말 · 로스터 카드 · 팀별 줄 · 이동 보드 · 직책 · 숫자)을 적어 두고 그대로 나오는지 본다.
+  잘못 보인다는 제보가 오면 **먼저 그 상황을 SCENARIOS에 정답과 함께 넣고**(실패 확인) 그다음 `place.py`를 고친다.
+  브라우저로 직접 보려면 `SCENARIO=all python tools/dev_server.py`(상황 전부를 넣은 세상) → `node tools/crawl.js`·캡처.
 - 독버섯 심기(소식 맨 위, `tracker/farm.py` + `static/farm.js`): 판·민심 집계·결과는 서버, 점수·밭은 브라우저(`teemofarm_lck_v1`).
   CSS·자바스크립트 이름은 모두 `tf-`로 시작(기존 `.pop`·`.farm` 등과 겹쳐서 화면이 깨진 적 있음). flows.js가 심기·수확(한 번만)·황금 버섯(하루 한 번)을 눌러 봄.
 - 실제 데이터로도 돌려 본다: 서버의 data/stove.db를 복사해 그 DB로 서버를 띄우고 `node tools/crawl.js 주소`.

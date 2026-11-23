@@ -2,6 +2,7 @@
 
     python tools/dev_server.py            # http://127.0.0.1:8099
     PORT=8100 python tools/dev_server.py
+    SCENARIO=all python tools/dev_server.py   # 이적 상황 점검용 데이터(tools/scenarios.py)로
 DB는 임시 폴더에 만들고 끌 때 지워요.
 """
 import os, sys, time, random, tempfile, shutil, atexit
@@ -127,6 +128,11 @@ ROSTER_PL = [{"ID":n,"P":n,"Team":WN[k],"Role":r,"Contract":c,"N":""} for k,r,n,
 fam.cargo = fake_cargo
 fam.REQUEST_GAP = 0
 fam.poll_fa(0)
+# SCENARIO=all(또는 상황 이름): tools/scenarios.py의 이적 상황들로 FA 목록·로스터를 바꿔 띄움(브라우저로 직접 보기·crawl.js)
+if os.environ.get("SCENARIO"):
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import scenarios as _sc  # noqa: E402
+    _sc.apply(os.environ["SCENARIO"])
 _orig = fake_collect
 def fake_collect2():
     fam.poll_fa(0)

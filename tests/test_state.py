@@ -43,7 +43,8 @@ class SnapshotTest(unittest.TestCase):
             views.render_summary("lck")
             views.roster_rows()
             views.fa_rows()
-            views.rumor_slots()
+            views.people()
+            views.render_roster("lck")
             integrity.check()
         self.assertIs(a, b)
         self.assertEqual(rm.call_count, 2)          # FA 선수 한 번 + 계약 중 선수 한 번: 화면 여러 개와 점검이 같이 씀

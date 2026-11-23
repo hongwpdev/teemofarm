@@ -6,7 +6,8 @@
 //   화면에 undefined·NaN·null·{{ 가 보임 / 같은 id 두 번 / 사이트 이미지 깨짐 /
 //   (휴대폰) 메뉴 글자가 두 줄로 꺾임 · 화면이 옆으로 넘침
 // 데이터 규칙: /api/integrity(같은 사람이 FA·로스터에서 다른 말) / 같은 사람의 자리(감독·코치·포지션)가 화면마다 다름 /
-//   같은 사람의 상태(발표·유력·확정·미정)와 행선지가 이적 시장·행선지 맞히기·로스터에서 다름
+//   같은 사람의 상태(확정·잔류·유력·미정)와 행선지가 이적 시장·행선지 맞히기·로스터·이동 보드에서 다름 /
+//   (지금 로스터) 한 사람이 로스터 카드 두 곳 이상에 / 상태 말이 4개(+무산) 밖이거나 예전 말(이적 확정·재계약·이적설·잔류 유력)
 // 실패가 하나라도 있으면 종료 코드 1. flows.js 끝에서도 함께 돌아감(GitHub 점검에 포함).
 const { chromium } = require('playwright');
 
@@ -111,6 +112,24 @@ async function crawl(base, opts = {}) {
         }
         out.facts.push([e.dataset.nick, e.dataset.pos || '', label, dest, w]);
       }
+      // 상태 말은 4개(+무산)만: 이적 시장·로스터·이동 보드·독버섯 판·숫자 칸. 예전 말(이적 확정·재계약·이적설·잔류 유력·발표)이 다시 나오면 실패
+      const WORDS = ['확정', '잔류', '유력', '미정', '무산'];
+      for (const e of document.querySelectorAll('[data-label]')) {
+        const v = e.dataset.label || '';
+        if (v && !WORDS.includes(v)) out.problems.push(`상태 말이 4개 밖: '${v}' (${txt(e.textContent).slice(0, 30)})`);
+      }
+      for (const e of document.querySelectorAll('.st2, i.rm, .rmo, .tf-src, .sum button, nav.stove a, .mini a, .vh-rm')) {
+        const m = txt(e.textContent).match(/이적 확정|재계약|이적설|잔류 유력|잔류 발표|기사 추측/);
+        if (m) out.problems.push(`예전 상태 말 '${m[0]}'이 보임: ${txt(e.textContent).slice(0, 40)}`);
+      }
+      for (const e of document.querySelectorAll('.scard .sl > em')) {
+        if (!['영입', '이탈', '잔류', '유력', '미정'].includes(txt(e.textContent))) out.problems.push(`팀별 줄 이름이 '${txt(e.textContent)}'`);
+      }
+      // 로스터 카드: 한 사람은 한 카드·한 줄에만(지금 로스터. 지난 시즌 기록은 시즌 중 이적이 있어 밖에서 거름)
+      out.cards = {};
+      for (const card of document.querySelectorAll('.rgrid .rc')) {
+        for (const e of card.querySelectorAll('[data-page]')) (out.cards[e.dataset.page] = out.cards[e.dataset.page] || []).push(card.dataset.team);
+      }
       // 휴대폰: 메뉴 글자 꺾임 · 옆으로 넘침
       if (innerWidth < 500) {
         for (const a of document.querySelectorAll('.top_tab a, .view_tab a, .ssel summary b, .lgsel summary b')) {
@@ -125,6 +144,9 @@ async function crawl(base, opts = {}) {
       return out;
     }).catch(e => ({ links: [], problems: ['점검 실패: ' + e.message], facts: [] }));
     r.problems.forEach(m => bad(url, (phone ? '[휴대폰] ' : '') + m));
+    if (!phone && live(url)) for (const [pg, ts] of Object.entries(r.cards || {})) {
+      if (ts.length > 1) bad(url, `로스터 카드에 ${pg}이(가) ${ts.length}번: ${ts.join(', ')} — 한 사람은 한 카드에만`);
+    }
     if (!phone && live(url)) r.facts.forEach(f => facts.push([url.replace(B, ''), ...f]));
     await p.close();
     return r.links;

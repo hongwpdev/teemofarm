@@ -20,7 +20,7 @@ from datetime import datetime, timedelta, timezone
 os.environ["DB_PATH"] = os.path.join(tempfile.mkdtemp(), "fuzz.db")
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from tracker import cluster, farm, filters, integrity, rumor, state  # noqa: E402
+from tracker import cluster, farm, filters, integrity, place, rumor, state  # noqa: E402
 from tracker.core import db, init_db  # noqa: E402
 from tracker.fa import fill_from_fa  # noqa: E402
 from tracker.filters import KO_NICKS  # noqa: E402
@@ -50,7 +50,7 @@ def wilson(k, n, z=1.96):
 
 def reset_caches():
     state.reset()
-    views._RM_SLOTS.update(key=None, val={}, out={})
+    place._C.update(snap=None, val=None)
     with rumor._LOCK:
         rumor._CACHE.clear()
     filters._NAMES["at"] = 0.0
