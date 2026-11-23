@@ -377,7 +377,12 @@ def part_b(n, rnd):
                 bad("로스터 카드 한 팀", nick, sorted(c))
             if kind in ("move", "stay", "official-move", "official-stay", "contract"):
                 checks["로스터 카드 위치"] += 1
-                if sure != {team}:
+                lv = snap["leaving"].get(nick) if kind == "contract" else None
+                if lv and lv["team"] in KEYS and lv["team"] != team:
+                    # 계약 중인데 다른 LCK 팀 이적 기사: 원래 팀 카드엔 없고 가는 팀 카드에만(유력, 오피셜이면 확정 칸)
+                    if c != {(lv["team"], "in" if lv["official"] else "rm")}:
+                        bad("로스터 카드 위치", nick, ("leaving", lv["team"], sorted(c)))
+                elif sure != {team}:
                     bad("로스터 카드 위치", nick, sorted(c))
             # 데이터 점검: 리그피디아 로스터가 FA 확정보다 늦은 사람을 잡아내는지
             if lag.get(nick) == "fa-behind":

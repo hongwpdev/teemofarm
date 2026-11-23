@@ -133,7 +133,7 @@ class SmokeTest(unittest.TestCase):
 
     def test_leaving_player_only_on_destination_card(self):
         # 계약 중인데 다른 LCK 팀으로 갈 것 같은 선수(루시드 DK → DRX, 델라잇 HLE → DK)는 가는 팀 카드에만 '유력'.
-        # 원래 팀 카드: 두 번째 줄(주전이 따로 있음)은 줄째 빠지고, 주전은 이름만 남고 '➔ ○○ 유력' 화살표는 안 보임
+        # 원래 팀 카드에선 주전이든 두 번째 줄이든 빠짐(리그피디아상 계약 중이어도). 주전이 빠진 칸은 빈자리(+ 들어올 유력 선수)
         from unittest import mock
         from tracker.web import views
         def row(team, role, nick, joined=0):
@@ -150,9 +150,12 @@ class SmokeTest(unittest.TestCase):
         self.assertNotIn(">Lucid<", dk)                                  # DK 카드엔 루시드 줄 없음
         self.assertIn(">Lucid<", drx)                                    # DRX 카드엔 유력으로
         self.assertIn('<i class="in rm"', drx)
-        self.assertIn(">Delight<", hle)                                  # 주전은 이름은 남음
-        self.assertNotIn("rmo", hle)                                     # 화살표는 없음
+        self.assertNotIn(">Delight<", hle)                               # 주전이어도 HLE 카드엔 없음(듀로 GEN → DRX도 같음)
+        self.assertIn('<li class="vac"><span class="pk">서폿</span>', hle) # 그 자리는 빈자리
+        self.assertIn(">0/5<", hle)
+        self.assertNotIn("rmo", hle + dk)
         self.assertIn(">Delight<", dk)                                   # 가는 팀(DK)에 유력
+        self.assertEqual(dk.count(">Delight<") + hle.count(">Delight<") + drx.count(">Delight<"), 1)   # 한 사람은 한 카드에만
 
     def test_roster_complete_mark(self):
         # 주전 5명 + 감독이 다 있으면 'n/5' 대신 '로스터 완성 ✓', 한 자리라도 비면 그대로 n/5

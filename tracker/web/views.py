@@ -383,16 +383,17 @@ def roster_complete(k: str, rows, news_slots=()) -> bool:
 
 def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True, name_then: str = "") -> str:
     """name_then: 지난 시즌 기록에서 그 당시 팀 이름(지금 이름과 다르면 제목에 쓰고 아래에 '지금: …')."""
+    rmk = rumor_slots().get(k, {}) if rm else {}
+    leave = roster_leaving() if rm else {}
+    # 다른 LCK 팀으로 갈 것 같은(유력·확정 기사) 선수는 리그피디아상 계약 중이라도 가는 팀 카드에만 보임(한 사람은 한 카드에만).
+    # 원래 팀 카드에선 주전이든 후보든 빼고, 그 자리는 빈자리(또는 들어올 유력 선수)로. 갈 카드가 없는 곳(LCK 밖)이면 그대로
+    lck = set(team_keys())
+    goes = lambda x: (leave.get(x["page"]) or {}).get("team") in lck - {k}   # noqa: E731
+    rows = [r for r in rows if r["team"] != k or not goes(r)]
     by = {}
     for r in rows:
         if r["team"] == k:
             by.setdefault(r["role"], []).append(r)
-    rmk = rumor_slots().get(k, {}) if rm else {}
-    leave = roster_leaving() if rm else {}
-    # 다른 LCK 팀으로 갈 것 같은(유력·확정 기사) 계약 중 선수는 가는 팀 카드에만 보임(같은 사람이 두 카드에 두 번 X).
-    # 원래 팀 카드에선 '➔ ○○ 유력' 화살표를 빼고, 같은 자리 두 번째 줄(주전이 따로 있음)이면 줄째 뺌. 갈 카드가 없는 곳이면 그대로
-    lck = set(team_keys())
-    goes = lambda x: (leave.get(x["page"]) or {}).get("team") in lck - {k}   # noqa: E731
     # 오피셜 기사로 확정된 사람(리그피디아 반영 전)은 이 팀 사람으로 채워 보여 줌(빗금·점선 아님), 기사 추측만 '유력'
     # (감독 자리는 감독만 채움: 오피셜 기사로 잔류한 '코치'는 칸을 채우지 않고 아래 줄에만)
     news_in = {p: [x for x in rmk.get(p, []) if x["rm"]["official"] and (p != "Head Coach" or x["role"] == "Head Coach")]
@@ -440,10 +441,10 @@ def roster_card(k: str, rows, extra_cls: str = "", rm: bool = True, name_then: s
             return (f'<span class="rmo" data-dest="{lv["team"]}" title="{esc(lv["outlet"] + " · " + lv["title"])}">➔ {team_logo(lv["team"])}{esc(team_short(lv["team"]))} '
                     f'{"확정" if lv["official"] else "유력"}</span>' if lv else "")
         subs = "".join(f'<span class="subl">{pn(x, "pn sub")}{IN_S if x["joined"] else ""}{lv_tag(x)}</span>'
-                       for x in rs[1:] if not goes(x))      # 같은 포지션 선수가 더 있으면(후보 등) 이름을 모두 보여 줌
+                       for x in rs[1:])      # 같은 포지션 선수가 더 있으면(후보 등) 이름을 모두 보여 줌
         subs += "".join(f'<span class="subl">{pn(x, "pn sub")}{ntag(x, True)}</span>' for x in newp + staff)
         subs += "".join(f'<span class="subl rml">{pn(x, "pn sub")}{rtag(x, True)}</span>' for x in rmp)
-        lv = None if goes(r) else leave.get(r["page"])        # 이 선수가 다른 팀으로 갈 것 같다는 기사(계약은 남아 있음). LCK 팀이면 그 팀 카드에만
+        lv = leave.get(r["page"])        # 이 선수가 LCK 밖으로 갈 것 같다는 기사(계약은 남아 있음. LCK 팀이면 위에서 이미 빠짐)
         out = (f'<span class="rmo" data-dest="{lv["team"]}" title="{esc(lv["outlet"] + " · " + lv["title"])}">➔ {team_logo(lv["team"])}{esc(team_short(lv["team"]))} '
                f'{"확정" if lv["official"] else "유력"}</span>' if lv else "")
         cells.append(f'<li><span class="pk">{FA_POS[p]}</span>{pn(r)}{out}{subs}'
@@ -1011,7 +1012,7 @@ def render_roster(league: str, season=None) -> str:
     past = " · ".join(f'<a href="/{league}/roster?season={y}">{y} 시즌</a>' for y in archive_years() if y != ended)
     head = (f'{team_toggle(league, "roster", season)}{page_head(f"{season} 시즌 로스터", "지금까지 계약으로 정해진 팀별 선수예요. 스토브리그가 끝날 때까지 계속 바뀌어요.")}'
             if season else f'{squad_toggle(league, "roster")}<p class="past-link">지난 시즌 로스터 보기: {past}</p>')
-    main = f"""{head}<section class="card panel fa" aria-label="조회"><div class="ptop"><p class="src">리그피디아 계약 기준 현재 로스터{when} · 빗금 칸은 아직 미정인 자리, '영입'은 이번 스토브리그에 새로 온 사람 · <i class="in rm">유력</i>은 최근 기사 제목 기준 참고 표시(공식 확정 전) · 이름을 누르면 프로필</p>{ACT}</div>{MSG}
+    main = f"""{head}<section class="card panel fa" aria-label="조회"><div class="ptop"><p class="src">리그피디아 계약 기준 현재 로스터{when} · 빗금 칸은 아직 미정인 자리, '영입'은 이번 스토브리그에 새로 온 사람 · <i class="in rm">유력</i>은 최근 기사 제목 기준 참고 표시(공식 확정 전, 다른 팀으로 갈 것 같은 선수는 그 팀 칸에만) · 이름을 누르면 프로필</p>{ACT}</div>{MSG}
 </section>
 <div class="rgrid" id="rgrid">{cards}</div>{empty}
 {POPUP}"""
