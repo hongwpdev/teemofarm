@@ -46,6 +46,16 @@ def fa_role(r: str) -> str:
     return ""
 
 
+def _new_role(old: str, new: str):
+    """다른 팀으로 옮기며 직책이 바뀌면 새 팀 직책으로(→ (보일 직책, 메모)). 선수가 코치로 가면 로스터 선수 칸에 넣지 않게.
+    새 직책을 모르면(리그피디아에 아직 없음) 예전 직책 그대로."""
+    if not new or new == old:
+        return old, ""
+    if old in FA_ROLES and new in ("Coach", "Head Coach"):
+        return new, "선수 → " + ("감독" if new == "Head Coach" else "코치")
+    return new, ""
+
+
 def classify_fa(rc, exp, players, today: str):
     """로스터 변동·계약 만료·현재 소속으로 FA 목록을 만든다(네트워크 없음, 시험하기 쉽게 분리).
     상태: move=이적 확정, stay=잔류(재계약·보직 변경), fa=미정."""
@@ -75,6 +85,7 @@ def classify_fa(rc, exp, players, today: str):
         st, to, to_name, until, memo, show_role = "fa", "", "", "", "", role
         if other:
             st, to_name = "move", other[-1]["Team"]
+            show_role, memo = _new_role(role, fa_role(other[-1]["Role"]))      # 라이프: DNS 서폿 → HLE 코치
         elif same:
             st, to_name = "stay", r["Team"]
             new_role = fa_role(same[-1]["Role"])
@@ -88,6 +99,7 @@ def classify_fa(rc, exp, players, today: str):
                 memo, show_role = "재계약", new_role
         elif cur_team and cur_team.lower() != r["Team"].lower():
             st, to_name = "move", cur_team
+            show_role, memo = _new_role(role, fa_role(cur.get("Role") or ""))
         elif cur_team and cur_until > today:
             st, to_name, memo = "stay", r["Team"], "재계약"
         if st != "fa":

@@ -1577,3 +1577,5 @@ nav.stove{margin-bottom:1rem}
 .stack{grid-template-columns:minmax(0,1fr)}          /* 가로로 긴 줄(일정 칩)이 화면 폭을 밀어내지 않게 */
 .stack>.sdates{margin:0}
 .fa-lite .fsel label span{white-space:nowrap}
+/* 선수별: 계약 중인데 이적 기사만 나온 선수 표시 */
+.fa-row .nm .ct{display:inline-block;margin-left:.5rem;padding:.1rem .6rem;border:1px solid var(--border);border-radius:999px;font-size:1.05rem;font-style:normal;font-weight:600;color:var(--t5);white-space:nowrap;vertical-align:middle}

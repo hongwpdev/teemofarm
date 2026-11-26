@@ -4,6 +4,7 @@
 ('유력인데 미정', '루시드가 DK·DRX 두 카드에', '듀로가 GEN에 그대로'). 규칙은 여기 한 곳에만 둠:
 
 1. 상태 말은 4개: 확정(move) · 잔류(stay) · 유력(rm, 기사 추측) · 미정(fa). FA 목록에 없는 계약 중 선수는 'on'(말 없음)
+   이적 목록(선수별)·숫자에는 FA 목록 사람 + 계약 중이지만 이적 기사가 있는 사람(listed)이 들어감
    - 리그피디아 FA 목록이 우선. 단 아직 미정인데 오피셜 기사가 있으면 그 기사대로 확정·잔류(news=True: 리그피디아 반영 전)
    - 리그피디아 로스터에 다른 LCK 팀으로 이미 올라온 사람은 그 팀 확정(state.py에서 FA 행을 고쳐 둠)
    - 계약 중 선수라도 다른 LCK 팀 이적 기사가 있으면 유력(오피셜이면 확정)
@@ -71,6 +72,9 @@ def _person(fa=None, ro=None, art=None, keys=frozenset()):
     elif fa:
         p["status"] = "fa"
     p["label"] = WORD[p["status"]]
+    # 이적 목록(선수별)·숫자에 드는 사람: FA 목록 사람 + 계약 중이지만 이적 기사(유력·오피셜)가 있는 사람(루시드·듀로)
+    p["listed"] = bool(fa) or bool(art)
+    p["contract"] = not fa                            # 계약 중(리그피디아 FA 목록에 없음)
     # 2) 로스터 카드: 한 사람당 한 카드
     to_other = art and not art["stay"] and art["team"] in keys and art["team"] != (ro["team"] if ro else frm)
     if art and (to_other or not ro):
@@ -126,10 +130,10 @@ def of(snap) -> dict:
 
 
 def counts(people) -> dict:
-    """이적 시장 숫자(FA 목록 사람만): {"move","stay","rm","fa"} — 네 칸은 겹치지 않음."""
+    """이적 숫자(선수별 목록에 드는 사람 = FA 목록 + 계약 중 이적 기사): {"move","stay","rm","fa"} — 네 칸은 겹치지 않음."""
     out = {}
     for p in people.values():
-        if p["in_fa"]:
+        if p["listed"]:
             out[p["status"]] = out.get(p["status"], 0) + 1
     return out
 

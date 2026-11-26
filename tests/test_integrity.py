@@ -67,6 +67,30 @@ class IntegrityTest(unittest.TestCase):
         self.assertEqual(rows[0][5], "stay")
 
 
+    def test_classify_move_takes_new_role(self):
+        # 라이프: DNS 서폿으로 나가서 HLE 코치로 합류 → FA 목록 직책은 코치(서폿 X), 로스터 선수 칸에 '영입'으로 들어가면 안 됨
+        from tracker.fa import fill_from_fa
+        rc = [{"Direction": "Leave", "Player": "Life", "Team": "DN SOOPers", "Role": "Support", "D": "2026-11-16 00:00:00"},
+              {"Direction": "Join", "Player": "Life", "Team": "Hanwha Life Esports", "Role": "Coach", "D": "2026-11-23 00:00:00"},
+              {"Direction": "Leave", "Player": "Kiin", "Team": "Gen.G", "Role": "Top", "D": "2026-11-16 00:00:00"},
+              {"Direction": "Join", "Player": "Kiin", "Team": "Hanwha Life Esports", "Role": "Top", "D": "2026-11-20 00:00:00"}]
+        rows = {r[0]: r for r in classify_fa(rc, [], [], "2026-11-24")}
+        self.assertEqual(rows["Life"][4:7], ("Coach", "move", "hle"))
+        self.assertEqual(rows["Life"][10], "선수 → 코치")
+        self.assertEqual(rows["Kiin"][4:7], ("Top", "move", "hle"))
+        self.assertEqual(rows["Kiin"][10], "")
+        roster = fill_from_fa([], [rows["Life"], rows["Kiin"]], {"hle", "dns", "geng"})
+        self.assertEqual([(r[1], r[2], r[3]) for r in roster], [("hle", "Top", "Kiin")])   # 코치는 선수 칸에 안 들어감
+
+    def test_classify_contract_trade_is_a_move(self):
+        # 계약 중 선수 트레이드(루시드 DK → DRX): 리그피디아에 나감·들어옴 기록이 남으므로 이적 확정으로 잡힘
+        # (그래서 반영 뒤에도 'LCK 밖에서 온 영입'이 아니라 DK 이탈 · DRX 영입)
+        rc = [{"Direction": "Leave", "Player": "Lucid", "Team": "Dplus KIA", "Role": "Jungle", "D": "2026-12-01 00:00:00"},
+              {"Direction": "Join", "Player": "Lucid", "Team": "Kiwoom DRX", "Role": "Jungle", "D": "2026-12-01 00:00:00"}]
+        players = [{"P": "Lucid", "ID": "Lucid", "Team": "Kiwoom DRX", "Role": "Jungle", "Contract": "2028-11-30", "N": ""}]
+        rows = classify_fa(rc, [], players, "2026-12-02")
+        self.assertEqual([(r[0], r[3], r[5], r[6]) for r in rows], [("Lucid", "dk", "move", "drx")])
+
     def test_fa_table_lags_behind_roster(self):
         # 도란: 로스터엔 DK(영입)인데 리그피디아 FA 목록은 아직 T1 미정 → 알림 대상
         put([("DoranI", "DoranI", "", "t1", "Top", "fa", "", "", "", "2026-11-17", "")],

@@ -718,6 +718,9 @@ def fa_row_html(r, rm=None) -> str:
         note = "오피셜 기사 기준 · 리그피디아 반영 전" if rm["official"] else "기사 제목 기준 추측"
         sub = [f'<a class="rm-src" href="{esc(rm["url"])}" target="_blank" rel="noopener" title="{esc(note + " · " + rm["title"])}">{esc(src)} 기사 ↗</a>']
     real = f'<small>{esc(r["real"])}</small>' if r["real"] else ""
+    if r.get("contract"):                              # 계약 중인데 이적 기사만 나온 선수(루시드·듀로): FA가 아님을 이름 옆에
+        until = f' ~{r["until"][:7].replace("-", ".")}' if r["until"] else ""
+        real += f'<em class="ct" title="리그피디아 계약이 남아 있어요. 기사로만 이적 얘기가 나온 선수">계약 중{until}</em>'
     ak = (r["team_to"] if r["status"] == "move" and r["team_to"] else rm["team"] if eff == "move" and rm else r["team_from"])   # 아바타: 새 팀(이적)·원래 팀
     badge = team_logo(ak, "bdg") if logo_src(ak) else ""
     grp = ("감독" if r["role"] == "Head Coach" and pos != "스태프" else "코치") if coach else pos
@@ -899,9 +902,19 @@ def farm_block(board=None) -> str:
     return f'<div id="tf" class="tf-wrap">{bar}{card}</div><script type="application/json" id="tf-data">{data}</script>'
 
 
+def _list_row(p) -> dict:
+    """선수별 목록 한 줄의 원본: FA 목록 행, 계약 중 선수는 로스터 행으로 같은 모양을 만듦(미정 + 기사 → 유력·확정)."""
+    if p["fa"]:
+        return p["fa"]
+    ro = p["ro"]
+    return {"page": p["page"], "nick": p["nick"], "real": p["real"], "team_from": ro["team"], "role": ro["role"], "status": "fa",
+            "team_to": "", "team_to_name": "", "until": ro.get("until") or "", "date": "", "memo": "", "contract": True}
+
+
 def render_fa(league: str) -> str:
     snap = state.get()
-    rows = snap["fa"]
+    ppl = place.of(snap)
+    rows = [_list_row(p) for p in ppl.values() if p["listed"]]       # FA 목록 + 계약 중 이적 기사(place.py)
     with db() as c:
         upd = c.execute("SELECT v FROM meta WHERE k='fa_updated'").fetchone()
     today = datetime.now(KST).date()
@@ -911,7 +924,6 @@ def render_fa(league: str) -> str:
     rows = sorted(rows, key=lambda r: (["move", "stay", "fa"].index(r["status"]) if r["status"] in FA_ST else 9,
                                        korder.get(r["team_from"], 99),
                                        porder.index(r["role"]) if r["role"] in porder else 99, r["nick"].lower()))
-    ppl = place.of(snap)
     rms = {r["page"]: ppl[r["page"]]["rm"] for r in rows if ppl.get(r["page"]) and ppl[r["page"]]["rm"]}   # 사람마다 쓰는 기사(place.py)
     # 네 칸은 서로 겹치지 않음: 확정 + 잔류 + 유력 + 미정 = FA 전체('유력이 왜 미정에도 있어'를 없앰). 다른 화면과 같은 숫자(place.counts)
     cnt = {"move": 0, "stay": 0, "rm": 0, "fa": 0, **place.counts(ppl)}
@@ -1986,7 +1998,7 @@ def _chip(p, cls="", extra="", pos=None):
 
 def render_summary(league: str) -> str:
     """팀마다 이번 겨울 영입·이탈·잔류(리그피디아·오피셜 기사)·유력(기사 제목)·미정. 사람마다 place.py가 정한 말·행선지 그대로.
-    영입·이탈처럼 유력도 양쪽 카드에: 가는 팀엔 이름, 원래 팀엔 '→ 행선지'(이적 시장 FA만 — 숫자가 이적 시장 '유력'과 같게)."""
+    영입·이탈처럼 유력도 양쪽 카드에: 가는 팀엔 이름, 원래 팀엔 '→ 행선지'(FA든 계약 중이든 같게 — 숫자는 선수별 '유력'과 같음)."""
     today = datetime.now(KST).date()
     keys = team_keys()
     ppl = people()
@@ -2016,7 +2028,7 @@ def render_summary(league: str) -> str:
             elif p["status"] == "rm":
                 if p["dest"] == k and p["dest"] != p["frm"]:
                     v["rm_in"].append(p)
-                elif p["frm"] == k and p["in_fa"]:
+                elif p["frm"] == k and p["listed"]:
                     v["rm_out"].append(p)
             ro = p["ro"]
             if ro and ro["joined"] and ro["team"] == k and not (p["in_fa"] and p["status"] == "move"):
